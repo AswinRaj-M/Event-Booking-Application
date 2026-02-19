@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import Navbar from "../../components/layout/Navbar.jsx";
+import logo from "../../assets/logo.jpeg";
 
 const LandingPage = () => {
   return (
@@ -139,10 +140,10 @@ const LandingPage = () => {
         <footer className="w-full border-t border-white/5 py-12 mt-auto">
           <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 bg-purple-600 rounded flex items-center justify-center text-[10px] font-bold">E</div>
-              <span className="font-bold text-sm">EventHorizon</span>
+              <img src={logo} alt="Festivo Logo" className="w-6 h-6 rounded-full object-cover" />
+              <span className="font-bold text-sm">Festivo</span>
             </div>
-            <p className="text-gray-600 text-xs">© 2024 EventHorizon Inc. All rights reserved.</p>
+            <p className="text-gray-600 text-xs">© 2024 Festivo Inc. All rights reserved.</p>
             <div className="flex gap-6 text-gray-600 text-xs">
               <a href="#" className="hover:text-white transition">Privacy Policy</a>
               <a href="#" className="hover:text-white transition">Terms of Service</a>

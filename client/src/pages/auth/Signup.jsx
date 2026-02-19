@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import logo from '../../assets/logo.jpeg';
 
 const Signup = () => {
     const navigate = useNavigate();
@@ -94,11 +95,9 @@ const Signup = () => {
                     {/* Logo & Header */}
                     <div className="text-center space-y-2 mb-6">
                         <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-800 mb-2 shadow-lg group hover:scale-105 transition-transform duration-300">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-purple-500 group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                            </svg>
+                            <img src={logo} alt="Festivo" className="w-8 h-8 rounded-full object-cover" />
                         </div>
-                        <h2 className="text-2xl font-bold tracking-tight text-white">EventHorizon</h2>
+                        <h2 className="text-2xl font-bold tracking-tight text-white">Festivo</h2>
                     </div>
 
                     {/* Sliding Tabs */}

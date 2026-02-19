@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
+import logo from "../../assets/logo.jpeg";
 
 const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false);
@@ -9,10 +10,8 @@ const Navbar = () => {
             <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
                 {/* Logo */}
                 <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-purple-600 rounded flex items-center justify-center text-white font-bold text-lg">
-                        E
-                    </div>
-                    <span className="text-white font-bold text-xl tracking-tight">EventHorizon</span>
+                    <img src={logo} alt="Festivo Logo" className="w-8 h-8 rounded-full object-cover" />
+                    <span className="text-white font-bold text-xl tracking-tight">Festivo</span>
                 </div>
 
                 {/* Desktop Links */}
