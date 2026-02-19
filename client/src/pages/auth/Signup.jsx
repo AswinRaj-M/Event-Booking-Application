@@ -93,11 +93,15 @@ const Signup = () => {
                 <div className="w-full max-w-md bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl relative z-10">
 
                     {/* Logo & Header */}
-                    <div className="text-center space-y-2 mb-6">
-                        <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-800 mb-2 shadow-lg group hover:scale-105 transition-transform duration-300">
-                            <img src={logo} alt="Festivo" className="w-8 h-8 rounded-full object-cover" />
+                    <div className="text-center space-y-4 mb-8">
+                        <div className="flex justify-center">
+                            <img
+                                src={logo}
+                                alt="Festivo"
+                                className="w-16 h-16 rounded-full object-cover shadow-[0_0_20px_rgba(139,92,246,0.6)]"
+                            />
                         </div>
-                        <h2 className="text-2xl font-bold tracking-tight text-white">Festivo</h2>
+                        <h2 className="text-3xl font-bold tracking-tight text-white drop-shadow-md">Festivo</h2>
                     </div>
 
                     {/* Sliding Tabs */}

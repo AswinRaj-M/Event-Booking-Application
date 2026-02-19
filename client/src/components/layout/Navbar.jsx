@@ -9,9 +9,13 @@ const Navbar = () => {
         <nav className="fixed top-0 left-0 w-full z-50 bg-black/20 backdrop-blur-md border-b border-white/10">
             <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
                 {/* Logo */}
-                <div className="flex items-center gap-2">
-                    <img src={logo} alt="Festivo Logo" className="w-8 h-8 rounded-full object-cover" />
-                    <span className="text-white font-bold text-xl tracking-tight">Festivo</span>
+                <div className="flex items-center gap-3">
+                    <img
+                        src={logo}
+                        alt="Festivo Logo"
+                        className="w-12 h-12 rounded-full object-cover shadow-[0_0_15px_rgba(139,92,246,0.6)] border-none"
+                    />
+                    <span className="text-white font-bold text-3xl tracking-tight drop-shadow-[0_0_10px_rgba(139,92,246,0.3)]">Festivo</span>
                 </div>
 
                 {/* Desktop Links */}
