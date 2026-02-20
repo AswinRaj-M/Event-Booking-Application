@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import isEmail from "validator/lib/isEmail";
+
 
 
 const userSchema = new mongoose.Schema({
@@ -46,3 +46,5 @@ const userSchema = new mongoose.Schema({
     refreshToken : String,
 
 },{timestamps : true})
+
+export default userSchema

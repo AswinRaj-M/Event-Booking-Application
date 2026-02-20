@@ -21,3 +21,5 @@ const sendOTP = async(isEmail,otp)=>{
     throw new Error("Failed to send OTP email")
   }
 }
+
+export default sendOTP
