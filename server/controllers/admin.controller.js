@@ -52,3 +52,28 @@ export const AdminLogin = async(req,res)=>{
     return res.status(500).json({message : "Server Error"})
   }
 }
+
+
+export const logoutAdmin = async(req,res) =>{
+  try {
+    const token = req.cookies.refreshToken
+
+    if(token){
+      const hashed = hashToken(token)
+      await User.findOneAndUpdate(
+        {refreshToken : hashed},
+        {$set : {refreshToken : null}}
+      )
+    }
+
+    res.clearCookie("refreshToken",{
+      httpOnly : true,
+      sameSite : "strict",
+      secure : false
+    })
+    return res.status(200).json({message : "Admin Logged Out Successfully"})
+  } catch (error) {
+    console.error("Error from the admin logout",error)
+    return res.status(500).json({message : "Server Error"})
+  }
+}

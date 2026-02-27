@@ -196,7 +196,7 @@ export const logoutUser = async (req, res) => {
     const hashed = hashToken(token)
     await User.findOneAndUpdate(
       { refreshToken: hashed },
-      { refreshToken: null }
+      { $set : {refreshToken: null} }
     )
   }
   
@@ -206,7 +206,7 @@ export const logoutUser = async (req, res) => {
     secure : false 
   })
 
-  return res.json({ message: "Logged out Successfully" })
+  return res.status(200).json({ message: "Logged out Successfully" })
   } catch (error) {
     console.error("Error from logout user : ",error)
     return res.status(500).json({
