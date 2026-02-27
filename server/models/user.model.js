@@ -41,10 +41,12 @@ const userSchema = new mongoose.Schema({
       type : Boolean,
       default : false
     },
-    otp : String,
-    otpExpires :  Date,
-    refreshToken : String,
+    refreshToken : {
+      type : String,  
+    }
 
 },{timestamps : true})
 
-export default userSchema
+const User = mongoose.model("User",userSchema)
+
+export default User

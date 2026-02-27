@@ -1,6 +1,5 @@
 import {createSlice , createAsyncThunk} from "@reduxjs/toolkit"
 import *as userAPI from "../services/user.api.js"
-import { data } from "react-router-dom"
 
 export const registerUserThunk = createAsyncThunk(
   "user/register",
@@ -10,7 +9,7 @@ export const registerUserThunk = createAsyncThunk(
       return response.data
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        err.response?.data?.message || "Register failed"
+        error.response?.data?.message || "Register failed"
       )
     }
   }
@@ -24,7 +23,7 @@ export const verifyOTPThunk = createAsyncThunk(
       return response.data
     } catch (error) {
         return thunkAPI.rejectWithValue(
-          err.response?.data?.message || "OTP Verification Failed"
+          error.response?.data?.message || "OTP Verification Failed"
         )
     }
   }
@@ -41,7 +40,7 @@ export const loginUserThunk = createAsyncThunk(
 
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        err.response?.data?.message || "Failed To Login"
+        error.response?.data?.message || "Failed To Login"
       )      
     }
   }
@@ -59,7 +58,7 @@ export const logoutUserThunk = createAsyncThunk(
   }
 )
 
-export const refreshUserThunk = createAsyncThunk(
+export const refreshUserToken = createAsyncThunk(
   "users/refresh-token",
   async(_,thunkAPI) =>{
     try {
@@ -76,6 +75,7 @@ const userSlice = createSlice({
   name :"user",
   initialState : {
     user : null,
+    userId : null,
     accessToken : null,
     loading : false,
     error : null,
@@ -84,14 +84,14 @@ const userSlice = createSlice({
 
   reducers : {
     logoutUserState : (state) =>{
-      state.user = null,
-      state.accessToken = null,
+      state.user = null
+      state.accessToken = null
       state.success = false
       state.error = null
     },
     clearMessages : (state) =>{
-      state.error = null,
-      state.success= false
+      state.error = null
+      state.success= false  
     }
   },
   extraReducers : (builder) => {
@@ -104,6 +104,7 @@ const userSlice = createSlice({
       .addCase(registerUserThunk.fulfilled, (state,action) =>{
         state.loading = false
         state.success = true
+        state.userId = action.payload.userId
       })
       .addCase(registerUserThunk.rejected,(state,action) =>{
         state.loading = false
@@ -141,13 +142,17 @@ const userSlice = createSlice({
       })
 
 
-      .addCase(refreshUserThunk.fulfilled,(state,action)=>{
+      .addCase(refreshUserToken.fulfilled,(state,action)=>{
         state.accessToken = action.payload.accessToken
       })
-      .addCase(refreshUserThunk.rejected,(state,action)=>{
+      .addCase(refreshUserToken.rejected,(state,action)=>{
         state.user = null
         state.accessToken = null
       })
       
   }
 })
+
+
+export const { logoutUserState, clearMessages} =userSlice.actions
+export default userSlice.reducer;

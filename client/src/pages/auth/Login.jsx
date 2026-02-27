@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import logo from '../../assets/logo.jpeg';
+import { useDispatch, useSelector } from 'react-redux';
+import { clearMessages, loginUserThunk } from '../../features/user.slice';
+import { useEffect } from 'react';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -9,9 +12,26 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [isLogin, setIsLogin] = useState(true);
 
+  const dispatch = useDispatch()
+  const {loading, success} = useSelector((state)=> state.user)
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
+
+  const handleSubmit =(e)=>{
+    e.preventDefault()
+    dispatch(loginUserThunk({
+      email,
+      password
+    }))
+  }
+
+  useEffect(()=>{
+    if(success){
+      dispatch(clearMessages)
+      navigate('/home')
+    }
+  },[success,dispatch,navigate])
 
   const handleTabSwitch = (loginMode) => {
     setIsLogin(loginMode);
@@ -121,7 +141,7 @@ const Login = () => {
               <p className="text-sm text-gray-400">Enter your credentials to access your account</p>
             </div>
 
-            <form className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-300 ml-1" htmlFor="email">Email</label>
                 <div className="relative group">
@@ -148,7 +168,7 @@ const Login = () => {
                 <div className="relative group">
                   <input
                     id="password"
-                    type={showPassword ? "text" : "password"}
+                    type={showPassword ? "password" : "text"}
                     placeholder="••••••••"
                     className="w-full px-4 py-3 pl-11 pr-11 bg-black/50 border border-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all placeholder:text-gray-600 text-white group-hover:border-gray-700"
                     value={password}
@@ -177,7 +197,7 @@ const Login = () => {
                   </button>
                 </div>
                 <div className="flex justify-center">
-                  <Link to="/forgot-password" class="text-xs font-medium text-primary hover:text-primary/80 transition-colors">
+                  <Link to="/forgot-password" className="text-xs font-medium text-primary hover:text-primary/80 transition-colors">
                     Forgot password?
                   </Link>
                 </div>
