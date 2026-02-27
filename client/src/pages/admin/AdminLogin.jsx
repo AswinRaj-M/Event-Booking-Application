@@ -125,20 +125,14 @@ const AdminLogin = () => {
                             </div>
                         </div>
 
-                        {/* Remember Device */}
-                        <div className="flex items-center pt-1">
-                            <input
-                                id="remember"
-                                name="remember"
-                                type="checkbox"
-                                className="h-4 w-4 rounded border-gray-700 bg-[#1c1c24] text-[#a855f7] focus:ring-[#a855f7]/50 focus:ring-offset-0 cursor-pointer"
-                            />
-                            <label
-                                htmlFor="remember"
-                                className="ml-2 block text-xs font-semibold text-gray-300 cursor-pointer"
+                        {/* Forgot Password */}
+                        <div className="flex items-center justify-center pt-1">
+                            <a
+                                href="#"
+                                className="text-xs font-semibold text-[#a855f7] hover:text-[#c084fc] transition-colors"
                             >
-                                Remember this device
-                            </label>
+                                Forgot Password?
+                            </a>
                         </div>
 
                         {/* Submit Button */}
