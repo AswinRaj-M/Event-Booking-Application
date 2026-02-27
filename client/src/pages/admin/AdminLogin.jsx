@@ -1,6 +1,32 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import { adminClearMessages, adminLoginThunk } from "../../features/admin.slice";
+
 
 const AdminLogin = () => {
+
+    const [email ,setEmail] = useState("")
+    const [password, setPassword] = useState("")
+
+    const dispatch = useDispatch()
+    const navigate = useNavigate()
+    const {loading , success} = useSelector((state) => state.admin)
+
+    const handleSubmit = (e) =>{
+        e.preventDefault()
+        dispatch(adminLoginThunk({
+            email,
+            password
+        }))
+    }
+
+    useEffect(()=>{
+        if(success){
+            dispatch(adminClearMessages())
+            navigate("/admin/pannel")
+        }
+    },[success,navigate,dispatch])
     return (
         <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#1b1b24] text-white p-4 font-sans selection:bg-purple-500/30">
             {/* Top Logo & Text */}
@@ -35,7 +61,7 @@ const AdminLogin = () => {
                         </p>
                     </div>
 
-                    <form className="space-y-6">
+                    <form onSubmit={handleSubmit} className="space-y-6">
                         {/* Email Field */}
                         <div className="space-y-1.5">
                             <label
@@ -67,6 +93,7 @@ const AdminLogin = () => {
                                     type="email"
                                     className="w-full pl-10 pr-4 py-3 bg-[#1c1c24] border border-gray-800 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#a855f7] focus:border-[#a855f7] transition-all placeholder:text-gray-600"
                                     placeholder="admin@eventplatform.com"
+                                    onChange={(e)=> setEmail(e.target.value)}
                                 />
                             </div>
                         </div>
@@ -102,6 +129,7 @@ const AdminLogin = () => {
                                     type="password"
                                     className="w-full pl-10 pr-10 py-3 bg-[#1c1c24] border border-gray-800 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#a855f7] focus:border-[#a855f7] transition-all placeholder:text-gray-600 tracking-widest"
                                     placeholder="••••••••••••"
+                                    onChange={(e)=> setPassword(e.target.value)}
                                 />
                                 <button
                                     type="button"
@@ -154,7 +182,7 @@ const AdminLogin = () => {
                                     d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
                                 />
                             </svg>
-                            Login to Admin Panel
+                            {loading ? "loging in..." : "Login to Admin Panel"}
                         </button>
                     </form>
                 </div>

@@ -4,12 +4,12 @@ import *as adminAPI from "../services/admin.api.js"
 
 export const adminLoginThunk = createAsyncThunk(
   "admin/login",
-  async(data,ThunkAPI) =>{
+  async(data,thunkAPI) =>{
     try {
     const response = await adminAPI.adminLogin(data)
     return response.data
     } catch (error) {
-      return ThunkAPI.rejectWithValue(
+      return thunkAPI.rejectWithValue(
         error.response?.data?.message || "Failed to admin login"
       )
     }
@@ -24,5 +24,40 @@ const adminSlice = createSlice({
     loading : false,
     success : false,
     error : null
+  },
+  reducers :{
+    logoutAdminState : (state) =>{
+      state.admin = null
+      state.accessToken = null
+      state.success = false
+      state.error = null
+    },
+    adminClearMessages : (state) =>{
+      state.error = null
+      state.success = false
+    }
+  },
+  extraReducers : (builder)=>{
+    builder
+      .addCase(adminLoginThunk.pending,(state)=>{
+        state.success = false
+        state.error = null
+        state.loading = true
+      })
+      .addCase(adminLoginThunk.fulfilled,(state,action)=>{
+        state.success = true
+        state.admin =action.payload.admin
+        state.accessToken = action.payload.accessToken
+        state.loading = false
+        state.error = null
+      })
+      .addCase(adminLoginThunk.rejected,(state,action)=>{
+        state.success = false
+        state.loading = false
+        state.error = action.payload
+      })
   }
 })
+
+export const {logoutAdminState,adminClearMessages} = adminSlice.actions
+export default adminSlice.reducer

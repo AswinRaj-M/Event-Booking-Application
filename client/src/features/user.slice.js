@@ -134,6 +134,7 @@ const userSlice = createSlice({
       .addCase(loginUserThunk.fulfilled,(state,action)=>{
         state.loading = false,
         state.success = true,
+        state.user = action.payload.user
         state.accessToken = action.payload.accessToken
       })
       .addCase(loginUserThunk.rejected,(state,action)=>{
