@@ -5,6 +5,7 @@ import cors from "cors"
 import cookieParser from "cookie-parser"
 import connectDB from "./config/db.js"
 import userRoutes from './routes/user.routes.js'
+import adminRoutes from "./routes/admin.routes.js"
 
 
 connectDB()
@@ -18,6 +19,7 @@ app.use(cookieParser());
 app.use(cors({ origin : "http://localhost:5173", credentials : true}))
 
 app.use("/api/users",userRoutes)
+app.use("/api/admin/",adminRoutes)
 
 const PORT = process.env.PORT || 5000
 
