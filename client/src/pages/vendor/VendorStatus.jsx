@@ -3,11 +3,10 @@ import { Link } from 'react-router-dom';
 import logo from '../../assets/logo.jpeg';
 import { CheckCircle2, Clock, XCircle, RefreshCw } from 'lucide-react';
 
-// The component accepts a 'status' prop: "pending", "approved", or "rejected".
-// Defaulting to "pending" for demonstration purposes if no prop is provided.
+
 const VendorStatus = ({ status = 'pending' }) => {
 
-    // Helper function to render content dynamically based on the status prop
+    
     const renderStatusContent = () => {
         switch (status) {
             case 'approved':

@@ -9,6 +9,7 @@ const Signup = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { loading, error, success , userId } = useSelector((state) => state.user);
+  const [isSignUp, setIsSignUp] = useState(true);
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -61,6 +62,14 @@ const Signup = () => {
       }),
     );
   };
+
+    const handleTabSwitch = (SignUpMode) => {
+    setIsSignUp(SignUpMode);
+    if (!SignUpMode) {
+      navigate('/login');
+    }
+  };
+
 
   useEffect(() => {
     if (success&&userId) {
@@ -170,11 +179,13 @@ const Signup = () => {
               className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-gray-800 rounded-lg shadow-sm transition-all duration-300 ease-spring left-[calc(50%+4px)]`}
             ></div>
             <button
+            onClick={() => handleTabSwitch(false)}
               className={`relative z-10 flex-1 py-2 text-sm font-medium rounded-lg transition-colors duration-200 text-gray-400 hover:text-gray-200`}
             >
               Log In
             </button>
             <button
+            onClick={() => handleTabSwitch(true)}
               className={`relative z-10 flex-1 py-2 text-sm font-medium rounded-lg transition-colors duration-200 text-white`}
             >
               Sign Up
