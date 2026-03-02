@@ -1,9 +1,128 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import logo from '../../assets/logo.jpeg';
 import { Building2, Info, MapPin, Upload } from 'lucide-react';
+import { useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { vendorApplicationThunk } from '../../features/vendorSlice';
+import { useEffect } from 'react';
 
 const VendorApplication = () => {
+
+    const navigate = useNavigate()
+    const dispatch = useDispatch()
+    const {loading, success } = useSelector((state) => state.vendor)
+    const [form ,setForm ] = useState({
+    organizerName: "",
+    businessName: "",
+    businessEmail: "",
+    password: "",
+    confirmPassword: "",
+    contactPhone: "",
+    eventCategory: "",
+    experience: "",
+    description: "",
+    websiteOrInstagram: "",
+    city: "",
+    state: "",
+    country: "",
+    })
+
+    const [businessDocument , setBusinessDocument] = useState(null)
+    const [idProof, setIdProof] = useState(null)
+    const [agreeTermsAndConditions, setAgreeTermsAndConditions] = useState(false)
+    const [errors, setErrors] = useState({})
+    
+
+    const handleChange  = (e) => {
+        setForm({...form, [e.target.name] : e.target.value})
+    }
+
+
+     const validate = () => {
+    const newErrors = {};
+
+    if (!form.organizerName.trim())
+      newErrors.organizerName = "Organizer name required";
+
+    if (!form.businessName.trim())
+      newErrors.businessName = "Business name required";
+
+    if (!form.businessEmail.trim())
+      newErrors.businessEmail = "Email required";
+
+    if (!form.contactPhone.trim())
+      newErrors.contactPhone = "Phone required";
+
+    if (!form.password)
+      newErrors.password = "Password required";
+
+    if (form.password !== form.confirmPassword)
+      newErrors.confirmPassword = "Passwords do not match";
+
+    if (!form.eventCategory)
+      newErrors.eventCategory = "Select category";
+
+    if (!form.experience)
+      newErrors.experience = "Select experience";
+
+    if (!form.description.trim())
+      newErrors.description = "Description required";
+
+    if (!businessDocument)
+      newErrors.businessDocument = "Business document required";
+
+    if (!idProof)
+      newErrors.idProof = "ID proof required";
+
+    if (!agreeTermsAndConditions)
+      newErrors.agreeTermsAndConditions = "You must accept terms";
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    if(!validate()) return;
+    const formData =   new FormData()
+
+    formData.append("organizerName",form.organizerName)
+    formData.append("businessName", form.businessName)
+    formData.append("businessEmail",form.businessEmail)
+    formData.append("contactPhone",form.contactPhone)
+    formData.append("password",form.password)
+    formData.append("eventCategory",form.eventCategory)
+    formData.append("experience",form.experience)
+    formData.append("description",form.description)
+    formData.append("websiteOrInstagram",form.websiteOrInstagram)
+    formData.append("agreeTermsAndConditions",agreeTermsAndConditions)
+    formData.append(
+        "location",
+        JSON.stringify({
+            city : form.city,
+            state : form.state,
+            country : form.country
+        })
+    )
+    formData.append("businessDocument" ,businessDocument)
+    formData.append("idProof",idProof)
+
+    dispatch(vendorApplicationThunk(formData))
+
+  }
+
+  useEffect(()=>{
+    if(success){
+        navigate("/vendor/status",{
+            state : {
+                businessName : form.businessName
+            }
+        })
+    }
+  },[success,dispatch,navigate])
+    
+
     return (
         <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-violet-500/30">
             {/* Navigation Layer */}
@@ -62,7 +181,7 @@ const VendorApplication = () => {
                             <p className="text-sm text-gray-500">Please fill out the form below accurately. All fields marked with * are required.</p>
                         </div>
 
-                        <form className="space-y-10">
+                        <form onSubmit={handleSubmit} className="space-y-10">
 
                             {/* --- Section 1: Business Information --- */}
                             <div className="space-y-6">
@@ -81,8 +200,12 @@ const VendorApplication = () => {
                                             <input
                                                 type="text"
                                                 placeholder="e.g. John Doe"
+                                                name='organizerName'
+                                                value={form.organizerName}
+                                                onChange={handleChange}
                                                 className="w-full bg-[#121212] border border-white/5 rounded-xl px-4 py-3.5 pl-10 text-white placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:border-violet-500 transition-all"
                                             />
+                                            <p className='error'>{errors.organizerName}</p>
                                             <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500">
                                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                                             </div>
@@ -98,8 +221,12 @@ const VendorApplication = () => {
                                             <input
                                                 type="text"
                                                 placeholder="e.g. Elite Catering Services"
+                                                name='businessName'
+                                                value={form.businessName}
+                                                onChange={handleChange}
                                                 className="w-full bg-[#121212] border border-white/5 rounded-xl px-4 py-3.5 pl-10 text-white placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:border-violet-500 transition-all"
                                             />
+                                            <p className='error'>{errors.businessName}</p>
                                             <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500">
                                                 <div className="w-4 h-4 rounded-[3px] border-2 border-gray-600"></div>
                                             </div>
@@ -115,8 +242,12 @@ const VendorApplication = () => {
                                             <input
                                                 type="email"
                                                 placeholder="contact@business.com"
+                                                name='businessEmail'
+                                                value={form.businessEmail}
+                                                onChange={handleChange}
                                                 className="w-full bg-[#121212] border border-white/5 rounded-xl px-4 py-3.5 pl-10 text-white placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:border-violet-500 transition-all"
                                             />
+                                            <p className='error'>{errors.businessEmail}</p>
                                             <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500">
                                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                                             </div>
@@ -132,8 +263,13 @@ const VendorApplication = () => {
                                             <input
                                                 type="tel"
                                                 placeholder="+1 (555) 000-0000"
+                                                name='contactPhone'
+                                                autoComplete='tel'
+                                                value={form.contactPhone}
+                                                onChange={handleChange}
                                                 className="w-full bg-[#121212] border border-white/5 rounded-xl px-4 py-3.5 pl-10 text-white placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:border-violet-500 transition-all"
                                             />
+                                            <p className='error'>{errors.contactPhone}</p>
                                             <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500">
                                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
                                             </div>
@@ -149,8 +285,13 @@ const VendorApplication = () => {
                                             <input
                                                 type="password"
                                                 placeholder="••••••••"
+                                                name='password'
+                                                autoComplete='new-password'
+                                                value={form.password}
+                                                onChange={handleChange}
                                                 className="w-full bg-[#121212] border border-white/5 rounded-xl px-4 py-3.5 pl-10 text-white placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:border-violet-500 transition-all"
                                             />
+                                            <p className='error'>{errors.password}</p>
                                             <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500">
                                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
                                             </div>
@@ -166,8 +307,13 @@ const VendorApplication = () => {
                                             <input
                                                 type="password"
                                                 placeholder="••••••••"
+                                                name='confirmPassword'
+                                                autoComplete='new-password'
+                                                value={form.confirmPassword}
+                                                onChange={handleChange}
                                                 className="w-full bg-[#121212] border border-white/5 rounded-xl px-4 py-3.5 pl-10 text-white placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:border-violet-500 transition-all"
                                             />
+                                            <p className='error'>{errors.confirmPassword}</p>
                                             <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500">
                                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
                                             </div>
@@ -180,14 +326,19 @@ const VendorApplication = () => {
                                             Event Category <span className="text-red-500">*</span>
                                         </label>
                                         <div className="relative">
-                                            <select className="w-full bg-[#121212] border border-white/5 rounded-xl px-4 py-3.5 text-white appearance-none focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:border-violet-500 transition-all">
-                                                <option value="" disabled selected className="text-gray-600">Select a category</option>
+                                            <select 
+                                            name='eventCategory'
+                                            value={form.eventCategory}
+                                            onChange={handleChange}
+                                            className="w-full bg-[#121212] border border-white/5 rounded-xl px-4 py-3.5 text-white appearance-none focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:border-violet-500 transition-all">
+                                                <option value="" disabled className="text-gray-600">Select a category</option>
                                                 <option value="catering">Catering & Food</option>
                                                 <option value="photography">Photography & Video</option>
                                                 <option value="decor">Decor & Design</option>
                                                 <option value="music">Music & Entertainment</option>
                                                 <option value="venue">Venue & Locations</option>
                                             </select>
+                                            <p className='error'>{errors.eventCategory}</p>
                                             <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
                                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                                             </div>
@@ -200,13 +351,19 @@ const VendorApplication = () => {
                                             Years of Experience <span className="text-red-500">*</span>
                                         </label>
                                         <div className="relative">
-                                            <select className="w-full bg-[#121212] border border-white/5 rounded-xl px-4 py-3.5 text-white appearance-none focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:border-violet-500 transition-all">
-                                                <option value="" disabled selected className="text-gray-600">Select experience</option>
+                                            <select 
+                                            name='experience'
+                                            value={form.experience}
+                                            onChange={handleChange}
+
+                                            className="w-full bg-[#121212] border border-white/5 rounded-xl px-4 py-3.5 text-white appearance-none focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:border-violet-500 transition-all">
+                                                <option value="" disabled  className="text-gray-600">Select experience</option>
                                                 <option value="0-2">0-2 Years</option>
                                                 <option value="3-5">3-5 Years</option>
                                                 <option value="5-10">5-10 Years</option>
                                                 <option value="10+">10+ Years</option>
                                             </select>
+                                            <p className='error'>{errors.experience}</p>
                                             <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
                                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                                             </div>
@@ -232,13 +389,18 @@ const VendorApplication = () => {
                                     <div className="relative">
                                         <textarea
                                             rows="4"
+                                            name='description'
+                                            value={form.description}
+                                            onChange={handleChange}
                                             placeholder="Tell us about your services, specialty, and what makes your business unique..."
                                             className="w-full bg-[#121212] border border-white/5 rounded-xl px-4 py-3.5 text-white placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:border-violet-500 transition-all resize-none"
                                         ></textarea>
+
                                     </div>
                                     <div className="flex justify-end">
-                                        <span className="text-xs text-gray-500">0/500 characters</span>
+                                        <span className="text-xs text-gray-500">{form.description.length}/500 characters</span>
                                     </div>
+                                    <p className='error'>{errors.description}</p>
                                 </div>
 
                                 {/* Social/Website */}
@@ -249,6 +411,9 @@ const VendorApplication = () => {
                                     <div className="relative group">
                                         <input
                                             type="url"
+                                            name='websiteOrInstagram'
+                                            value={form.websiteOrInstagram}
+                                            onChange={handleChange}
                                             placeholder="https://instagram.com/yourbusiness"
                                             className="w-full bg-[#121212] border border-white/5 rounded-xl px-4 py-3.5 pl-10 text-white placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:border-violet-500 transition-all"
                                         />
@@ -263,14 +428,27 @@ const VendorApplication = () => {
                                     <label className="text-sm font-medium text-gray-300">
                                         Verification Documents
                                     </label>
-                                    <div className="mt-2 flex justify-center px-6 pt-10 pb-10 border-2 border-white/5 border-dashed rounded-xl cursor-pointer hover:bg-white/5 hover:border-violet-500/50 transition-all group">
+                                    <div className="mt-2 flex justify-center px-6 pt-10 pb-10 border-2 border-white/5 border-dashed rounded-xl cursor-pointer hover:bg-white/5 hover:border-violet-500/50 transition-all group"
+                                    onClick={()=> document.getElementById("businessDocumentUpload").click()}
+                                    >
+                                            
+                                        <input 
+                                        id='businessDocumentUpload'
+                                        type="file"
+                                        accept=".svg,.png,.jpg,.jpeg,.pdf"
+                                        hidden
+                                        onChange={(e) => setBusinessDocument(e.target.files[0])}
+                                        />
+                                        
                                         <div className="space-y-3 text-center">
                                             <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mx-auto group-hover:bg-violet-500/20 group-hover:text-violet-400 transition-all text-gray-400">
                                                 <Upload size={20} />
                                             </div>
                                             <div className="flex text-sm text-gray-400 justify-center">
                                                 <span className="relative font-medium text-violet-400 group-hover:text-violet-300 transition-colors">
-                                                    Click to upload or drag and drop
+                                                    {businessDocument
+                                                    ?businessDocument.name
+                                                    : "Click to upload or drag and drop"}
                                                 </span>
                                             </div>
                                             <p className="text-xs text-gray-500">
@@ -279,20 +457,36 @@ const VendorApplication = () => {
                                         </div>
                                     </div>
                                 </div>
+                                {errors.businessDocument&&(
+                                    <p className='error'>{errors.businessDocument}</p>
+                                )}
 
                                 {/* ID Proof Upload */}
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-gray-300">
                                         ID Proof
                                     </label>
-                                    <div className="mt-2 flex justify-center px-6 pt-6 pb-6 border-2 border-white/5 border-dashed rounded-xl cursor-pointer hover:bg-white/5 hover:border-violet-500/50 transition-all group">
+                                    <div className="mt-2 flex justify-center px-6 pt-6 pb-6 border-2 border-white/5 border-dashed rounded-xl cursor-pointer hover:bg-white/5 hover:border-violet-500/50 transition-all group"
+                                    onClick={() => document.getElementById("idProofUpload").click()}
+                                    >
+                                        
+                                        <input 
+                                        id='idProofUpload'
+                                        type="file"
+                                        accept=".png,.jpg,.pdf"
+                                        hidden
+                                        onChange={(e) => setIdProof(e.target.files[0])}
+                                        />
+                                        
                                         <div className="space-y-2 text-center">
                                             <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center mx-auto group-hover:bg-violet-500/20 group-hover:text-violet-400 transition-all text-gray-400">
                                                 <Upload size={18} />
                                             </div>
                                             <div className="flex text-sm text-gray-400 justify-center">
                                                 <span className="relative font-medium text-violet-400 group-hover:text-violet-300 transition-colors">
-                                                    Click to upload or drag and drop
+                                                    {idProof
+                                                    ?idProof.name
+                                                    :"Click to upload or drag and drop"}
                                                 </span>
                                             </div>
                                             <p className="text-xs text-gray-500">
@@ -302,6 +496,9 @@ const VendorApplication = () => {
                                     </div>
                                 </div>
                             </div>
+                            {errors.idProof &&(
+                                <p className='error'>{errors.idProof}</p>
+                            )}
 
                             <hr className="border-white/5" />
 
@@ -320,6 +517,9 @@ const VendorApplication = () => {
                                         </label>
                                         <input
                                             type="text"
+                                            name='city'
+                                            value={form.city}
+                                            onChange={handleChange}
                                             placeholder="San Francisco"
                                             className="w-full bg-[#121212] border border-white/5 rounded-xl px-4 py-3.5 text-white placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:border-violet-500 transition-all"
                                         />
@@ -332,6 +532,9 @@ const VendorApplication = () => {
                                         </label>
                                         <input
                                             type="text"
+                                            name='state'
+                                            value={form.state}
+                                            onChange={handleChange}
                                             placeholder="California"
                                             className="w-full bg-[#121212] border border-white/5 rounded-xl px-4 py-3.5 text-white placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:border-violet-500 transition-all"
                                         />
@@ -343,8 +546,12 @@ const VendorApplication = () => {
                                             Country <span className="text-red-500">*</span>
                                         </label>
                                         <div className="relative">
-                                            <select className="w-full bg-[#121212] border border-white/5 rounded-xl px-4 py-3.5 text-white appearance-none focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:border-violet-500 transition-all">
-                                                <option value="" disabled selected className="text-gray-600">Select Country</option>
+                                            <select 
+                                            name='country'
+                                            value={form.country}
+                                            onChange={handleChange}
+                                            className="w-full bg-[#121212] border border-white/5 rounded-xl px-4 py-3.5 text-white appearance-none focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:border-violet-500 transition-all">
+                                                <option value="" disabled  className="text-gray-600">Select Country</option>
                                                 <option value="US">United States</option>
                                                 <option value="UK">United Kingdom</option>
                                                 <option value="CA">Canada</option>
@@ -366,6 +573,9 @@ const VendorApplication = () => {
                                         <input
                                             id="terms"
                                             type="checkbox"
+                                            name='agreeTermsAndConditions'
+                                            checked={agreeTermsAndConditions}
+                                            onChange={(e) => setAgreeTermsAndConditions(e.target.checked)}
                                             className="w-4 h-4 bg-[#121212] border-white/10 rounded focus:ring-violet-500/50 text-violet-500 focus:ring-2 focus:ring-offset-0 focus:ring-offset-transparent cursor-pointer"
                                         />
                                     </div>
@@ -386,10 +596,16 @@ const VendorApplication = () => {
                                     Cancel Application
                                 </button>
                                 <button
-                                    type="button"
-                                    className="w-full md:w-auto px-8 py-3.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-sm font-medium rounded-xl shadow-[0_0_20px_rgba(139,92,246,0.3)] hover:shadow-[0_0_25px_rgba(139,92,246,0.5)] transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
-                                >
-                                    Submit Application
+                                    type="submit"
+                                    className={`w-full md:w-auto px-8 py-3.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-sm font-medium rounded-xl shadow-[0_0_20px_rgba(139,92,246,0.3)] hover:shadow-[0_0_25px_rgba(139,92,246,0.5)] transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2
+                                            ${loading 
+                                            ? "bg-gray-600 cursor-not-allowed" 
+                                            : "bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500"
+                                            }
+                                            `}
+                               >
+                                      
+                                    {loading ? "Submiting..." : "Submit Application"}
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
                                 </button>
                             </div>

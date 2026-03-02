@@ -299,7 +299,7 @@ const Signup = () => {
                     id="phone"
                     type="tel"
                     name="phoneNumber"
-                    placeholder="+1 (555) 000-0000"
+                    placeholder="+91 9876543210"
                     className="w-full px-4 py-2.5 pl-10 bg-black/50 border border-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all placeholder:text-gray-600 text-white group-hover:border-gray-700 text-sm"
                     value={phoneNumber}
                     onChange={handleChange}

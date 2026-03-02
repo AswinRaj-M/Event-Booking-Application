@@ -46,7 +46,7 @@ const adminSlice = createSlice({
       })
       .addCase(adminLoginThunk.fulfilled,(state,action)=>{
         state.success = true
-        state.admin =action.payload.admin
+        state.admin =action.payload.admin 
         state.accessToken = action.payload.accessToken
         state.loading = false
         state.error = null

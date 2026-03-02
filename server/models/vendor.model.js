@@ -40,7 +40,7 @@ const vendorSchema = new mongoose.Schema({
       required : true
     },
   eventCategory : String,
-  experience : Number,
+  experience : String,
   description : String,
   websiteOrInstagram : String,
   businessDocument :{

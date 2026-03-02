@@ -24,7 +24,7 @@ const AdminLogin = () => {
     useEffect(()=>{
         if(success){
             dispatch(adminClearMessages())
-            navigate("/admin/pannel")
+            navigate("/admin/dashboard")
         }
     },[success,navigate,dispatch])
     return (
@@ -126,6 +126,7 @@ const AdminLogin = () => {
                                 <input
                                     id="password"
                                     name="password"
+                                    autoComplete="new-pasword"
                                     type="password"
                                     className="w-full pl-10 pr-10 py-3 bg-[#1c1c24] border border-gray-800 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#a855f7] focus:border-[#a855f7] transition-all placeholder:text-gray-600 tracking-widest"
                                     placeholder="••••••••••••"

@@ -1,12 +1,12 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import logo from '../../assets/logo.jpeg';
 import { CheckCircle2, Clock, XCircle, RefreshCw } from 'lucide-react';
 
 
 const VendorStatus = ({ status = 'pending' }) => {
-
-    
+    const location = useLocation()
+    const businessName = location.state.businessName || ""
     const renderStatusContent = () => {
         switch (status) {
             case 'approved':
@@ -30,13 +30,13 @@ const VendorStatus = ({ status = 'pending' }) => {
                                 <p className="text-gray-500 text-xs uppercase tracking-wider mb-1">Application ID</p>
                                 <p className="text-white font-medium">AVND-2023-8492</p>
                             </div>
-                            <div>
+                            <div className="md:ml-40">
                                 <p className="text-gray-500 text-xs uppercase tracking-wider mb-1">Business Name</p>
                                 <div className="flex items-center gap-2">
                                     <div className="w-5 h-5 rounded bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center">
                                         <div className="w-2 h-2 bg-white rounded-full"></div>
                                     </div>
-                                    <p className="text-white font-medium">Gourmet Delights Co.</p>
+                                    <p className="text-white font-medium">{businessName}</p>
                                 </div>
                             </div>
                         </div>
@@ -81,9 +81,9 @@ const VendorStatus = ({ status = 'pending' }) => {
                                 <p className="text-gray-500 text-xs uppercase tracking-wider mb-1">Application ID</p>
                                 <p className="text-white font-medium">AVND-2023-8492</p>
                             </div>
-                            <div>
+                            <div className="md:ml-40">
                                 <p className="text-gray-500 text-xs uppercase tracking-wider mb-1">Business Name</p>
-                                <p className="text-white font-medium">Gourmet Delights Co.</p>
+                                <p className="text-white font-medium ">{businessName}</p>
                             </div>
                         </div>
 
@@ -128,11 +128,11 @@ const VendorStatus = ({ status = 'pending' }) => {
                                 <p className="text-gray-500 text-xs uppercase tracking-wider mb-1">Application ID</p>
                                 <p className="text-white font-medium">AVND-2023-8492</p>
                             </div>
-                            <div>
+                            <div className="md:ml-40">
                                 <p className="text-gray-500 text-xs uppercase tracking-wider mb-1">Business Name</p>
                                 <div className="flex items-center gap-2">
                                     <div className="w-5 h-5 rounded bg-violet-600"></div>
-                                    <p className="text-white font-medium">Gourmet Delights Co.</p>
+                                    <p className="text-white font-medium">{businessName}</p>
                                 </div>
                             </div>
                         </div>

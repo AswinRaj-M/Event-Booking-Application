@@ -20,8 +20,8 @@ app.use(cookieParser());
 app.use(cors({ origin : "http://localhost:5173", credentials : true}))
 
 app.use("/api/users",userRoutes)
-app.use("/api/admin/",adminRoutes)
-app.use("api/vendor/",vendorRoutes)
+app.use("/api/admin",adminRoutes)
+app.use("/api/vendor",vendorRoutes)
 
 const PORT = process.env.PORT || 5000
 

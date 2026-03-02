@@ -65,6 +65,7 @@ export const applyVendor = async(req,res) =>{
       experience : req.body.experience,
       description : req.body.description,
       websiteOrInstagram : req.body.websiteOrInstagram,
+      agreeTermsAndConditions : req.body.agreeTermsAndConditions,
       location : JSON.parse(req.body.location),
 
       businessDocument : {
