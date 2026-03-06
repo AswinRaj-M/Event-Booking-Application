@@ -430,7 +430,7 @@ const Signup = () => {
                 type="submit"
                 className="w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-medium rounded-xl shadow-lg shadow-purple-900/40 hover:shadow-purple-900/60 transition-all duration-200 transform hover:-translate-y-0.5 mt-2"
               >
-                Create Account
+                {loading ? "Creating..." : "Create Account"}
               </button>
             </form>
 

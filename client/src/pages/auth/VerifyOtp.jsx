@@ -44,21 +44,21 @@ const VerifyOtp = () => {
     }
   };
 
-  const handleKeyDown = (e, index) => {
-    if (e.key === 'Backspace') {
-      if (otp[index] !== '') {
-        const newOtp = [...otp];
-        newOtp[index] = '';
-        setOtp(newOtp);
-        return;
-      }
+const handleKeyDown = (e, index) => {
+  const newOtp = [...otp]; 
+  if (e.key === 'Backspace') {
+    e.preventDefault();
 
-      if (index > 0) {
-        e.preventDefault();
-        inputsRef.current[index - 1]?.focus();
-      }
+    if (otp[index] !== '') {
+      newOtp[index] = '';
+      setOtp(newOtp);
+    } else if (index > 0) {
+      inputsRef.current[index - 1]?.focus();
+      newOtp[index - 1] = '';
+      setOtp(newOtp);
     }
-  };
+  }
+};
 
   const handlePaste = (e) => {
     e.preventDefault();

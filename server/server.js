@@ -17,7 +17,10 @@ const app = express()
 
 app.use(express.json())
 app.use(cookieParser());
-app.use(cors({ origin : "http://localhost:5173", credentials : true}))
+app.use(cors({ 
+  origin : process.env.CLIENT_PORT,
+  credentials : true
+}))
 
 app.use("/api/users",userRoutes)
 app.use("/api/admin",adminRoutes)
@@ -29,6 +32,6 @@ app.get("/",(req,res)=>{
   res.send("FESTIVO")
 })
 
-app.listen(PORT,()=>{
+app.listen(PORT,'0.0.0.0',()=>{
   console.log(`server is running on localhost : ${PORT}`)
 })  

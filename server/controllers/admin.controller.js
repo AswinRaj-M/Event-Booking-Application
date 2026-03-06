@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import User from "../models/user.model.js";
 import { generateAccessToken, generateRefreshToken } from "../utils/generateToken.js";
 import { hashToken } from "../utils/hashToken.js";
+import Vendor from "../models/vendor.model.js";
 
 
 export const AdminLogin = async(req,res)=>{
@@ -43,6 +44,7 @@ export const AdminLogin = async(req,res)=>{
       accessToken,
       admin :{
         id : admin._id,
+        name : admin.fullName,
         email : admin.email,
         role : admin.role
       }
@@ -75,5 +77,62 @@ export const logoutAdmin = async(req,res) =>{
   } catch (error) {
     console.error("Error from the admin logout",error)
     return res.status(500).json({message : "Server Error"})
+  }
+}
+
+export const getAllVendors = async(req,res) =>{
+  try {
+      const {status} = req.query
+
+      let filter = {}
+
+      if(status){
+        filter.applicationStatus = status
+      }
+
+      const vendors = await Vendor.find(filter)
+        .select("-password")
+        .sort({createdAt : -1})
+
+
+      return res.status(200).json({
+        success : true,
+        count : vendors.length,
+        data : vendors
+      })
+
+
+  } catch (error) {
+    console.error("Error from admin get all vendors ")
+    return res.status(500).json({
+      success : false,
+      message :  "Server Error"
+    }) 
+  }
+}
+
+
+export const getVendorById = async(req,res) =>{
+  try {
+    const vendor = await Vendor.findById(req.params.id)
+      .select("-password")
+
+    if(!vendor){
+      return res.status(404).json({
+        success : false,
+        message : "Vendor not Found"
+      })
+    }
+
+    return res.status(200).json({
+      success : true,
+      data : vendor
+    })
+  } catch (error) {
+    console.error("Error from the get vendor by id ",error)
+    return res.status(500).json({
+      success : false,
+      message : "Server Error"
+    })
   }
 }

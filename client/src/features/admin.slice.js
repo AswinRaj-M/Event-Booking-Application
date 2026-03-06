@@ -16,6 +16,20 @@ export const adminLoginThunk = createAsyncThunk(
   }
 )
 
+export const getAllVendorsThunk = createAsyncThunk(
+  "admin/vendorManagement",
+  async(data,thunkAPI) =>{
+    try {
+      const response = await adminAPI.getAllVendors(data)
+      return response.data
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "failed to fetch vendors"
+      )
+    }
+  }
+)
+
 const adminSlice = createSlice({
   name :"admin",
   initialState : {
@@ -23,7 +37,9 @@ const adminSlice = createSlice({
     accessToken : null,
     loading : false,
     success : false,
-    error : null
+    error : null,
+    vendors : [],
+    count : 0
   },
   reducers :{
     logoutAdminState : (state) =>{
@@ -52,6 +68,26 @@ const adminSlice = createSlice({
         state.error = null
       })
       .addCase(adminLoginThunk.rejected,(state,action)=>{
+        state.success = false
+        state.loading = false
+        state.error = action.payload
+      })
+
+      .addCase(getAllVendorsThunk.pending,(state)=>{
+        state.success = false
+        state.loading = true
+        state.error = null
+      })
+
+      .addCase(getAllVendorsThunk.fulfilled,(state,action) =>{
+        state.success = true
+        state.loading = false
+        state.vendors = action.payload.data
+        state.count = action.payload.count
+        state.error = null
+      })
+
+      .addCase(getAllVendorsThunk.rejected,(state,action) =>{
         state.success = false
         state.loading = false
         state.error = action.payload

@@ -1,6 +1,6 @@
 import React from 'react'
-import { useDispatch } from 'react-redux'
-import { useNavigate } from 'react-router-dom'
+import { useDispatch, useSelector } from 'react-redux'
+import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { logoutAdminState } from '../../features/admin.slice'
 import {
     LayoutDashboard,
@@ -17,11 +17,17 @@ import {
 function AdminSidebar() {
     const dispatch = useDispatch()
     const navigate = useNavigate()
+    const location = useLocation()
+    const adminState = useSelector((state) => state.admin)
+    const email = adminState.admin?.email
+    const name = adminState.admin?.name
 
     const handleLogout = () => {
         dispatch(logoutAdminState())
         navigate("/admin/login")
     }
+
+    const isActive = (path) => location.pathname === path
 
     return (
         <aside className="w-64 bg-[#131022] flex flex-col border-r border-gray-800 hidden md:flex h-full">
@@ -38,50 +44,50 @@ function AdminSidebar() {
                 <div className="px-4 mb-6">
                     <p className="px-4 text-[11px] font-semibold text-gray-500 mb-2 uppercase">Platform</p>
                     <nav className="space-y-1">
-                        <a href="#" className="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg bg-[#2A204C] text-white">
-                            <LayoutDashboard className="mr-3 h-5 w-5 text-purple-400" />
+                        <Link to="/admin/dashboard" className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive('/admin/dashboard') ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
+                            <LayoutDashboard className={`mr-3 h-5 w-5 ${isActive('/admin/dashboard') ? 'text-purple-400' : 'text-gray-500'}`} />
                             Dashboard
-                        </a>
-                        <a href="#" className="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg text-gray-400 hover:bg-gray-800/50 hover:text-white transition-colors">
-                            <Users className="mr-3 h-5 w-5 text-gray-500" />
+                        </Link>
+                        <Link to="#" className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive('/admin/users') ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
+                            <Users className={`mr-3 h-5 w-5 ${isActive('/admin/users') ? 'text-purple-400' : 'text-gray-500'}`} />
                             Users
-                        </a>
-                        <a href="#" className="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg text-gray-400 hover:bg-gray-800/50 hover:text-white transition-colors">
-                            <Store className="mr-3 h-5 w-5 text-gray-500" />
+                        </Link>
+                        <Link to="/admin/vendorManagement" className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive('/admin/vendors') ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
+                            <Store className={`mr-3 h-5 w-5 ${isActive('/admin/vendors') ? 'text-purple-400' : 'text-gray-500'}`} />
                             Vendors
-                        </a>
-                        <a href="#" className="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg text-gray-400 hover:bg-gray-800/50 hover:text-white transition-colors">
-                            <Calendar className="mr-3 h-5 w-5 text-gray-500" />
+                        </Link>
+                        <Link to="#" className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive('/admin/events') ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
+                            <Calendar className={`mr-3 h-5 w-5 ${isActive('/admin/events') ? 'text-purple-400' : 'text-gray-500'}`} />
                             Events
-                        </a>
+                        </Link>
                     </nav>
                 </div>
 
                 <div className="px-4 mb-6">
                     <p className="px-4 text-[11px] font-semibold text-gray-500 mb-2 uppercase">Management</p>
                     <nav className="space-y-1">
-                        <a href="#" className="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg text-gray-400 hover:bg-gray-800/50 hover:text-white transition-colors">
-                            <Ticket className="mr-3 h-5 w-5 text-gray-500" />
+                        <Link to="#" className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive('/admin/bookings') ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
+                            <Ticket className={`mr-3 h-5 w-5 ${isActive('/admin/bookings') ? 'text-purple-400' : 'text-gray-500'}`} />
                             Bookings
-                        </a>
-                        <a href="#" className="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg text-gray-400 hover:bg-gray-800/50 hover:text-white transition-colors">
-                            <CreditCard className="mr-3 h-5 w-5 text-gray-500" />
+                        </Link>
+                        <Link to="#" className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive('/admin/payments') ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
+                            <CreditCard className={`mr-3 h-5 w-5 ${isActive('/admin/payments') ? 'text-purple-400' : 'text-gray-500'}`} />
                             Payments
-                        </a>
-                        <a href="#" className="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg text-gray-400 hover:bg-gray-800/50 hover:text-white transition-colors">
-                            <BarChart3 className="mr-3 h-5 w-5 text-gray-500" />
+                        </Link>
+                        <Link to="#" className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive('/admin/analytics') ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
+                            <BarChart3 className={`mr-3 h-5 w-5 ${isActive('/admin/analytics') ? 'text-purple-400' : 'text-gray-500'}`} />
                             Analytics
-                        </a>
+                        </Link>
                     </nav>
                 </div>
 
                 <div className="px-4">
                     <p className="px-4 text-[11px] font-semibold text-gray-500 mb-2 uppercase">System</p>
                     <nav className="space-y-1">
-                        <a href="#" className="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg text-gray-400 hover:bg-gray-800/50 hover:text-white transition-colors">
-                            <Settings className="mr-3 h-5 w-5 text-gray-500" />
+                        <Link to="#" className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive('/admin/settings') ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
+                            <Settings className={`mr-3 h-5 w-5 ${isActive('/admin/settings') ? 'text-purple-400' : 'text-gray-500'}`} />
                             Settings
-                        </a>
+                        </Link>
                     </nav>
                 </div>
             </div>
@@ -92,12 +98,12 @@ function AdminSidebar() {
                     <div className="flex items-center">
                         <img
                             className="h-9 w-9 rounded-md object-cover"
-                            src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+                            src="https://www.google.com/imgres?q=admin%20Image&imgurl=https%3A%2F%2Fcdn-icons-png.flaticon.com%2F512%2F2304%2F2304226.png&imgrefurl=https%3A%2F%2Fwww.flaticon.com%2Ffree-icon%2Fadmin_2304226&docid=MPecgjYIogc5eM&tbnid=LZk5dbwIspAbdM&vet=12ahUKEwjjgs3TioGTAxVT2DgGHUsUDK0QnPAOegQIHxAB..i&w=512&h=512&hcb=2&ved=2ahUKEwjjgs3TioGTAxVT2DgGHUsUDK0QnPAOegQIHxAB"
                             alt="Admin avatar"
                         />
                         <div className="ml-3">
-                            <p className="text-sm font-medium text-white">Jonathan Davis</p>
-                            <p className="text-xs text-gray-500">admin@platform.com</p>
+                            <p className="text-sm font-medium text-white">{name || "Admin" }</p>
+                            <p className="text-xs text-gray-500">{ email || "admin@gmail.com" }</p>
                         </div>
                     </div>
                     <button onClick={handleLogout} className="p-1.5 text-gray-400 hover:text-white rounded-md hover:bg-gray-800 transition-colors" title="Logout">
