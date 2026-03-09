@@ -201,14 +201,14 @@ function AdminVendorManagement() {
                     </tr>
                   ) : vendors.length > 0 ?(
                         vendors.map((vendor) => (
-                            <tr key={vendor.id}>
-                                <td  className="px-6 py-4">{vendor._id}</td>
+                            <tr key={vendor._id}>
+                                <td  className="px-6 py-4">App id</td>
                                 <td  className="px-6 py-4">{vendor.businessName}</td>
                                 <td  className="px-6 py-4">{vendor.contactPhone}</td>
                                 <td  className="px-6 py-4">{vendor.eventCategory}</td>
                                 <td  className="px-6 py-4">{new Date(vendor.createdAt).toLocaleDateString()}</td>
                                 <td  className="px-6 py-4">{vendor.applicationStatus}</td>
-                                <td  className="px-6 py-4">Actions</td>
+                                <td  className="px-6 py-4"><Link to={`/admin/vendor-application/${vendor._id}`} className="text-purple-400 hover:underline">View Application</Link></td>
                                 
                             </tr>   
                         ))

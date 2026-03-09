@@ -2,7 +2,7 @@ import User from "../models/user.model.js"
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
 import { generateOTP } from "../utils/generateOtp.js"
-import sendOTP from "../utils/sendOtp.js"
+import {sendOTP} from "../utils/sendMail.js"
 import { generateAccessToken, generateRefreshToken } from "../utils/generateToken.js"
 import { hashToken } from "../utils/hashToken.js"
 import Otp from "../models/user.otp.model.js"
@@ -73,7 +73,7 @@ export const verifyOTP = async (req, res) => {
     const { userId, otp } = req.body;
 
     if(!userId || !otp){
-      return res.status(404).json({message : ""})
+      return res.status(404).json({message : "otp Required"})
     }
 
     const user = await User.findById(userId);
@@ -99,7 +99,7 @@ export const verifyOTP = async (req, res) => {
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       sameSite: "strict",
-      secure: false, 
+      secure: process.env.NODE_ENV === "production", 
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -125,7 +125,7 @@ export const loginUser = async (req, res) => {
 
     const user = await User.findOne({ email })
     if (!user || !user.isVerified)
-      res.status(400).json({ message: "Invalid Credentials" })
+      return res.status(400).json({ message: "Invalid Credentials" })
 
     const match = await bcrypt.compare(password, user.password)
 

@@ -13,3 +13,11 @@ export const logoutAdmin = (data) =>{
 export const getAllVendors = (data) => {
   return axiosInstance.get("/admin/vendorManagement",data)
 }
+
+export const getVendorById = (id) =>{
+  return axiosInstance.get(`/admin/vendor-application/${id}`)
+}
+
+export const approveVendorApplication = (id,message) =>{
+  return axiosInstance.patch(`/admin/vendor/approve-application`,{id,message})
+}

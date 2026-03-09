@@ -3,6 +3,7 @@ import User from "../models/user.model.js";
 import { generateAccessToken, generateRefreshToken } from "../utils/generateToken.js";
 import { hashToken } from "../utils/hashToken.js";
 import Vendor from "../models/vendor.model.js";
+import { sendMail } from "../utils/sendMail.js";
 
 
 export const AdminLogin = async(req,res)=>{
@@ -114,7 +115,9 @@ export const getAllVendors = async(req,res) =>{
 
 export const getVendorById = async(req,res) =>{
   try {
-    const vendor = await Vendor.findById(req.params.id)
+    const id = req.params.id
+    const vendor = await Vendor.findById(id)
+    
       .select("-password")
 
     if(!vendor){
@@ -135,4 +138,42 @@ export const getVendorById = async(req,res) =>{
       message : "Server Error"
     })
   }
+}
+
+
+export const vendorApprove = async(req,res) =>{
+  try {
+    const {id,message} = req.body
+    const vendor  = await Vendor.findById(id)
+    if(!vendor){
+      return res.status(404).json({
+        message : "Vendor not found"
+      })
+    }
+    vendor.applicationStatus = "approved"
+    await vendor.save()
+    sendMail(vendor.businessEmail,message,"Vendor Application Approved!")
+    return res.status(200).json({message:"Application Approved"})
+  } catch (error) {
+    console.log('Error in vendorApproval:',error)
+    return res.status(500).json({message:error.message})
+  }
+}
+
+export const rejectAppoval = async(req,res) =>{
+    try {
+      const {id,message} = req.body 
+      const vendor = await Vendor.findById(id)
+      if (!vendor){
+        return res.status(404).json({message:'Vendor not found'})
+      }
+      vendor.applicationStatus = 'rejected'
+      vendor.rejectionReason = message
+      vendor.save()
+      sendMail(vendor.businessEmail,message,'Vendor Application rejected!')
+      return res.status(200).json({message:'Application Rejected!'})
+    } catch (error) {
+      console.log('Error in rejectApproval:',error)
+      return res.status(500).json({message:error.message})
+    }
 }

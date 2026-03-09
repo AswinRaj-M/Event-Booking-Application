@@ -30,6 +30,20 @@ export const getAllVendorsThunk = createAsyncThunk(
   }
 )
 
+
+export  const getVendorByIdThunk =createAsyncThunk(
+  "admin/vendor-application",
+  async(id,thunkAPI) =>{
+    try {
+      const response = await adminAPI.getVendorById(id)
+      return response.data.data
+    } catch (error) {
+      thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to get vendor by id"
+      )
+    }
+  }
+)
 const adminSlice = createSlice({
   name :"admin",
   initialState : {
@@ -39,6 +53,7 @@ const adminSlice = createSlice({
     success : false,
     error : null,
     vendors : [],
+    vendorDetails: null,
     count : 0
   },
   reducers :{
@@ -88,6 +103,24 @@ const adminSlice = createSlice({
       })
 
       .addCase(getAllVendorsThunk.rejected,(state,action) =>{
+        state.success = false
+        state.loading = false
+        state.error = action.payload
+      })
+
+      .addCase(getVendorByIdThunk.pending,(state,action) =>{
+        state.success = false
+        state.loading = true
+      })
+
+      .addCase(getVendorByIdThunk.fulfilled,(state,action) =>{
+        state.success = true
+        state.loading = false
+        state.error = null
+        state.vendorDetails = action.payload
+      })
+
+      .addCase(getVendorByIdThunk.rejected,(state,action)=>{
         state.success = false
         state.loading = false
         state.error = action.payload

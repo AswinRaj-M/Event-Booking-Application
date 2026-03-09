@@ -5,6 +5,7 @@
     import VerifyOtp from '../pages/auth/VerifyOtp.jsx';
     import Home from '../pages/home.jsx'
     import ProtectedRoute from '../auth/ProtectedRoute.jsx';
+    import Loader from '../components/common/Loader.jsx';
 
     const AppRoutes = () => {
         return (
@@ -15,6 +16,7 @@
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
                 <Route path="/verify-otp" element={<VerifyOtp />} />
+                <Route path="/spinner" element={<Loader/>}/>
             </Routes>
         );
     };

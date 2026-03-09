@@ -1,12 +1,57 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     ArrowLeft, Printer, Mail, Utensils, Phone, Globe,
     FileText, Image as ImageIcon, CheckCircle, XCircle, ChevronRight,
     User, Calendar, Building, Search, Bell, Sidebar
 } from 'lucide-react';
 import AdminSidebar from '../../components/admin/AdminSidebar';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { getVendorByIdThunk } from '../../features/admin.slice';
+import { approveVendorApplication } from '../../services/admin.api';
+import { toast } from 'sonner';
+import Loader from '../../components/common/Loader';
 
 const AdminVendorApplicationView = () => {
+
+    const { id } = useParams()
+    const dispatch = useDispatch()
+   
+
+    const { vendorDetails, loading } = useSelector((state) => state.admin)
+    const [message,setMessage] = useState('')
+    
+    useEffect(() => {
+        dispatch(getVendorByIdThunk(id))
+    }, [dispatch, id])
+
+    const approveApplication = async () =>{
+        try {
+            await approveVendorApplication(id,message)
+            toast.success('Successfully approved status')
+            dispatch(getVendorByIdThunk(id))
+        } catch (error) {
+            console.log('error:',error)
+        }
+    }
+
+    if (loading) {
+        return (
+           <Loader/>
+        );
+    }
+
+    if (!vendorDetails) {
+        return (
+            <div className="flex h-screen bg-[#0B0914] text-white font-sans overflow-hidden">
+                <AdminSidebar />
+                <main className="flex-1 flex flex-col h-full bg-[#0B0914] items-center justify-center">
+                    <h2 className="text-2xl font-bold text-gray-400">Vendor Not Found</h2>
+                </main>
+            </div>
+        );
+    }
+
     return (
         <div className="flex h-screen bg-[#0B0914] text-white font-sans overflow-hidden">
             {/* Sidebar */}
@@ -22,7 +67,7 @@ const AdminVendorApplicationView = () => {
                         <span className="mx-2">&gt;</span>
                         <span className="font-medium">Vendor Applications</span>
                         <span className="mx-2">&gt;</span>
-                        <span className="text-purple-400 font-medium">Review #VN-892</span>
+                        <span className="text-purple-400 font-medium">Review Application</span>
                     </div>
                     <div className="flex items-center gap-4">
                         <div className="relative hidden md:block">
@@ -50,15 +95,15 @@ const AdminVendorApplicationView = () => {
                             <div className="flex items-center space-x-4 mb-2">
                                 <button className="flex items-center space-x-2 px-3 py-1.5 bg-[#151221] hover:bg-[#2A204C] border border-gray-800 hover:border-purple-500/50 rounded-lg text-sm transition-colors text-purple-300">
                                     <ArrowLeft size={16} />
-                                    <span className="hidden sm:inline">Back</span>
+                                    <span className="hidden sm:inline">Back to list</span>
                                 </button>
-                                <span className="px-3 py-1 bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 rounded-md text-xs font-medium">
-                                    Pending Review
+                                <span className="px-3 py-1 bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 rounded-md text-xs font-medium uppercase">
+                                    {vendorDetails?.applicationStatus || 'Status'}
                                 </span>
-                                <span className="text-sm text-gray-500">ID: VN-2024-892</span>
+                                <span className="text-sm text-gray-500">ID: {vendorDetails?._id?.substring(0, 8) || '#'}</span>
                             </div>
                             <h1 className="text-2xl font-bold text-white mb-1">Vendor Application Review</h1>
-                            <p className="text-gray-400 text-sm">Submitted on October 24, 2023 at 10:42 AM</p>
+                            <p className="text-gray-400 text-sm">Submitted on {vendorDetails?.createdAt ? new Date(vendorDetails.createdAt).toLocaleDateString() : 'Date'}</p>
                         </div>
 
                         <div className="flex space-x-3">
@@ -83,12 +128,8 @@ const AdminVendorApplicationView = () => {
                             <div className="bg-[#151221] border border-gray-800/80 rounded-xl p-6 relative overflow-hidden">
                                 <div className="flex flex-col sm:flex-row sm:items-start gap-6 relative z-10">
                                     <div className="relative shrink-0">
-                                        <div className="w-24 h-24 rounded-xl overflow-hidden border-2 border-gray-700/50">
-                                            <img
-                                                src="https://images.unsplash.com/photo-1555244162-803834f87a4d?ixlib=rb-4.0.3&auto=format&fit=crop&w=256&q=80"
-                                                alt="Vendor Cover"
-                                                className="w-full h-full object-cover"
-                                            />
+                                        <div className="w-24 h-24 rounded-xl overflow-hidden border-2 border-gray-700/50 bg-[#2A204C] flex items-center justify-center text-3xl font-bold text-purple-300">
+                                            {vendorDetails?.businessName?.charAt(0)?.toUpperCase()}
                                         </div>
                                         <div className="absolute -bottom-2 -right-2 bg-[#151221] rounded-full p-1">
                                             <div className="bg-emerald-500 rounded-full p-1 shadow-[0_0_10px_rgba(16,185,129,0.3)]">
@@ -98,16 +139,16 @@ const AdminVendorApplicationView = () => {
                                     </div>
 
                                     <div className="flex-1">
-                                        <h2 className="text-2xl font-bold text-white mb-2">Urban Eats Catering</h2>
+                                        <h2 className="text-2xl font-bold text-white mb-2">{vendorDetails?.businessName || 'Business Name'}</h2>
                                         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-400 mb-6">
                                             <div className="flex items-center space-x-1.5">
                                                 <User size={14} />
-                                                <span>Organizer: Sarah Jenkins</span>
+                                                <span>Organizer: {vendorDetails?.organizerName || 'Name'}</span>
                                             </div>
                                             <div className="hidden sm:block w-1.5 h-1.5 bg-gray-600 rounded-full"></div>
                                             <div className="flex items-center space-x-1.5">
                                                 <Calendar size={14} />
-                                                <span>Est. 2018 (5 Years Exp.)</span>
+                                                <span>{vendorDetails?.experience || 'Experience Info'}</span>
                                             </div>
                                         </div>
 
@@ -116,28 +157,30 @@ const AdminVendorApplicationView = () => {
                                                 <p className="text-xs text-gray-500 mb-1.5">Category</p>
                                                 <div className="flex items-center space-x-2">
                                                     <Utensils size={16} className="text-purple-400" />
-                                                    <span className="font-medium text-gray-200">Food & Beverage</span>
+                                                    <span className="font-medium text-gray-200">{vendorDetails?.eventCategory || 'Category Name'}</span>
                                                 </div>
                                             </div>
                                             <div>
                                                 <p className="text-xs text-gray-500 mb-1.5">Phone Number</p>
                                                 <div className="flex items-center space-x-2">
                                                     <Phone size={16} className="text-gray-400" />
-                                                    <span className="font-medium text-gray-200">+1 (555) 123-4567</span>
+                                                    <span className="font-medium text-gray-200">{vendorDetails?.contactPhone || 'Phone Number'}</span>
                                                 </div>
                                             </div>
                                             <div>
                                                 <p className="text-xs text-gray-500 mb-1.5">Email Address</p>
                                                 <div className="flex items-center space-x-2">
                                                     <Mail size={16} className="text-gray-400" />
-                                                    <span className="font-medium text-gray-200">sarah.j@urbaneats.com</span>
+                                                    <span className="font-medium text-gray-200">{vendorDetails?.businessEmail || 'Email Address'}</span>
                                                 </div>
                                             </div>
                                             <div>
-                                                <p className="text-xs text-gray-500 mb-1.5">Website</p>
+                                                <p className="text-xs text-gray-500 mb-1.5">Website / Instagram</p>
                                                 <div className="flex items-center space-x-2 text-purple-400 hover:text-purple-300 cursor-pointer transition-colors">
                                                     <Globe size={16} />
-                                                    <span className="font-medium truncate underline-offset-4 hover:underline">urbaneats-catering.com</span>
+                                                    <span className="font-medium truncate underline-offset-4 hover:underline">
+                                                        {vendorDetails?.websiteOrInstagram || 'URL/Handle'}
+                                                    </span>
                                                 </div>
                                             </div>
                                         </div>
@@ -157,13 +200,7 @@ const AdminVendorApplicationView = () => {
                                         <h4 className="text-sm font-medium text-gray-400 mb-3">Short Description</h4>
                                         <div className="bg-[#0B0914] border border-gray-800/50 rounded-xl p-5 text-sm leading-relaxed text-gray-300">
                                             <p className="mb-4">
-                                                Urban Eats Catering is a premium catering service specializing in urban street food with a gourmet twist. We focus on locally sourced ingredients and sustainable practices.
-                                            </p>
-                                            <p className="mb-4">
-                                                Our team has served at over 200 events across the metropolitan area, ranging from corporate luncheons to large-scale music festivals. We are fully licensed and insured, with a fleet of 3 food trucks and a portable serving station setup.
-                                            </p>
-                                            <p>
-                                                Looking to expand our presence at the upcoming Summer Fest series.
+                                                {vendorDetails?.description || 'No description provided.'}
                                             </p>
                                         </div>
                                     </div>
@@ -171,25 +208,29 @@ const AdminVendorApplicationView = () => {
                                     <div>
                                         <h4 className="text-sm font-medium text-gray-400 mb-3">Uploaded Documents</h4>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            <div className="flex items-center space-x-4 p-4 border border-gray-800 bg-[#0B0914] rounded-xl cursor-pointer hover:bg-[#2A204C]/50 hover:border-purple-500/30 transition-all duration-200 group">
-                                                <div className="p-3 bg-red-500/10 text-red-400 rounded-lg group-hover:bg-red-500/20 transition-colors">
-                                                    <FileText size={20} />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-sm font-medium text-gray-200 truncate group-hover:text-purple-100 transition-colors">Business_License.pdf</p>
-                                                    <p className="text-xs text-gray-500 mt-0.5">2.4 MB • Oct 24, 2023</p>
-                                                </div>
-                                            </div>
+                                            {vendorDetails?.businessDocument?.fileUrl && (
+                                                <a href={vendorDetails.businessDocument.fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center space-x-4 p-4 border border-gray-800 bg-[#0B0914] rounded-xl cursor-pointer hover:bg-[#2A204C]/50 hover:border-purple-500/30 transition-all duration-200 group">
+                                                    <div className="p-3 bg-red-500/10 text-red-400 rounded-lg group-hover:bg-red-500/20 transition-colors">
+                                                        <FileText size={20} />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-medium text-gray-200 truncate group-hover:text-purple-100 transition-colors">Business Document</p>
+                                                        <p className="text-xs text-gray-500 mt-0.5">Click to view</p>
+                                                    </div>
+                                                </a>
+                                            )}
 
-                                            <div className="flex items-center space-x-4 p-4 border border-gray-800 bg-[#0B0914] rounded-xl cursor-pointer hover:bg-[#2A204C]/50 hover:border-purple-500/30 transition-all duration-200 group">
-                                                <div className="p-3 bg-blue-500/10 text-blue-400 rounded-lg group-hover:bg-blue-500/20 transition-colors">
-                                                    <ImageIcon size={20} />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-sm font-medium text-gray-200 truncate group-hover:text-purple-100 transition-colors">Menu_Sample_2024.jpg</p>
-                                                    <p className="text-xs text-gray-500 mt-0.5">1.8 MB • Oct 24, 2023</p>
-                                                </div>
-                                            </div>
+                                            {vendorDetails?.idProof?.fileUrl && (
+                                                <a href={vendorDetails.idProof.fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center space-x-4 p-4 border border-gray-800 bg-[#0B0914] rounded-xl cursor-pointer hover:bg-[#2A204C]/50 hover:border-purple-500/30 transition-all duration-200 group">
+                                                    <div className="p-3 bg-blue-500/10 text-blue-400 rounded-lg group-hover:bg-blue-500/20 transition-colors">
+                                                        <ImageIcon size={20} />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-medium text-gray-200 truncate group-hover:text-purple-100 transition-colors">ID Proof</p>
+                                                        <p className="text-xs text-gray-500 mt-0.5">Click to view</p>
+                                                    </div>
+                                                </a>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -208,26 +249,21 @@ const AdminVendorApplicationView = () => {
                                 </div>
 
                                 <div className="space-y-4">
-                                    <div className="bg-[#0B0914] border border-gray-800/50 rounded-xl p-4">
-                                        <p className="text-xs text-gray-500 mb-1.5">Address</p>
-                                        <p className="text-sm font-medium text-gray-200">123 Culinary Avenue, Suite 400</p>
-                                    </div>
-
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="bg-[#0B0914] border border-gray-800/50 rounded-xl p-4">
                                             <p className="text-xs text-gray-500 mb-1.5">City</p>
-                                            <p className="text-sm font-medium text-gray-200">Portland</p>
+                                            <p className="text-sm font-medium text-gray-200">{vendorDetails?.location?.city || 'City name'}</p>
                                         </div>
                                         <div className="bg-[#0B0914] border border-gray-800/50 rounded-xl p-4">
                                             <p className="text-xs text-gray-500 mb-1.5">State</p>
-                                            <p className="text-sm font-medium text-gray-200">Oregon</p>
+                                            <p className="text-sm font-medium text-gray-200">{vendorDetails?.location?.state || 'State name'}</p>
                                         </div>
                                     </div>
 
                                     <div className="bg-[#0B0914] border border-gray-800/50 rounded-xl p-4 flex justify-between items-center">
                                         <div>
                                             <p className="text-xs text-gray-500 mb-1.5">Country</p>
-                                            <p className="text-sm font-medium text-gray-200">United States</p>
+                                            <p className="text-sm font-medium text-gray-200">{vendorDetails?.location?.country || 'Country name'}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -246,6 +282,8 @@ const AdminVendorApplicationView = () => {
                                     <div>
                                         <label className="block text-sm font-medium text-gray-300 mb-2">Review Notes / Reason</label>
                                         <textarea
+                                        value={message}
+                                        onChange={(e)=>setMessage(e.target.value)}
                                             rows={3}
                                             className="w-full bg-[#0B0914] border border-gray-700/80 rounded-xl p-3 text-sm focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 text-gray-200 placeholder-gray-600 resize-none transition-all"
                                             placeholder="Add internal notes..."
@@ -268,8 +306,8 @@ const AdminVendorApplicationView = () => {
                                         </div>
                                     </div>
 
-                                    <div className="pt-4 space-y-3">
-                                        <button className="w-full flex items-center justify-center space-x-2 py-3 bg-emerald-600/90 hover:bg-emerald-500 text-white rounded-xl text-sm font-semibold transition-all shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+                                   {vendorDetails.applicationStatus !== 'approved' ?( <div className="pt-4 space-y-3">
+                                        <button onClick={approveApplication} className="w-full flex items-center justify-center space-x-2 py-3 bg-emerald-600/90 hover:bg-emerald-500 text-white rounded-xl text-sm font-semibold transition-all shadow-[0_0_15px_rgba(16,185,129,0.15)]">
                                             <CheckCircle size={16} />
                                             <span>Approve Request</span>
                                         </button>
@@ -277,7 +315,10 @@ const AdminVendorApplicationView = () => {
                                             <XCircle size={16} />
                                             <span>Reject Application</span>
                                         </button>
-                                    </div>
+                                    </div>) :( <button className="w-full flex items-center justify-center space-x-2 py-3 bg-[#0B0914] hover:bg-red-500/10 border border-red-500/30 hover:border-red-500 text-red-500 rounded-xl text-sm font-semibold transition-all">
+                                            <XCircle size={16} />
+                                            <span>Suspend Vendor</span>
+                                        </button>)}
                                 </div>
                             </div>
 

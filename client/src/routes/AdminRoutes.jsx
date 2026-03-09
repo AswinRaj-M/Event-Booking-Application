@@ -10,8 +10,8 @@ function AdminRoutes() {
     <Routes>
       <Route path="/login" element={<AdminLogin/>}/>
       <Route path='/dashboard' element={<AdminDashboard/>}/>
-      <Route path='/vendorManagement'  element={<AdminVendorManagement/>}/>
-      <Route path="/vendor-application" element={<AdminVendorApplicationView/>}/>
+      <Route path='/vendors'  element={<AdminVendorManagement/>}/>
+      <Route path="/vendor-application/:id" element={<AdminVendorApplicationView/>}/>
     </Routes>
   )
 }

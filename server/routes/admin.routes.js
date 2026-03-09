@@ -3,7 +3,8 @@ import {
   AdminLogin,
   logoutAdmin,
   getAllVendors,
-  getVendorById
+  getVendorById,
+  vendorApprove
 
 } from "../controllers/admin.controller.js" 
 
@@ -14,8 +15,8 @@ const router = express.Router()
 router.post('/login',AdminLogin)
 router.post('/logout',logoutAdmin)
 router.get("/vendorManagement",getAllVendors)
-router.get('/vendor/:id',getVendorById)
-
+router.get('/vendor-application/:id',getVendorById)
+router.patch('/vendor/approve-application',vendorApprove)
 
 
 

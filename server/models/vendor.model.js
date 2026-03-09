@@ -31,6 +31,10 @@ const vendorSchema = new mongoose.Schema({
     type : String,
     required : true
   },
+  role:{
+    type : String,
+    default : "vendor"
+  },
   contactPhone : {
     type : String,
     required : true,
@@ -38,6 +42,10 @@ const vendorSchema = new mongoose.Schema({
   agreeTermsAndConditions  :{
       type : Boolean,
       required : true
+    },
+    emailVerify :{
+      type : Boolean,
+      defualt :false
     },
   eventCategory : String,
   experience : String,

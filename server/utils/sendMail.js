@@ -1,7 +1,7 @@
 import {getTransporter} from "../config/mail.js"
 
 
-const sendOTP = async (email, otp) => {
+export const sendOTP = async (email, otp) => {
   try {
     const transporter = getTransporter()
     await transporter.sendMail({
@@ -60,4 +60,61 @@ const sendOTP = async (email, otp) => {
   }
 };
 
-export default sendOTP
+
+
+export const sendMail = async (email, feedback, sub) => {
+  try {
+    const transporter = getTransporter();
+
+    await transporter.sendMail({
+      from: `"Festivo Events" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: sub,
+      html: `
+      <div style="font-family: Arial, sans-serif; background:#f4f4f4; padding:30px;">
+        <div style="max-width:600px; margin:auto; background:white; padding:30px; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.1);">
+          
+          <h2 style="color:#ff6b35; text-align:center;">
+            Festivo Events 🎉
+          </h2>
+
+          <p style="font-size:16px; color:#333;">
+            Hello,
+          </p>
+
+          <p style="font-size:15px; color:#555;">
+            Thank you for reaching out to <b>Festivo Events</b>. We truly appreciate your feedback.
+          </p>
+
+          <div style="background:#f9f9f9; padding:15px; border-left:4px solid #ff6b35; margin:20px 0;">
+            <p style="margin:0; color:#444; font-size:15px;">
+              ${feedback}
+            </p>
+          </div>
+
+          <p style="font-size:15px; color:#555;">
+            Our team will review your message and get back to you if necessary.
+          </p>
+
+          <p style="margin-top:30px; font-size:14px; color:#777;">
+            Best Regards,<br/>
+            <b>Festivo Events Team</b>
+          </p>
+
+          <hr style="margin:30px 0"/>
+
+          <p style="font-size:12px; color:#aaa; text-align:center;">
+            © ${new Date().getFullYear()} Festivo Events. All rights reserved.
+          </p>
+
+        </div>
+      </div>
+      `
+    });
+
+    console.log(`Email sent to ${email}`);
+  } catch (error) {
+    console.error("Error in send mail:", error);
+    throw new Error("Error in email sending");
+  }
+};
