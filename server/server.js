@@ -7,6 +7,7 @@ import connectDB from "./config/db.js"
 import userRoutes from './routes/user.routes.js'
 import adminRoutes from "./routes/admin.routes.js"
 import vendorRoutes from "./routes/vendor.routes.js"
+import { globalErrorHandler } from "./middleware/error.middleware.js"
 
 
 connectDB()
@@ -25,6 +26,9 @@ app.use(cors({
 app.use("/api/users",userRoutes)
 app.use("/api/admin",adminRoutes)
 app.use("/api/vendor",vendorRoutes)
+
+
+app.use(globalErrorHandler);
 
 const PORT = process.env.PORT || 5000
 

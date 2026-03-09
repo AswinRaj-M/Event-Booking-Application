@@ -4,176 +4,134 @@ import { generateAccessToken, generateRefreshToken } from "../utils/generateToke
 import { hashToken } from "../utils/hashToken.js";
 import Vendor from "../models/vendor.model.js";
 import { sendMail } from "../utils/sendMail.js";
+import { AppError } from "../utils/AppError.js";
+import { asyncHandler } from "../middleware/error.middleware.js";
 
 
-export const AdminLogin = async(req,res)=>{
-  try {
-    const {email,password} = req.body
-    if(!email || !password){
-      return res.status(400).json({message : "Email and Password are Required"})
-    }
-
-    const admin = await User.findOne({email})
-    if(!admin){
-      return res.status(401).json({message : "Invalid Credentials"})
-    }
-
-    if(admin.role !== "admin"){
-      return res.status(403).json({message : "Access Denied. Not An Admin"})
-    }
-
-    const isMatch = await bcrypt.compare(password,admin.password)
-
-    if(!isMatch){
-      return res.status(401).json({message : "Invalid Password"})
-    }
-
-    const accessToken = generateAccessToken(admin._id,admin.role)
-    const refreshToken = generateRefreshToken(admin._id,admin.role)
-    admin.refreshToken = hashToken(refreshToken)
-    await admin.save()
-
-    res.cookie("refreshToken", refreshToken,{
-      httpOnly : true,
-      secure : false,
-      sameSite : "strict",
-      maxAge : 7 * 24 * 60 * 60 * 1000,
-    })
-
-    res.status(200).json({
-      message : "Admin Logged In Successfully",
-      accessToken,
-      admin :{
-        id : admin._id,
-        name : admin.fullName,
-        email : admin.email,
-        role : admin.role
-      }
-    })
-  } catch (error) {
-    console.error(error)
-    return res.status(500).json({message : "Server Error"})
+export const AdminLogin = asyncHandler(async (req, res) => {
+  const { email, password } = req.body
+  if (!email || !password) {
+    throw new AppError("Email and Password are Required", 400)
   }
-}
 
-
-export const logoutAdmin = async(req,res) =>{
-  try {
-    const token = req.cookies.refreshToken
-
-    if(token){
-      const hashed = hashToken(token)
-      await User.findOneAndUpdate(
-        {refreshToken : hashed},
-        {$set : {refreshToken : null}}
-      )
-    }
-
-    res.clearCookie("refreshToken",{
-      httpOnly : true,
-      sameSite : "strict",
-      secure : false
-    })
-    return res.status(200).json({message : "Admin Logged Out Successfully"})
-  } catch (error) {
-    console.error("Error from the admin logout",error)
-    return res.status(500).json({message : "Server Error"})
+  const admin = await User.findOne({ email })
+  if (!admin) {
+    throw new AppError("Invalid Credentials", 401)
   }
-}
 
-export const getAllVendors = async(req,res) =>{
-  try {
-      const {status} = req.query
-
-      let filter = {}
-
-      if(status){
-        filter.applicationStatus = status
-      }
-
-      const vendors = await Vendor.find(filter)
-        .select("-password")
-        .sort({createdAt : -1})
-
-
-      return res.status(200).json({
-        success : true,
-        count : vendors.length,
-        data : vendors
-      })
-
-
-  } catch (error) {
-    console.error("Error from admin get all vendors ")
-    return res.status(500).json({
-      success : false,
-      message :  "Server Error"
-    }) 
+  if (admin.role !== "admin") {
+    throw new AppError("Access Denied. Not An Admin", 403)
   }
-}
 
+  const isMatch = await bcrypt.compare(password, admin.password)
 
-export const getVendorById = async(req,res) =>{
-  try {
-    const id = req.params.id
-    const vendor = await Vendor.findById(id)
-    
-      .select("-password")
-
-    if(!vendor){
-      return res.status(404).json({
-        success : false,
-        message : "Vendor not Found"
-      })
-    }
-
-    return res.status(200).json({
-      success : true,
-      data : vendor
-    })
-  } catch (error) {
-    console.error("Error from the get vendor by id ",error)
-    return res.status(500).json({
-      success : false,
-      message : "Server Error"
-    })
+  if (!isMatch) {
+    throw new AppError("Invalid Password", 401)
   }
-}
 
+  const accessToken = generateAccessToken(admin._id, admin.role)
+  const refreshToken = generateRefreshToken(admin._id, admin.role)
+  admin.refreshToken = hashToken(refreshToken)
+  await admin.save()
 
-export const vendorApprove = async(req,res) =>{
-  try {
-    const {id,message} = req.body
-    const vendor  = await Vendor.findById(id)
-    if(!vendor){
-      return res.status(404).json({
-        message : "Vendor not found"
-      })
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: false,
+    sameSite: "strict",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  })
+
+  res.status(200).json({
+    message: "Admin Logged In Successfully",
+    accessToken,
+    admin: {
+      id: admin._id,
+      name: admin.fullName,
+      email: admin.email,
+      role: admin.role
     }
-    vendor.applicationStatus = "approved"
-    await vendor.save()
-    sendMail(vendor.businessEmail,message,"Vendor Application Approved!")
-    return res.status(200).json({message:"Application Approved"})
-  } catch (error) {
-    console.log('Error in vendorApproval:',error)
-    return res.status(500).json({message:error.message})
+  })
+});
+
+
+export const logoutAdmin = asyncHandler(async (req, res) => {
+  const token = req.cookies.refreshToken
+
+  if (token) {
+    const hashed = hashToken(token)
+    await User.findOneAndUpdate(
+      { refreshToken: hashed },
+      { $set: { refreshToken: null } }
+    )
   }
-}
 
-export const rejectAppoval = async(req,res) =>{
-    try {
-      const {id,message} = req.body 
-      const vendor = await Vendor.findById(id)
-      if (!vendor){
-        return res.status(404).json({message:'Vendor not found'})
-      }
-      vendor.applicationStatus = 'rejected'
-      vendor.rejectionReason = message
-      vendor.save()
-      sendMail(vendor.businessEmail,message,'Vendor Application rejected!')
-      return res.status(200).json({message:'Application Rejected!'})
-    } catch (error) {
-      console.log('Error in rejectApproval:',error)
-      return res.status(500).json({message:error.message})
-    }
-}
+  res.clearCookie("refreshToken", {
+    httpOnly: true,
+    sameSite: "strict",
+    secure: false
+  })
+  return res.status(200).json({ message: "Admin Logged Out Successfully" })
+});
+
+export const getAllVendors = asyncHandler(async (req, res) => {
+  const { status } = req.query
+
+  let filter = {}
+
+  if (status) {
+    filter.applicationStatus = status
+  }
+
+  const vendors = await Vendor.find(filter)
+    .select("-password")
+    .sort({ createdAt: -1 })
+
+
+  return res.status(200).json({
+    success: true,
+    count: vendors.length,
+    data: vendors
+  })
+});
+
+
+export const getVendorById = asyncHandler(async (req, res) => {
+  const id = req.params.id
+  const vendor = await Vendor.findById(id)
+    .select("-password")
+
+  if (!vendor) {
+    throw new AppError("Vendor not Found", 404)
+  }
+
+  return res.status(200).json({
+    success: true,
+    data: vendor
+  })
+});
+
+
+export const vendorApprove = asyncHandler(async (req, res) => {
+  const { id, message } = req.body
+  const vendor = await Vendor.findById(id)
+  if (!vendor) {
+    throw new AppError("Vendor not found", 404)
+  }
+  vendor.applicationStatus = "approved"
+  await vendor.save()
+  sendMail(vendor.businessEmail, message, "Vendor Application Approved!")
+  return res.status(200).json({ message: "Application Approved" })
+});
+
+export const rejectAppoval = asyncHandler(async (req, res) => {
+  const { id, message } = req.body
+  const vendor = await Vendor.findById(id)
+  if (!vendor) {
+    throw new AppError("Vendor not found", 404)
+  }
+  vendor.applicationStatus = 'rejected'
+  vendor.rejectionReason = message
+  vendor.save()
+  sendMail(vendor.businessEmail, message, 'Vendor Application rejected!')
+  return res.status(200).json({ message: 'Application Rejected!' })
+});
