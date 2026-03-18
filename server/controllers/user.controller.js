@@ -7,10 +7,8 @@ import { generateAccessToken, generateRefreshToken } from "../utils/generateToke
 import { hashToken } from "../utils/hashToken.js"
 import Otp from "../models/user.otp.model.js"
 import { AppError } from "../utils/AppError.js"
-import { asyncHandler } from "../middleware/error.middleware.js"
 
-
-export const registerUser = asyncHandler(async (req, res) => {
+export const registerUser = async (req, res) => {
   const {
     fullName,
     email,
@@ -23,8 +21,8 @@ export const registerUser = asyncHandler(async (req, res) => {
   if (password != confirmPassword) {
     throw new AppError("Password do not match", 400)
   }
-  if (!agreeTermsAndConditions) {
-    throw new AppError("You must have to agree the terms and conditions", 400)
+  if (!agreeTermsAndConditions || (agreeTermsAndConditions !== true && agreeTermsAndConditions !== "true")) {
+    throw new AppError("You must agree to the terms and conditions", 400)
   }
 
   const existingUser = await User.findOne({ email });
@@ -54,17 +52,23 @@ export const registerUser = asyncHandler(async (req, res) => {
     userId: user._id,
     otp
   })
-  await sendOTP(email, otp)
-  console.log("otp is ", otp)
-  console.log("OTP sent to", email)
+    try {
+      await sendOTP(email, otp)
+    } catch (mailError) {
+      console.error("Failed to send OTP:", mailError)
+      throw new AppError("User registered but failed to send verification email. Please try to login to resend OTP.", 500)
+    }
 
-  return res.status(201).json({
-    message: "Otp Send To Email",
-    userId: user._id
-  })
-})
+    console.log("otp is ", otp)
+    console.log("OTP sent to", email)
 
-export const verifyOTP = asyncHandler(async (req, res) => {
+    return res.status(201).json({
+      message: "Otp Send To Email",
+      userId: user._id
+    })
+}
+
+export const verifyOTP = async (req, res) => {
   const { userId, otp } = req.body;
 
   if (!userId || !otp) {
@@ -107,15 +111,18 @@ export const verifyOTP = asyncHandler(async (req, res) => {
       role: user.role,
     },
   });
-});
+}
 
 
-export const loginUser = asyncHandler(async (req, res) => {
-  const { email, password } = req.body
+export const loginUser = async (req, res) => {
+  const { email, password } = req.body  
 
   const user = await User.findOne({ email })
-  if (!user || !user.isVerified)
+  if (!user)
     throw new AppError("Invalid Credentials", 400)
+
+  if (!user.isVerified)
+    throw new AppError("Please verify your email to login", 400)
 
   const match = await bcrypt.compare(password, user.password)
 
@@ -128,7 +135,7 @@ export const loginUser = asyncHandler(async (req, res) => {
 
   user.refreshToken = hashToken(refreshToken)
   await user.save();
-
+  
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
     secure: false,
@@ -136,7 +143,7 @@ export const loginUser = asyncHandler(async (req, res) => {
     maxAge: 7 * 24 * 60 * 60 * 1000,
   })
 
-  res.json({
+  return res.json({
     accessToken,
     user: {
       id: user._id,
@@ -145,11 +152,11 @@ export const loginUser = asyncHandler(async (req, res) => {
       role: user.role
     }
   })
-});
+}
 
 
 
-export const refreshAccessToken = asyncHandler(async (req, res) => {
+export const refreshAccessToken = async (req, res) => {
   const token = req.cookies.refreshToken
 
   if (!token)
@@ -170,11 +177,11 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
   const newAccessToken = generateAccessToken(user)
 
   res.json({ accessToken: newAccessToken })
-});
+}
 
 
 
-export const logoutUser = asyncHandler(async (req, res) => {
+export const logoutUser = async (req, res) => {
   const token = req.cookies.refreshToken;
   if (token) {
     const hashed = hashToken(token)
@@ -191,4 +198,4 @@ export const logoutUser = asyncHandler(async (req, res) => {
   })
 
   return res.status(200).json({ message: "Logged out Successfully" })
-});
+}

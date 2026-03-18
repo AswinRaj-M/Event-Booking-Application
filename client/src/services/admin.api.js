@@ -19,5 +19,9 @@ export const getVendorById = (id) =>{
 }
 
 export const approveVendorApplication = (id,message) =>{
-  return axiosInstance.patch(`/admin/vendor/approve-application`,{id,message})
+  return axiosInstance.patch(`/admin/vendors/approve-application`,{id,message})
+}
+
+export const rejectVendorAppplication = (id,message) =>{
+  return axiosInstance.patch(`/admin/vendors/reject-application`,{id,message})
 }

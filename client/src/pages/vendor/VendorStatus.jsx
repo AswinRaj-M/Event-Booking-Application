@@ -1,65 +1,32 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { vendorLogoutState } from '../../features/vendorSlice';
 import logo from '../../assets/logo.jpeg';
-import { CheckCircle2, Clock, XCircle, RefreshCw } from 'lucide-react';
+import { CheckCircle2, Clock, XCircle, RefreshCw, LogOut } from 'lucide-react';
 
-
-const VendorStatus = ({ status = 'pending' }) => {
+const VendorStatus = () => {
     const location = useLocation()
-    const businessName = location.state.businessName || ""
+    const dispatch = useDispatch()
+    const navigate = useNavigate()
+    const vendor = useSelector((state) => state.vendor?.vendor)
+    
+    const status = vendor?.applicationStatus || 'pending';
+    const businessName = vendor?.businessName || location.state?.businessName || "";
+    
+    useEffect(() => {
+        if (status === 'approved') {
+            navigate('/vendor/dashboard', { replace: true });
+        }
+    }, [status, navigate]);
+
+    const handleLogout = () => {
+        dispatch(vendorLogoutState());
+        navigate('/login', { replace: true });
+    };
+
     const renderStatusContent = () => {
         switch (status) {
-            case 'approved':
-                return (
-                    <div className="w-full bg-[#0a0a0a] rounded-2xl border border-white/5 overflow-hidden">
-                        {/* Status Header Bar */}
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-6 border-b border-white/5 gap-4">
-                            <div>
-                                <h3 className="text-white font-medium text-lg">Application Details</h3>
-                                <p className="text-gray-500 text-sm mt-1">Submitted on October 24, 2023</p>
-                            </div>
-                            <div className="flex items-center gap-2 bg-green-500/10 text-green-400 px-3 py-1.5 rounded-full border border-green-500/20 w-fit">
-                                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                                <span className="text-xs font-semibold uppercase tracking-wider">Approved</span>
-                            </div>
-                        </div>
-
-                        {/* Details Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 border-b border-white/5">
-                            <div>
-                                <p className="text-gray-500 text-xs uppercase tracking-wider mb-1">Application ID</p>
-                                <p className="text-white font-medium">AVND-2023-8492</p>
-                            </div>
-                            <div className="md:ml-40">
-                                <p className="text-gray-500 text-xs uppercase tracking-wider mb-1">Business Name</p>
-                                <div className="flex items-center gap-2">
-                                    <div className="w-5 h-5 rounded bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center">
-                                        <div className="w-2 h-2 bg-white rounded-full"></div>
-                                    </div>
-                                    <p className="text-white font-medium">{businessName}</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Status Message Box */}
-                        <div className="p-6 md:p-10">
-                            <div className="bg-[#121212] rounded-xl border border-green-500/20 p-8 flex flex-col items-center text-center">
-                                <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mb-6 text-green-500 shadow-[0_0_30px_rgba(34,197,94,0.2)]">
-                                    <CheckCircle2 size={32} />
-                                </div>
-                                <h2 className="text-2xl font-bold text-white mb-3">Your application has been approved!</h2>
-                                <p className="text-gray-400 max-w-md leading-relaxed mb-8">
-                                    Welcome aboard. Your vendor account is now active. You can start setting up your profile and listing events immediately.
-                                </p>
-                                <button className="bg-green-500 hover:bg-green-600 text-black font-semibold px-8 py-3.5 rounded-xl transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(34,197,94,0.3)] hover:shadow-[0_0_25px_rgba(34,197,94,0.4)] transform hover:-translate-y-0.5">
-                                    Go to Vendor Dashboard
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                );
-
             case 'rejected':
                 return (
                     <div className="w-full bg-[#0a0a0a] rounded-2xl border border-white/5 overflow-hidden">
@@ -173,20 +140,14 @@ const VendorStatus = ({ status = 'pending' }) => {
                         <span className="text-white font-bold text-xl tracking-tight">EventConnect</span>
                     </div>
 
-                    {/* Desktop Right Side - User Profile Mini */}
-                    <div className="hidden md:flex items-center gap-4">
-                        <div className="text-right">
-                            <p className="text-sm font-medium text-white">Olivia Martinez</p>
-                            <p className="text-xs text-gray-500">olivia@gourmetdelights.com</p>
-                        </div>
-                        <div className="w-10 h-10 rounded-full bg-gray-800 border-2 border-white/10 overflow-hidden">
-                            <img
-                                src="https://i.pravatar.cc/150?u=olivia"
-                                alt="User Avatar"
-                                className="w-full h-full object-cover"
-                            />
-                        </div>
-                    </div>
+                    <button 
+                        onClick={handleLogout}
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all"
+                    >
+                        <LogOut size={16} />
+                        Logout
+                    </button>
+
                 </div>
             </nav>
 

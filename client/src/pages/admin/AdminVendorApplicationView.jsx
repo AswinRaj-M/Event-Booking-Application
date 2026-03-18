@@ -8,7 +8,7 @@ import AdminSidebar from '../../components/admin/AdminSidebar';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { getVendorByIdThunk } from '../../features/admin.slice';
-import { approveVendorApplication } from '../../services/admin.api';
+import { approveVendorApplication, rejectVendorAppplication } from '../../services/admin.api';
 import { toast } from 'sonner';
 import Loader from '../../components/common/Loader';
 
@@ -32,6 +32,19 @@ const AdminVendorApplicationView = () => {
             dispatch(getVendorByIdThunk(id))
         } catch (error) {
             console.log('error:',error)
+        }
+    }
+
+    const rejectApplication = async() =>{
+        try {
+            if(!message){
+                toast.error("Please enter the rejection reason")
+            }
+            await rejectVendorAppplication(id,message)
+            toast.success("Successfully rejected status")
+            dispatch(getVendorByIdThunk(id))
+        } catch (error) {
+            console.error("Error : ",error)
         }
     }
 
@@ -311,7 +324,7 @@ const AdminVendorApplicationView = () => {
                                             <CheckCircle size={16} />
                                             <span>Approve Request</span>
                                         </button>
-                                        <button className="w-full flex items-center justify-center space-x-2 py-3 bg-[#0B0914] hover:bg-red-500/10 border border-red-500/30 hover:border-red-500 text-red-500 rounded-xl text-sm font-semibold transition-all">
+                                        <button onClick={rejectApplication} className="w-full flex items-center justify-center space-x-2 py-3 bg-[#0B0914] hover:bg-red-500/10 border border-red-500/30 hover:border-red-500 text-red-500 rounded-xl text-sm font-semibold transition-all">
                                             <XCircle size={16} />
                                             <span>Reject Application</span>
                                         </button>

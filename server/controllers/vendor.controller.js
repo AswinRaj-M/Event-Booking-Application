@@ -3,7 +3,8 @@ import cloudinary from "../config/cloudinary.js"
 import streamifier from 'streamifier'
 import bcrypt from "bcryptjs"
 import { AppError } from "../utils/AppError.js"
-import { asyncHandler } from "../middleware/error.middleware.js"
+import { generateAccessToken, generateRefreshToken } from "../utils/generateToken.js"
+import { hashToken } from "../utils/hashToken.js"
 
 const uploadToCloudinary = (fileBuffer, folder) => {
   return new Promise((resolve, reject) => {
@@ -23,20 +24,8 @@ const uploadToCloudinary = (fileBuffer, folder) => {
 }
 
 
-export const applyVendor = asyncHandler(async (req, res) => {
-  const password = req.body.password
-  if (!password) {
-    throw new AppError("password is required", 400)
-  }
-
-  const hashedPassword = await bcrypt.hash(password, 10)
-  const existing = await Vendor.findOne({
-    businessEmail: req.body.businessEmail
-  })
-
-  if (existing) {
-    throw new AppError("applicaton already submited with this email", 400)
-  }
+export const applyVendor = async (req, res) => {
+  const hashedPassword = await bcrypt.hash(req.body.password, 10)
 
   if (!req.files?.businessDocument || !req.files?.idProof) {
     throw new AppError("business document and ID Proof are required", 400)
@@ -86,4 +75,56 @@ export const applyVendor = asyncHandler(async (req, res) => {
       status: vendor.applicationStatus
     }
   })
-});
+}
+
+ export const vendorLogin = async(req,res) =>{
+  const vendor = req.vendor
+
+  const accessToken = generateAccessToken(vendor)
+  const refreshToken = generateRefreshToken(vendor)
+
+  vendor.refreshToken = hashToken(refreshToken)
+  await vendor.save()
+
+  res.cookie("refreshToken",refreshToken,{
+    httpOnly :  true,
+    secure  :  false,
+    sameSite  : "strict",
+    maxAge : 7 * 24 * 60 * 60 * 1000
+  })
+
+
+  res.status(200).json({
+    accessToken,
+    vendor : {
+      id : vendor._id,
+      organizerName : vendor.organizerName,
+      businessEmail : vendor.businessEmail,
+      businessName : vendor.businessName,
+      role : vendor.role,
+      applicationStatus : vendor.applicationStatus
+    }
+  })
+
+}
+
+
+export const vendorLogout = async(req,res) =>{
+  const token = req.cookies.refreshToken
+  if(token){
+    const hashed = hashToken(token)
+    await Vendor.findOneAndUpdate(
+      {refreshToken : hashed},
+      {$set : {refreshToken : null}}
+    )
+  }
+
+  res.clearCookie("refreshToken",{
+    httpOnly : true,
+    sameSite : "strict",
+    secure : false
+  })
+
+  return res.status(200).json({message : "Logged out Successfully"})
+}
+

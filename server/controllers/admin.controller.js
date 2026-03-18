@@ -5,10 +5,8 @@ import { hashToken } from "../utils/hashToken.js";
 import Vendor from "../models/vendor.model.js";
 import { sendMail } from "../utils/sendMail.js";
 import { AppError } from "../utils/AppError.js";
-import { asyncHandler } from "../middleware/error.middleware.js";
 
-
-export const AdminLogin = asyncHandler(async (req, res) => {
+export const AdminLogin = async (req, res) => {
   const { email, password } = req.body
   if (!email || !password) {
     throw new AppError("Email and Password are Required", 400)
@@ -51,10 +49,10 @@ export const AdminLogin = asyncHandler(async (req, res) => {
       role: admin.role
     }
   })
-});
+}
 
 
-export const logoutAdmin = asyncHandler(async (req, res) => {
+export const logoutAdmin = async (req, res) => {
   const token = req.cookies.refreshToken
 
   if (token) {
@@ -71,9 +69,9 @@ export const logoutAdmin = asyncHandler(async (req, res) => {
     secure: false
   })
   return res.status(200).json({ message: "Admin Logged Out Successfully" })
-});
+}
 
-export const getAllVendors = asyncHandler(async (req, res) => {
+export const getAllVendors = async (req, res) => {
   const { status } = req.query
 
   let filter = {}
@@ -92,10 +90,10 @@ export const getAllVendors = asyncHandler(async (req, res) => {
     count: vendors.length,
     data: vendors
   })
-});
+}
 
 
-export const getVendorById = asyncHandler(async (req, res) => {
+export const getVendorById = async (req, res) => {
   const id = req.params.id
   const vendor = await Vendor.findById(id)
     .select("-password")
@@ -108,10 +106,10 @@ export const getVendorById = asyncHandler(async (req, res) => {
     success: true,
     data: vendor
   })
-});
+}
 
 
-export const vendorApprove = asyncHandler(async (req, res) => {
+export const vendorApprove = async (req, res) => {
   const { id, message } = req.body
   const vendor = await Vendor.findById(id)
   if (!vendor) {
@@ -121,9 +119,9 @@ export const vendorApprove = asyncHandler(async (req, res) => {
   await vendor.save()
   sendMail(vendor.businessEmail, message, "Vendor Application Approved!")
   return res.status(200).json({ message: "Application Approved" })
-});
+}
 
-export const rejectAppoval = asyncHandler(async (req, res) => {
+export const vendorReject = async (req, res) => {
   const { id, message } = req.body
   const vendor = await Vendor.findById(id)
   if (!vendor) {
@@ -131,7 +129,7 @@ export const rejectAppoval = asyncHandler(async (req, res) => {
   }
   vendor.applicationStatus = 'rejected'
   vendor.rejectionReason = message
-  vendor.save()
-  sendMail(vendor.businessEmail, message, 'Vendor Application rejected!')
+  await vendor.save()
+  await sendMail(vendor.businessEmail, message, 'Vendor Application rejected!')
   return res.status(200).json({ message: 'Application Rejected!' })
-});
+}

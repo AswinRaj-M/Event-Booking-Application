@@ -2,18 +2,17 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import logo from "../../assets/logo.jpeg";
 import { useDispatch, useSelector } from "react-redux";
-// import { registerUser } from "../../services/user.api";
 import { clearMessages, registerUserThunk } from "../../features/user.slice";
+import { toast } from "sonner";
 
 const Signup = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { loading, error, success , userId } = useSelector((state) => state.user);
-  const [isSignUp, setIsSignUp] = useState(true);
+  const { loading, error, success, userId } = useSelector((state) => state.user);
 
   const [formData, setFormData] = useState({
     fullName: "",
-    email : "",
+    email: "",
     phoneNumber: "",
     password: "",
     confirmPassword: "",
@@ -43,14 +42,13 @@ const Signup = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!agreeTermsAndConditions) {
-      return setLocalError("You must have to agree the terms and conditions");
+      return toast.error("You must agree to the terms and conditions");
     }
 
     if (password !== confirmPassword) {
-      return setLocalError("Password do not Match");
+      return toast.error("Passwords do not match");
     }
 
-    setLocalError("");
     dispatch(
       registerUserThunk({
         fullName,
@@ -63,25 +61,29 @@ const Signup = () => {
     );
   };
 
-    const handleTabSwitch = (SignUpMode) => {
-    setIsSignUp(SignUpMode);
-    if (!SignUpMode) {
-      navigate('/login');
-    }
-  };
-
 
   useEffect(() => {
-    if (success&&userId) {
+    dispatch(clearMessages());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (success && userId) {
       dispatch(clearMessages());
-      navigate("/verify-otp",{
-        state : {
+      navigate("/verify-otp", {
+        state: {
           userId,
-          email : email,
+          email: email,
         }
       });
     }
-  }, [success, dispatch, navigate]);
+  }, [success, userId, email, dispatch, navigate]);
+
+  useEffect(() => {
+    if (error) {
+      toast.error(typeof error === "string" ? error : (error.message || "Registration failed"));
+      dispatch(clearMessages());
+    }
+  }, [error, dispatch]);
 
   return (
     <div className="flex min-h-screen w-full bg-black text-foreground font-sans selection:bg-primary/30 overflow-hidden">
@@ -173,24 +175,6 @@ const Signup = () => {
             </h2>
           </div>
 
-          {/* Sliding Tabs */}
-          <div className="relative flex bg-gray-900/50 p-1 rounded-xl mb-6 border border-white/5">
-            <div
-              className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-gray-800 rounded-lg shadow-sm transition-all duration-300 ease-spring left-[calc(50%+4px)]`}
-            ></div>
-            <button
-            onClick={() => handleTabSwitch(false)}
-              className={`relative z-10 flex-1 py-2 text-sm font-medium rounded-lg transition-colors duration-200 text-gray-400 hover:text-gray-200`}
-            >
-              Log In
-            </button>
-            <button
-            onClick={() => handleTabSwitch(true)}
-              className={`relative z-10 flex-1 py-2 text-sm font-medium rounded-lg transition-colors duration-200 text-white`}
-            >
-              Sign Up
-            </button>
-          </div>
 
           {/* Signup Form */}
           <div className="space-y-5">
@@ -202,12 +186,6 @@ const Signup = () => {
                 Sign up to discover and book amazing events
               </p>
             </div>
-
-            {(error || localError) && (
-              <div className="bg-red-500 text-white p-2 rounded mb-4 text-sm">
-                {error || localError}
-              </div>
-            )}
 
             <form onSubmit={handleSubmit} className="space-y-3">
               {/* Full Name */}
@@ -226,6 +204,7 @@ const Signup = () => {
                     placeholder="John Doe"
                     className="w-full px-4 py-2.5 pl-10 bg-black/50 border border-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all placeholder:text-gray-600 text-white group-hover:border-gray-700 text-sm"
                     value={fullName}
+                    autoComplete="name"
                     onChange={handleChange}
                     required
                   />
@@ -264,6 +243,7 @@ const Signup = () => {
                     placeholder="john@example.com"
                     className="w-full px-4 py-2.5 pl-10 bg-black/50 border border-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all placeholder:text-gray-600 text-white group-hover:border-gray-700 text-sm"
                     value={email}
+                    autoComplete="username"
                     onChange={handleChange}
                     required
                   />
@@ -302,6 +282,7 @@ const Signup = () => {
                     placeholder="+91 9876543210"
                     className="w-full px-4 py-2.5 pl-10 bg-black/50 border border-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all placeholder:text-gray-600 text-white group-hover:border-gray-700 text-sm"
                     value={phoneNumber}
+                    autoComplete="tel"
                     onChange={handleChange}
                     required
                   />
@@ -341,6 +322,7 @@ const Signup = () => {
                       className="w-full px-4 py-2.5 pl-10 bg-black/50 border border-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all placeholder:text-gray-600 text-white group-hover:border-gray-700 text-sm"
                       value={password}
                       name="password"
+                      autoComplete="new-password"
                       onChange={handleChange}
                     />
                     <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-hover:text-gray-400 transition-colors">
@@ -379,6 +361,7 @@ const Signup = () => {
                       className="w-full px-4 py-2.5 pl-10 bg-black/50 border border-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all placeholder:text-gray-600 text-white group-hover:border-gray-700 text-sm"
                       value={confirmPassword}
                       onChange={handleChange}
+                      autoComplete="new-password"
                       required
                     />
                     <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-hover:text-gray-400 transition-colors">
@@ -445,8 +428,8 @@ const Signup = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <button className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#121212] hover:bg-[#1a1a1a] border border-gray-800 rounded-xl transition-colors group">
+            <div className="flex flex-col gap-4">
+              <button className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-[#121212] hover:bg-[#1a1a1a] border border-gray-800 rounded-xl transition-colors group">
                 <svg className="h-4 w-4" viewBox="0 0 24 24">
                   <path
                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -466,22 +449,18 @@ const Signup = () => {
                   />
                 </svg>
                 <span className="text-xs font-medium text-gray-300 group-hover:text-white">
-                  Google
+                  Continue with Google
                 </span>
               </button>
-              <button className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#121212] hover:bg-[#1a1a1a] border border-gray-800 rounded-xl transition-colors group">
-                {/* Apple Icon */}
-                <svg
-                  className="h-4 w-4 text-gray-300 group-hover:text-white"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.74 1.18 0 2.45-1.64 3.57-1.67 1.37-.03 2.65.65 3.34 1.71-2.92 1.63-2.39 5.86.32 7.07-.63 1.83-1.47 3.65-2.31 5.12zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
-                </svg>
-                <span className="text-xs font-medium text-gray-300 group-hover:text-white">
-                  Apple
-                </span>
-              </button>
+
+              <div className="flex justify-center mt-2">
+                <p className="text-sm text-gray-400">
+                  Already have an account?{" "}
+                  <Link to="/login" className="text-purple-500 hover:text-purple-400 transition-colors font-medium">
+                    Log in
+                  </Link>
+                </p>
+              </div>
             </div>
           </div>
         </div>

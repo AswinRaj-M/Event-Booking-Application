@@ -9,13 +9,19 @@ import {
 import { protect } from "../middleware/auth.middleware.js"
 import { requireRole } from "../middleware/role.middleware.js"
 import { asyncHandler } from '../middleware/error.middleware.js'  
+import { validate } from "../middleware/validate.middleware.js"
+import { 
+  registerValidation, 
+  loginValidation, 
+  verifyOTPValidation 
+} from "../validations/user.validation.js"
 
 const router = express.Router()
 
-router.post('/register', asyncHandler(registerUser), protect, requireRole("user"))
-router.post('/verify-otp', asyncHandler(verifyOTP), protect, requireRole("user"))
-router.post('/login', asyncHandler(loginUser), protect, requireRole("user"))
-router.get('/refresh-token', asyncHandler(refreshAccessToken), protect, requireRole("user"))
+router.post('/register', registerValidation, validate, asyncHandler(registerUser))
+router.post('/verify-otp', verifyOTPValidation, validate, asyncHandler(verifyOTP))
+router.post('/login', loginValidation, validate, asyncHandler(loginUser))
+router.get('/refresh-token', asyncHandler(refreshAccessToken))
 router.post('/logout', asyncHandler(logoutUser), protect, requireRole("user"))
 
 export default router

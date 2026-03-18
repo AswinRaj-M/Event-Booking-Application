@@ -10,13 +10,13 @@ const VerifyOtp = () => {
 
   const { loading, success, error } = useSelector((state) => state.user);
 
-  const{email, userId } = location.state || {};
+  const { email, userId } = location.state || {};
 
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [timer, setTimer] = useState(60);
   const inputsRef = useRef([]);
 
- 
+
   useEffect(() => {
     if (timer <= 0) return;
     const interval = setInterval(() => {
@@ -27,7 +27,7 @@ const VerifyOtp = () => {
 
   useEffect(() => {
     if (success) {
-      navigate('/home');
+      navigate('/home', { replace: true });
     }
   }, [success, navigate]);
 
@@ -44,21 +44,21 @@ const VerifyOtp = () => {
     }
   };
 
-const handleKeyDown = (e, index) => {
-  const newOtp = [...otp]; 
-  if (e.key === 'Backspace') {
-    e.preventDefault();
+  const handleKeyDown = (e, index) => {
+    const newOtp = [...otp];
+    if (e.key === 'Backspace') {
+      e.preventDefault();
 
-    if (otp[index] !== '') {
-      newOtp[index] = '';
-      setOtp(newOtp);
-    } else if (index > 0) {
-      inputsRef.current[index - 1]?.focus();
-      newOtp[index - 1] = '';
-      setOtp(newOtp);
+      if (otp[index] !== '') {
+        newOtp[index] = '';
+        setOtp(newOtp);
+      } else if (index > 0) {
+        inputsRef.current[index - 1]?.focus();
+        newOtp[index - 1] = '';
+        setOtp(newOtp);
+      }
     }
-  }
-};
+  };
 
   const handlePaste = (e) => {
     e.preventDefault();
@@ -69,7 +69,7 @@ const handleKeyDown = (e, index) => {
     const otpArray = pastedData.split('');
     setOtp(otpArray);
 
-  
+
     otpArray.forEach((digit, index) => {
       if (inputsRef.current[index]) {
         inputsRef.current[index].value = digit;
@@ -89,7 +89,7 @@ const handleKeyDown = (e, index) => {
         otp: finalOtp,
       })
     );
-  
+
   };
 
   const isOtpComplete = otp.join('').length === 6;
