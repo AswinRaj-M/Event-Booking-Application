@@ -1,13 +1,13 @@
 import User from "../models/user.model.js"
+import Otp from "../models/user.otp.model.js"
+import Vendor from "../models/vendor.model.js"
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
-import { generateOTP } from "../utils/generateOtp.js"
-import { sendMail, sendOTP } from "../utils/sendMail.js"
 import { generateAccessToken, generateRefreshToken, generateResetToken } from "../utils/generateToken.js"
 import { hashToken } from "../utils/hashToken.js"
-import Otp from "../models/user.otp.model.js"
 import { AppError } from "../utils/AppError.js"
-import Vendor from "../models/vendor.model.js"
+import { sendMail } from "../utils/sendMail.js"
+import * as userService from "../services/user.service.js"
 
 export const registerUser = async (req, res) => {
   const {
@@ -26,47 +26,18 @@ export const registerUser = async (req, res) => {
     throw new AppError("You must agree to the terms and conditions", 400)
   }
 
-  const existingUser = await User.findOne({ email });
-  if (existingUser) {
-    if (existingUser.isVerified) {
-      console.log(" Error: Email already verified", email)
-      throw new AppError("Email Already Registered", 400);
-    } else {
-      console.log("register Info: Found unverified user, deleting to allow re-registration", email)
-      await User.deleteOne({ _id: existingUser._id });
-    }
-  }
-
-  const hashedPassword = await bcrypt.hash(password, 10)
-
-
-  const user = await User.create({
+  const { userId } = await userService.registerUser({
     fullName,
     email,
     phoneNumber,
-    password: hashedPassword,
+    password,
     agreeTermsAndConditions
-  });
-  const otp = generateOTP()
-
-  await Otp.create({
-    userId: user._id,
-    otp
   })
-    try {
-      await sendOTP(email, otp)
-    } catch (mailError) {
-      console.error("Failed to send OTP:", mailError)
-      throw new AppError("User registered but failed to send verification email. Please try to login to resend OTP.", 500)
-    }
 
-    console.log("otp is ", otp)
-    console.log("OTP sent to", email)
-
-    return res.status(201).json({
-      message: "Otp Send To Email",
-      userId: user._id
-    })
+  return res.status(201).json({
+    message: "Otp Send To Email",
+    userId
+  })
 }
 
 export const verifyOTP = async (req, res) => {
@@ -76,25 +47,13 @@ export const verifyOTP = async (req, res) => {
     throw new AppError("otp Required", 404)
   }
 
-  const user = await User.findById(userId);
-
-  if (!user)
-    throw new AppError("User not found", 400);
-
-  const otpDoc = await Otp.findOne({ userId, otp })
-  if (!otpDoc) {
-    throw new AppError("Invalid or Expired Otp", 400)
-  }
-
-  user.isVerified = true;
+  const user = await userService.verifyOTP(userId, otp)
 
   const accessToken = generateAccessToken(user._id, user.role);
   const refreshToken = generateRefreshToken(user._id);
 
   user.refreshToken = hashToken(refreshToken);
-
   await user.save();
-  await Otp.deleteOne({ userId })
 
   res.cookie("accessToken", accessToken, {
     httpOnly: true,
@@ -126,64 +85,28 @@ export const resendOtp = async(req,res) =>{
   if(!userId)
     throw new AppError("Failed to Fetch userId",400)
 
-  const user = await User.findById(userId)
-
-  if(!user)
-    throw new AppError("User not Found",404)
-
-  
-  await Otp.deleteMany({userId})
-
-  const otp =  generateOTP()
-
-  await Otp.create({
-    userId : user._id,
-    otp
-  })
-
-  
-  try {
-    await sendOTP(user.email,otp)
-  } catch (error) {
-    throw new AppError("Failed to resend Otp",500)
-  }
-  console.log("resend Otp",otp)
-
+  await userService.resendOtp(userId)
 
   return res.status(200).json({
     message : "Otp resent Successfully"
   })
 }
 
-
 export const loginUser = async (req, res) => {
   const { email, password } = req.body  
 
-  const user = await User.findOne({ email })
-  if (!user)
-    throw new AppError("Invalid Credentials", 400)
+  const result = await userService.loginUser(email, password)
 
-  if (!user.isVerified){
-    const otp = generateOTP()
-    console.log("Email verify Otp : ",otp)
-    await Otp.create({
-      userId : user._id,
-      otp
-    })
-
-    await sendOTP(user.email,otp)
+  if (!result.isVerified) {
     return res.status(403).json({
-      success : false , 
-      code : "EMAIL_NOT_VERIFIED",
-      message : "Please verify you email first" ,
-      userId : user._id})
+      success: false, 
+      code: "EMAIL_NOT_VERIFIED",
+      message: "Please verify you email first",
+      userId: result.userId
+    })
   }
-  const match = await bcrypt.compare(password, user.password)
 
-  if (!match)
-    throw new AppError("Password is Incorrect", 400)
-
-
+  const user = result.user
   const accessToken = generateAccessToken(user._id, user.role)
   const refreshToken = generateRefreshToken(user._id)
 
@@ -215,11 +138,9 @@ export const loginUser = async (req, res) => {
   })
 }
 
-
-
 export const forgotPassword = async(req,res) =>{
   const {email} = req.body
-  const user = await User.findOne({email});
+  const user = await userService.findUserByEmail(email);
 
   if(!user) {
     throw new AppError("User not found", 404)
@@ -228,11 +149,9 @@ export const forgotPassword = async(req,res) =>{
   const resetLink = `${process.env.CLIENT_PORT}/reset-password/${resetToken}`
 
   await sendMail(email,`your reset password link ${resetLink}`,"reset password")
-  console.log("Password reset link",resetLink)
 
   return res.json({message : "Reset link sent to Email"})
 }
-
 
 export const resetPassword = async(req,res) =>{
   const {token,password} = req.body  
@@ -243,19 +162,17 @@ export const resetPassword = async(req,res) =>{
     throw new AppError('invalid Access token')
   }
 
-  const user = await User.findById(decoded.id)
+  const user = await userService.findUserById(decoded.id)
   if(!user){
     throw new AppError("User not found",404)
   }
 
   const hashedPassword = await bcrypt.hash(password,10)
-
   user.password = hashedPassword
   await user.save() 
 
   return res.json({message : "Password reset Successfully"})
 }
-
 
 export const refreshAccessToken = async (req, res) => {
   const token = req.cookies.adminRefreshToken || req.cookies.vendorRefreshToken || req.cookies.refreshToken
@@ -275,10 +192,10 @@ export const refreshAccessToken = async (req, res) => {
     userId = Buffer.from(userId.data).toString('hex');
   }
 
-  let user = await User.findById(userId)
+  let user = await userService.findUserById(userId)
 
   if (!user) {
-    user = await Vendor.findById(userId)
+    user = await userService.findVendorById(userId)
   }
 
   if (!user || user.refreshToken !== hashToken(token))
@@ -294,23 +211,15 @@ export const refreshAccessToken = async (req, res) => {
     httpOnly: true,
     sameSite: "strict",
     secure: process.env.NODE_ENV === "production",
-    maxAge: 15 * 60 * 1000, // 15 minutes
+    maxAge: 15 * 60 * 1000, 
   });
 
   res.json({ message: "Token refreshed successfully" })
 }
 
-
-
 export const logoutUser = async (req, res) => {
   const token = req.cookies.refreshToken;
-  if (token) {
-    const hashed = hashToken(token)
-    await User.findOneAndUpdate(
-      { refreshToken: hashed },
-      { $set: { refreshToken: null } }
-    )
-  }
+  await userService.logoutUser(token)
 
   res.clearCookie("accessToken", {
     httpOnly: true,

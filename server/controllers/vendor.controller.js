@@ -1,70 +1,9 @@
-import Vendor from "../models/vendor.model.js"
-import cloudinary from "../config/cloudinary.js"
-import streamifier from 'streamifier'
-import bcrypt from "bcryptjs"
-import { AppError } from "../utils/AppError.js"
 import { generateAccessToken, generateRefreshToken } from "../utils/generateToken.js"
 import { hashToken } from "../utils/hashToken.js"
-
-const uploadToCloudinary = (fileBuffer, folder) => {
-  return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      {
-        folder,
-        resource_type: "auto"
-      },
-      (error, result) => {
-        if (error) reject(error)
-        else resolve(result)
-      }
-    )
-
-    streamifier.createReadStream(fileBuffer).pipe(stream)
-  })
-}
-
+import * as vendorService from "../services/vendor.service.js"
 
 export const applyVendor = async (req, res) => {
-  const hashedPassword = await bcrypt.hash(req.body.password, 10)
-
-  if (!req.files?.businessDocument || !req.files?.idProof) {
-    throw new AppError("business document and ID Proof are required", 400)
-  }
-
-  const businessDocUpload = await uploadToCloudinary(
-    req.files.businessDocument[0].buffer,
-    "vendorApplication/businessDocs"
-  );
-
-  const uploadIdProof = await uploadToCloudinary(
-    req.files.idProof[0].buffer,
-    "vendorApplication/idProofs"
-  );
-
-  const vendor = await Vendor.create({
-    organizerName: req.body.organizerName,
-    businessName: req.body.businessName,
-    businessEmail: req.body.businessEmail,
-    password: hashedPassword,
-    contactPhone: req.body.contactPhone,
-    eventCategory: req.body.eventCategory,
-    experience: req.body.experience,
-    description: req.body.description,
-    websiteOrInstagram: req.body.websiteOrInstagram,
-    agreeTermsAndConditions: req.body.agreeTermsAndConditions,
-    location: JSON.parse(req.body.location),
-
-    businessDocument: {
-      fileUrl: businessDocUpload.secure_url,
-      publicId: businessDocUpload.public_id,
-      fileType: businessDocUpload.resource_type
-    },
-    idProof: {
-      fileUrl: uploadIdProof.secure_url,
-      publicId: uploadIdProof.public_id,
-      fileType: uploadIdProof.resource_type
-    },
-  })
+  const vendor = await vendorService.applyVendor(req.body, req.files)
 
   res.status(201).json({
     message: "vendor application submited successfully",
@@ -77,7 +16,7 @@ export const applyVendor = async (req, res) => {
   })
 }
 
- export const vendorLogin = async(req,res) =>{
+export const vendorLogin = async(req,res) =>{
   const vendor = req.vendor
 
   const accessToken = generateAccessToken(vendor._id, vendor.role)
@@ -100,7 +39,6 @@ export const applyVendor = async (req, res) => {
     maxAge: 7 * 24 * 60 * 60 * 1000
   })
 
-
   res.status(200).json({
     vendor : {
       id : vendor._id,
@@ -111,19 +49,11 @@ export const applyVendor = async (req, res) => {
       applicationStatus : vendor.applicationStatus
     }
   })
-
 }
-
 
 export const vendorLogout = async(req,res) =>{
   const token = req.cookies.vendorRefreshToken
-  if(token){
-    const hashed = hashToken(token)
-    await Vendor.findOneAndUpdate(
-      {refreshToken : hashed},
-      {$set : {refreshToken : null}}
-    )
-  }
+  await vendorService.vendorLogout(token)
 
   res.clearCookie("vendorAccessToken", {
     httpOnly: true,
@@ -157,4 +87,3 @@ export const getVendorMe = async (req, res) => {
     }
   })
 }
-
