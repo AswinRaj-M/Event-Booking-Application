@@ -6,122 +6,143 @@ import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { vendorApplicationThunk } from '../../features/vendorSlice';
 import { useEffect } from 'react';
+import { toast } from 'sonner';
+import Loader from '../../components/common/Loader';
 
 const VendorApplication = () => {
 
     const navigate = useNavigate()
     const dispatch = useDispatch()
-    const {loading, success } = useSelector((state) => state.vendor)
-    const [form ,setForm ] = useState({
-    organizerName: "",
-    businessName: "",
-    businessEmail: "",
-    password: "",
-    confirmPassword: "",
-    contactPhone: "",
-    eventCategory: "",
-    experience: "",
-    description: "",
-    websiteOrInstagram: "",
-    city: "",
-    state: "",
-    country: "",
+    const { loading, success } = useSelector((state) => state.vendor)
+    const [form, setForm] = useState({
+        organizerName: "",
+        businessName: "",
+        businessEmail: "",
+        password: "",
+        confirmPassword: "",
+        contactPhone: "",
+        eventCategory: "",
+        experience: "",
+        description: "",
+        websiteOrInstagram: "",
+        city: "",
+        state: "",
+        country: "",
     })
 
-    const [businessDocument , setBusinessDocument] = useState(null)
+    const [businessDocument, setBusinessDocument] = useState(null)
     const [idProof, setIdProof] = useState(null)
     const [agreeTermsAndConditions, setAgreeTermsAndConditions] = useState(false)
     const [errors, setErrors] = useState({})
-    
 
-    const handleChange  = (e) => {
-        setForm({...form, [e.target.name] : e.target.value})
+
+    const handleChange = (e) => {
+        setForm({ ...form, [e.target.name]: e.target.value })
     }
 
 
-     const validate = () => {
-    const newErrors = {};
+    const validate = () => {
+        const newErrors = {};
 
-    if (!form.organizerName.trim())
-      newErrors.organizerName = "Organizer name required";
+        if (!form.organizerName.trim())
+            newErrors.organizerName = "Organizer name required";
 
-    if (!form.businessName.trim())
-      newErrors.businessName = "Business name required";
+        if (!form.businessName.trim())
+            newErrors.businessName = "Business name required";
 
-    if (!form.businessEmail.trim())
-      newErrors.businessEmail = "Email required";
+        if (!form.businessEmail.trim())
+            newErrors.businessEmail = "Email required";
 
-    if (!form.contactPhone.trim())
-      newErrors.contactPhone = "Phone required";
+        if (!form.contactPhone.trim())
+            newErrors.contactPhone = "Phone required";
 
-    if (!form.password)
-      newErrors.password = "Password required";
+        if (!form.password)
+            newErrors.password = "Password required";
 
-    if (form.password !== form.confirmPassword)
-      newErrors.confirmPassword = "Passwords do not match";
+        if (form.password !== form.confirmPassword)
+            newErrors.confirmPassword = "Passwords do not match";
 
-    if (!form.eventCategory)
-      newErrors.eventCategory = "Select category";
+        if (!form.eventCategory)
+            newErrors.eventCategory = "Select category";
 
-    if (!form.experience)
-      newErrors.experience = "Select experience";
+        if (!form.experience)
+            newErrors.experience = "Select experience";
 
-    if (!form.description.trim())
-      newErrors.description = "Description required";
+        if (!form.description.trim())
+            newErrors.description = "Description required";
 
-    if (!businessDocument)
-      newErrors.businessDocument = "Business document required";
+        if (!form.city.trim())
+            newErrors.city = "City required";
 
-    if (!idProof)
-      newErrors.idProof = "ID proof required";
+        if (!form.state.trim())
+            newErrors.state = "State required";
 
-    if (!agreeTermsAndConditions)
-      newErrors.agreeTermsAndConditions = "You must accept terms";
+        if (!form.country)
+            newErrors.country = "Country required";
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+        if (!businessDocument)
+            newErrors.businessDocument = "Business document required";
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    if(!validate()) return;
-    const formData =   new FormData()
+        if (!idProof)
+            newErrors.idProof = "ID proof required";
 
-    formData.append("organizerName",form.organizerName)
-    formData.append("businessName", form.businessName)
-    formData.append("businessEmail",form.businessEmail)
-    formData.append("contactPhone",form.contactPhone)
-    formData.append("password",form.password)
-    formData.append("eventCategory",form.eventCategory)
-    formData.append("experience",form.experience)
-    formData.append("description",form.description)
-    formData.append("websiteOrInstagram",form.websiteOrInstagram)
-    formData.append("agreeTermsAndConditions",agreeTermsAndConditions)
-    formData.append(
-        "location",
-        JSON.stringify({
-            city : form.city,
-            state : form.state,
-            country : form.country
-        })
-    )
-    formData.append("businessDocument" ,businessDocument)
-    formData.append("idProof",idProof)
+        if (!agreeTermsAndConditions)
+            newErrors.agreeTermsAndConditions = "You must accept terms";
 
-    dispatch(vendorApplicationThunk(formData))
+        setErrors(newErrors);
 
-  }
 
-  useEffect(()=>{
-    if(success){
-        navigate("/vendor/status",{
-            state : {
-                businessName : form.businessName
-            }
-        })
+        if (Object.keys(newErrors).length > 0) {
+
+            const firstError = Object.values(newErrors)[0];
+            toast.error(firstError);
+            return false;
+        }
+
+        return true;
+    };
+
+    const handleSubmit = (e) => {
+        e.preventDefault()
+        if (!validate()) return;
+        const formData = new FormData()
+
+        formData.append("organizerName", form.organizerName)
+        formData.append("businessName", form.businessName)
+        formData.append("businessEmail", form.businessEmail)
+        formData.append("contactPhone", form.contactPhone)
+        formData.append("password", form.password)
+        formData.append("eventCategory", form.eventCategory)
+        formData.append("experience", form.experience)
+        formData.append("description", form.description)
+        formData.append("websiteOrInstagram", form.websiteOrInstagram)
+        formData.append("agreeTermsAndConditions", agreeTermsAndConditions)
+        formData.append(
+            "location",
+            JSON.stringify({
+                city: form.city,
+                state: form.state,
+                country: form.country
+            })
+        )
+        formData.append("businessDocument", businessDocument)
+        formData.append("idProof", idProof)
+
+        dispatch(vendorApplicationThunk(formData))
+
     }
-  },[success,dispatch,navigate])
-    
+
+    useEffect(() => {
+        if (success) {
+            navigate("/vendor/status", {
+                state: {
+                    businessName: form.businessName
+                }
+            })
+        }
+    }, [success, dispatch, navigate])
+
+    if (loading) return <Loader />;
 
     return (
         <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-violet-500/30">
@@ -326,11 +347,11 @@ const VendorApplication = () => {
                                             Event Category <span className="text-red-500">*</span>
                                         </label>
                                         <div className="relative">
-                                            <select 
-                                            name='eventCategory'
-                                            value={form.eventCategory}
-                                            onChange={handleChange}
-                                            className="w-full bg-[#121212] border border-white/5 rounded-xl px-4 py-3.5 text-white appearance-none focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:border-violet-500 transition-all">
+                                            <select
+                                                name='eventCategory'
+                                                value={form.eventCategory}
+                                                onChange={handleChange}
+                                                className="w-full bg-[#121212] border border-white/5 rounded-xl px-4 py-3.5 text-white appearance-none focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:border-violet-500 transition-all">
                                                 <option value="" disabled className="text-gray-600">Select a category</option>
                                                 <option value="catering">Catering & Food</option>
                                                 <option value="photography">Photography & Video</option>
@@ -351,13 +372,13 @@ const VendorApplication = () => {
                                             Years of Experience <span className="text-red-500">*</span>
                                         </label>
                                         <div className="relative">
-                                            <select 
-                                            name='experience'
-                                            value={form.experience}
-                                            onChange={handleChange}
+                                            <select
+                                                name='experience'
+                                                value={form.experience}
+                                                onChange={handleChange}
 
-                                            className="w-full bg-[#121212] border border-white/5 rounded-xl px-4 py-3.5 text-white appearance-none focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:border-violet-500 transition-all">
-                                                <option value="" disabled  className="text-gray-600">Select experience</option>
+                                                className="w-full bg-[#121212] border border-white/5 rounded-xl px-4 py-3.5 text-white appearance-none focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:border-violet-500 transition-all">
+                                                <option value="" disabled className="text-gray-600">Select experience</option>
                                                 <option value="0-2">0-2 Years</option>
                                                 <option value="3-5">3-5 Years</option>
                                                 <option value="5-10">5-10 Years</option>
@@ -429,17 +450,17 @@ const VendorApplication = () => {
                                         Verification Documents
                                     </label>
                                     <div className="mt-2 flex justify-center px-6 pt-10 pb-10 border-2 border-white/5 border-dashed rounded-xl cursor-pointer hover:bg-white/5 hover:border-violet-500/50 transition-all group"
-                                    onClick={()=> document.getElementById("businessDocumentUpload").click()}
+                                        onClick={() => document.getElementById("businessDocumentUpload").click()}
                                     >
-                                            
-                                        <input 
-                                        id='businessDocumentUpload'
-                                        type="file"
-                                        accept=".svg,.png,.jpg,.jpeg,.pdf"
-                                        hidden
-                                        onChange={(e) => setBusinessDocument(e.target.files[0])}
+
+                                        <input
+                                            id='businessDocumentUpload'
+                                            type="file"
+                                            accept=".svg,.png,.jpg,.jpeg,.pdf"
+                                            hidden
+                                            onChange={(e) => setBusinessDocument(e.target.files[0])}
                                         />
-                                        
+
                                         <div className="space-y-3 text-center">
                                             <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mx-auto group-hover:bg-violet-500/20 group-hover:text-violet-400 transition-all text-gray-400">
                                                 <Upload size={20} />
@@ -447,8 +468,8 @@ const VendorApplication = () => {
                                             <div className="flex text-sm text-gray-400 justify-center">
                                                 <span className="relative font-medium text-violet-400 group-hover:text-violet-300 transition-colors">
                                                     {businessDocument
-                                                    ?businessDocument.name
-                                                    : "Click to upload or drag and drop"}
+                                                        ? businessDocument.name
+                                                        : "Click to upload or drag and drop"}
                                                 </span>
                                             </div>
                                             <p className="text-xs text-gray-500">
@@ -457,7 +478,7 @@ const VendorApplication = () => {
                                         </div>
                                     </div>
                                 </div>
-                                {errors.businessDocument&&(
+                                {errors.businessDocument && (
                                     <p className='error'>{errors.businessDocument}</p>
                                 )}
 
@@ -467,17 +488,17 @@ const VendorApplication = () => {
                                         ID Proof
                                     </label>
                                     <div className="mt-2 flex justify-center px-6 pt-6 pb-6 border-2 border-white/5 border-dashed rounded-xl cursor-pointer hover:bg-white/5 hover:border-violet-500/50 transition-all group"
-                                    onClick={() => document.getElementById("idProofUpload").click()}
+                                        onClick={() => document.getElementById("idProofUpload").click()}
                                     >
-                                        
-                                        <input 
-                                        id='idProofUpload'
-                                        type="file"
-                                        accept=".png,.jpg,.pdf"
-                                        hidden
-                                        onChange={(e) => setIdProof(e.target.files[0])}
+
+                                        <input
+                                            id='idProofUpload'
+                                            type="file"
+                                            accept=".png,.jpg,.pdf"
+                                            hidden
+                                            onChange={(e) => setIdProof(e.target.files[0])}
                                         />
-                                        
+
                                         <div className="space-y-2 text-center">
                                             <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center mx-auto group-hover:bg-violet-500/20 group-hover:text-violet-400 transition-all text-gray-400">
                                                 <Upload size={18} />
@@ -485,8 +506,8 @@ const VendorApplication = () => {
                                             <div className="flex text-sm text-gray-400 justify-center">
                                                 <span className="relative font-medium text-violet-400 group-hover:text-violet-300 transition-colors">
                                                     {idProof
-                                                    ?idProof.name
-                                                    :"Click to upload or drag and drop"}
+                                                        ? idProof.name
+                                                        : "Click to upload or drag and drop"}
                                                 </span>
                                             </div>
                                             <p className="text-xs text-gray-500">
@@ -496,7 +517,7 @@ const VendorApplication = () => {
                                     </div>
                                 </div>
                             </div>
-                            {errors.idProof &&(
+                            {errors.idProof && (
                                 <p className='error'>{errors.idProof}</p>
                             )}
 
@@ -546,12 +567,12 @@ const VendorApplication = () => {
                                             Country <span className="text-red-500">*</span>
                                         </label>
                                         <div className="relative">
-                                            <select 
-                                            name='country'
-                                            value={form.country}
-                                            onChange={handleChange}
-                                            className="w-full bg-[#121212] border border-white/5 rounded-xl px-4 py-3.5 text-white appearance-none focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:border-violet-500 transition-all">
-                                                <option value="" disabled  className="text-gray-600">Select Country</option>
+                                            <select
+                                                name='country'
+                                                value={form.country}
+                                                onChange={handleChange}
+                                                className="w-full bg-[#121212] border border-white/5 rounded-xl px-4 py-3.5 text-white appearance-none focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:border-violet-500 transition-all">
+                                                <option value="" disabled className="text-gray-600">Select Country</option>
                                                 <option value="US">United States</option>
                                                 <option value="UK">United Kingdom</option>
                                                 <option value="CA">Canada</option>
@@ -598,13 +619,13 @@ const VendorApplication = () => {
                                 <button
                                     type="submit"
                                     className={`w-full md:w-auto px-8 py-3.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-sm font-medium rounded-xl shadow-[0_0_20px_rgba(139,92,246,0.3)] hover:shadow-[0_0_25px_rgba(139,92,246,0.5)] transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2
-                                            ${loading 
-                                            ? "bg-gray-600 cursor-not-allowed" 
+                                            ${loading
+                                            ? "bg-gray-600 cursor-not-allowed"
                                             : "bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500"
-                                            }
+                                        }
                                             `}
-                               >
-                                      
+                                >
+
                                     {loading ? "Submiting..." : "Submit Application"}
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
                                 </button>

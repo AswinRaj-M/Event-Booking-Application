@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Lock, Mail, ArrowRight, ShieldCheck } from 'lucide-react';
 import { forgotPassword } from '../../services/user.api';
 import { toast } from 'sonner';
+import Loader from '../../components/common/Loader';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
@@ -12,20 +13,24 @@ const ForgotPassword = () => {
   
   const handleSubmit = async(e) => {
     e.preventDefault();
+    if (!email.trim()) {
+      return toast.error("Please enter your email address");
+    }
     try {
-    await forgotPassword(email)
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-    }, 1500);
-    toast.success("Reset link send Successfully")
-    navigate('/login')
+      setLoading(true);
+      await forgotPassword(email)
+      setTimeout(() => {
+        setLoading(false);
+      }, 1500);
+      toast.success("Reset link send Successfully")
+      navigate('/login')
     } catch (error) {
       console.error("Error from the forgot password : ",error)
       toast.error(error)
+      setLoading(false);
     }
- 
   };
+  if (loading) return <Loader />;
 
   return (
     <div className="min-h-screen bg-[#030303] flex flex-col justify-center items-center p-4 relative overflow-hidden font-sans">
@@ -66,7 +71,6 @@ const ForgotPassword = () => {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                required
                 className="w-full bg-[#131313] border border-white/5 rounded-xl pl-12 pr-4 py-3.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition-all shadow-inner"
                 placeholder="name@example.com"
               />

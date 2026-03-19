@@ -7,7 +7,8 @@ import {
   logoutUser,
   getMe,
   resendOtp,
-  forgotPassword
+  forgotPassword,
+  resetPassword
 } from "../controllers/user.controller.js"
 import { protect } from "../middleware/auth.middleware.js"
 import { requireRole } from "../middleware/role.middleware.js"
@@ -26,6 +27,7 @@ router.post('/verify-otp', verifyOTPValidation, validate, asyncHandler(verifyOTP
 router.post('/login', loginValidation, validate, asyncHandler(loginUser))
 router.post('/resend-otp',validate,asyncHandler(resendOtp))
 router.post('/forgot-password',validate,asyncHandler(forgotPassword))
+router.patch('/reset-password',validate,asyncHandler(resetPassword))
 router.get('/refresh-token', asyncHandler(refreshAccessToken))
 router.post('/logout', protect, requireRole("user"), asyncHandler(logoutUser))
 router.get('/me', protect, asyncHandler(getMe))

@@ -235,8 +235,7 @@ export const forgotPassword = async(req,res) =>{
 
 
 export const resetPassword = async(req,res) =>{
-  const {token,password} = req.body 
-
+  const {token,password} = req.body  
   let decoded;
   try {
     decoded = jwt.verify(token,process.env.JWT_RESET_SECRET)
@@ -244,12 +243,12 @@ export const resetPassword = async(req,res) =>{
     throw new AppError('invalid Access token')
   }
 
-  const user = await User.findOne(decoded.email)
+  const user = await User.findById(decoded.id)
   if(!user){
     throw new AppError("User not found",404)
   }
 
-  const hashedPassword = await bycrpt.hash(password,10)
+  const hashedPassword = await bcrypt.hash(password,10)
 
   user.password = hashedPassword
   await user.save() 

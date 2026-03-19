@@ -21,6 +21,10 @@ export const forgotPassword = (email) =>{
   return axiosInstance.post('/users/forgot-password',{email})
 }
 
+export const resetPassword = (token,password) =>{
+  return axiosInstance.patch('/users/reset-password',{token,password})
+}
+
 export const logoutUser = ()=>{
   return axiosInstance.post("/users/logout")
 }

@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { verifyOTPThunk } from '../../features/user.slice';
 import { resendOtp } from '../../services/user.api';
 import { toast } from 'sonner';
+import Loader from '../../components/common/Loader';
 
 const VerifyOtp = () => {
   const dispatch = useDispatch();
@@ -90,7 +91,9 @@ const VerifyOtp = () => {
 
   const handleSubmit = () => {
     const finalOtp = otp.join('');
-    if (finalOtp.length !== 6) return;
+    if (finalOtp.length !== 6) {
+      return toast.error("Please enter the full 6-digit OTP code");
+    }
 
     dispatch(
       verifyOTPThunk({
@@ -112,6 +115,7 @@ const VerifyOtp = () => {
   }
 
   const isOtpComplete = otp.join('').length === 6;
+  if (loading) return <Loader />;
 
   return (
     <div className="h-screen w-screen bg-[#050505] flex items-center justify-center relative overflow-hidden font-sans text-white">

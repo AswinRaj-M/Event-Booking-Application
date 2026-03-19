@@ -4,6 +4,7 @@ import logo from "../../assets/logo.jpeg";
 import { useDispatch, useSelector } from "react-redux";
 import { clearMessages, registerUserThunk } from "../../features/user.slice";
 import { toast } from "sonner";
+import Loader from "../../components/common/Loader";
 
 const Signup = () => {
   const dispatch = useDispatch();
@@ -41,6 +42,11 @@ const Signup = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    
+    if (!fullName.trim() || !email.trim() || !phoneNumber.trim() || !password.trim() || !confirmPassword.trim()) {
+      return toast.error("Please fill in all registration fields");
+    }
+
     if (!agreeTermsAndConditions) {
       return toast.error("You must agree to the terms and conditions");
     }
@@ -84,6 +90,7 @@ const Signup = () => {
       dispatch(clearMessages());
     }
   }, [error, dispatch]);
+  if (loading) return <Loader />;
 
   return (
     <div className="flex min-h-screen w-full bg-black text-foreground font-sans selection:bg-primary/30 overflow-hidden">
@@ -206,7 +213,7 @@ const Signup = () => {
                     value={fullName}
                     autoComplete="name"
                     onChange={handleChange}
-                    required
+                   
                   />
                   <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-hover:text-gray-400 transition-colors">
                     <svg
@@ -245,7 +252,7 @@ const Signup = () => {
                     value={email}
                     autoComplete="username"
                     onChange={handleChange}
-                    required
+                 
                   />
                   <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-hover:text-gray-400 transition-colors">
                     <svg
@@ -284,7 +291,7 @@ const Signup = () => {
                     value={phoneNumber}
                     autoComplete="tel"
                     onChange={handleChange}
-                    required
+                 
                   />
                   <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-hover:text-gray-400 transition-colors">
                     <svg
@@ -362,7 +369,7 @@ const Signup = () => {
                       value={confirmPassword}
                       onChange={handleChange}
                       autoComplete="new-password"
-                      required
+                     
                     />
                     <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-hover:text-gray-400 transition-colors">
                       <svg

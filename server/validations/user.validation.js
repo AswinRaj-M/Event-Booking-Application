@@ -1,6 +1,15 @@
 import { body } from "express-validator"
 
 export const registerValidation = [
+      body().custom((value, { req }) => {
+    const { email, password,fullName,phoneNumber,agreeTermsAndConditions } = req.body;
+
+    if (!email || !password||!fullName||!phoneNumber||!agreeTermsAndConditions) {
+      throw new Error("All fields are required");
+    }
+
+    return true;
+  }),
   body("fullName")
     .trim()
     .notEmpty()
@@ -52,6 +61,15 @@ export const registerValidation = [
 ]
 
 export const loginValidation = [
+    body().custom((value, { req }) => {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      throw new Error("All fields are required");
+    }
+
+    return true;
+  }),
   body("email")
     .trim()
     .notEmpty()
