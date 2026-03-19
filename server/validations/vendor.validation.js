@@ -85,7 +85,7 @@ export const vendorLoginValidation = [
     .custom(async (password, { req }) => {
 
       const vendor = req.vendor;
-      if(!vendor) return true; // fallback if first custom failed
+      if (!vendor) return true;
 
       const match = await bcrypt.compare(password, vendor.password);
 

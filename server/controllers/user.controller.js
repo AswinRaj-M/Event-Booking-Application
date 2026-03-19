@@ -2,8 +2,8 @@ import User from "../models/user.model.js"
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
 import { generateOTP } from "../utils/generateOtp.js"
-import { sendOTP } from "../utils/sendMail.js"
-import { generateAccessToken, generateRefreshToken } from "../utils/generateToken.js"
+import { sendMail, sendOTP } from "../utils/sendMail.js"
+import { generateAccessToken, generateRefreshToken, generateResetToken } from "../utils/generateToken.js"
 import { hashToken } from "../utils/hashToken.js"
 import Otp from "../models/user.otp.model.js"
 import { AppError } from "../utils/AppError.js"
@@ -100,7 +100,7 @@ export const verifyOTP = async (req, res) => {
     httpOnly: true,
     sameSite: "strict",
     secure: process.env.NODE_ENV === "production",
-    maxAge: 15 * 60 * 1000, // 15 minutes
+    maxAge: 15 * 60 * 1000, 
   });
 
   res.cookie("refreshToken", refreshToken, {
@@ -120,6 +120,41 @@ export const verifyOTP = async (req, res) => {
   });
 }
 
+export const resendOtp = async(req,res) =>{
+  const {userId} = req.body
+
+  if(!userId)
+    throw new AppError("Failed to Fetch userId",400)
+
+  const user = await User.findById(userId)
+
+  if(!user)
+    throw new AppError("User not Found",404)
+
+  
+  await Otp.deleteMany({userId})
+
+  const otp =  generateOTP()
+
+  await Otp.create({
+    userId : user._id,
+    otp
+  })
+
+  
+  try {
+    await sendOTP(user.email,otp)
+  } catch (error) {
+    throw new AppError("Failed to resend Otp",500)
+  }
+  console.log("resend Otp",otp)
+
+
+  return res.status(200).json({
+    message : "Otp resent Successfully"
+  })
+}
+
 
 export const loginUser = async (req, res) => {
   const { email, password } = req.body  
@@ -135,6 +170,8 @@ export const loginUser = async (req, res) => {
       userId : user._id,
       otp
     })
+
+    await sendOTP(user.email,otp)
     return res.status(403).json({
       success : false , 
       code : "EMAIL_NOT_VERIFIED",
@@ -157,7 +194,7 @@ export const loginUser = async (req, res) => {
     httpOnly: true,
     sameSite: "strict",
     secure: process.env.NODE_ENV === "production",
-    maxAge: 15 * 60 * 1000, // 15 minutes
+    maxAge: 15 * 60 * 1000, 
   });
 
   res.cookie("refreshToken", refreshToken, {
@@ -178,6 +215,47 @@ export const loginUser = async (req, res) => {
   })
 }
 
+
+
+export const forgotPassword = async(req,res) =>{
+  const {email} = req.body
+  const user = await User.findOne({email});
+
+  if(!user) {
+    throw new AppError("User not found", 404)
+  }
+  const resetToken = generateResetToken(user._id,user.email)
+  const resetLink = `${process.env.CLIENT_PORT}/reset-password/${resetToken}`
+
+  await sendMail(email,`your reset password link ${resetLink}`,"reset password")
+  console.log("Password reset link",resetLink)
+
+  return res.json({message : "Reset link sent to Email"})
+}
+
+
+export const resetPassword = async(req,res) =>{
+  const {token,password} = req.body 
+
+  let decoded;
+  try {
+    decoded = jwt.verify(token,process.env.JWT_RESET_SECRET)
+  } catch (error) {
+    throw new AppError('invalid Access token')
+  }
+
+  const user = await User.findOne(decoded.email)
+  if(!user){
+    throw new AppError("User not found",404)
+  }
+
+  const hashedPassword = await bycrpt.hash(password,10)
+
+  user.password = hashedPassword
+  await user.save() 
+
+  return res.json({message : "Password reset Successfully"})
+}
 
 
 export const refreshAccessToken = async (req, res) => {

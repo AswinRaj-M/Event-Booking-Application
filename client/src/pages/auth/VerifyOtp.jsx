@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { verifyOTPThunk } from '../../features/user.slice';
+import { resendOtp } from '../../services/user.api';
+import { toast } from 'sonner';
 
 const VerifyOtp = () => {
   const dispatch = useDispatch();
@@ -44,6 +46,8 @@ const VerifyOtp = () => {
     }
   };
 
+  
+
   const handleKeyDown = (e, index) => {
     const newOtp = [...otp];
     if (e.key === 'Backspace') {
@@ -78,6 +82,11 @@ const VerifyOtp = () => {
 
 
   };
+  useEffect(()=>{
+    if(error){
+      toast.error(error)
+    }
+  },[error,dispatch,navigate])
 
   const handleSubmit = () => {
     const finalOtp = otp.join('');
@@ -91,6 +100,16 @@ const VerifyOtp = () => {
     );
 
   };
+
+  const handleResendOtp = async() =>{
+    try {
+      await resendOtp(userId)
+      toast.success("OTP resend Successfully")
+    } catch (error) {
+      console.error("Error from resend otp client : ",error)
+      toast.error("Failed to resend otp")
+    }
+  }
 
   const isOtpComplete = otp.join('').length === 6;
 
@@ -133,7 +152,6 @@ const VerifyOtp = () => {
         </div>
 
         {/* Messages */}
-        {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
         {loading && <p className="text-purple-400 text-sm mb-4">Verifying...</p>}
 
         {/* Resend Logic */}
@@ -143,7 +161,8 @@ const VerifyOtp = () => {
             disabled={timer > 0}
             className="font-medium text-purple-400 hover:text-purple-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => {
-              setTimer(60);
+              handleResendOtp()
+              setTimer(60)
             }}
           >
             Resend OTP

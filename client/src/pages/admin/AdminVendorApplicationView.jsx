@@ -31,7 +31,7 @@ const AdminVendorApplicationView = () => {
             toast.success('Successfully approved status')
             dispatch(getVendorByIdThunk(id))
         } catch (error) {
-            console.log('error:',error)
+            console.error('error:',error)
         }
     }
 

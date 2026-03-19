@@ -1,3 +1,4 @@
+import { data } from "react-router-dom"
 import axiosInstance from "./axiosInstance.js"
 
 
@@ -13,9 +14,17 @@ export const loginUser = (data) =>{
   return axiosInstance.post("/users/login",data)
 }
 
+export const resendOtp = (userId) =>{
+  return axiosInstance.post("/users/resend-otp",{userId})
+}
+export const forgotPassword = (email) =>{
+  return axiosInstance.post('/users/forgot-password',{email})
+}
+
 export const logoutUser = ()=>{
   return axiosInstance.post("/users/logout")
 }
+
 
 export const refreshUser = ()=>{
   return axiosInstance.get("/users/refresh-token")

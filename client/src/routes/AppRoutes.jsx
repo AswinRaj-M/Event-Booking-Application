@@ -6,6 +6,8 @@ import VerifyOtp from '../pages/auth/VerifyOtp.jsx';
 import Home from '../pages/home.jsx'
 import { ProtectedRoute, PublicRoute } from '../auth/ProtectedRoute.jsx';
 import Loader from '../components/common/Loader.jsx';
+import ForgotPassword from '../pages/auth/ForgotPassword.jsx';
+import ResetPassword from '../pages/auth/ResetPassword.jsx';
 
 const AppRoutes = () => {
     return (
@@ -15,6 +17,16 @@ const AppRoutes = () => {
                 <ProtectedRoute role="user">
                     <Home />
                 </ProtectedRoute>
+            } />
+            <Route path='/forgot-password' element={
+                <PublicRoute>
+                     <ForgotPassword/>
+                </PublicRoute>
+            } />
+                <Route path='/reset-password/:token' element={
+                <PublicRoute>
+                     <ResetPassword/>
+                </PublicRoute>
             } />
             <Route path="/" element={
                 <PublicRoute>

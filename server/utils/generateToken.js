@@ -17,3 +17,11 @@ export const generateRefreshToken = (userId) =>{
     { expiresIn : process.env.REFRESH_TOKEN_EXPIRES }
   )
 }
+
+export const generateResetToken = (userId,email) =>{
+  return jwt.sign(
+    {id : userId.toString(),email : email},
+    process.env.JWT_RESET_SECRET,
+    {expiresIn : "15m"}
+  )
+}
