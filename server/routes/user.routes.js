@@ -4,7 +4,8 @@ import {
   verifyOTP,
   loginUser,
   refreshAccessToken,
-  logoutUser
+  logoutUser,
+  getMe
 } from "../controllers/user.controller.js"
 import { protect } from "../middleware/auth.middleware.js"
 import { requireRole } from "../middleware/role.middleware.js"
@@ -22,6 +23,7 @@ router.post('/register', registerValidation, validate, asyncHandler(registerUser
 router.post('/verify-otp', verifyOTPValidation, validate, asyncHandler(verifyOTP))
 router.post('/login', loginValidation, validate, asyncHandler(loginUser))
 router.get('/refresh-token', asyncHandler(refreshAccessToken))
-router.post('/logout', asyncHandler(logoutUser), protect, requireRole("user"))
+router.post('/logout', protect, requireRole("user"), asyncHandler(logoutUser))
+router.get('/me', protect, asyncHandler(getMe))
 
 export default router

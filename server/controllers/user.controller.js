@@ -7,6 +7,7 @@ import { generateAccessToken, generateRefreshToken } from "../utils/generateToke
 import { hashToken } from "../utils/hashToken.js"
 import Otp from "../models/user.otp.model.js"
 import { AppError } from "../utils/AppError.js"
+import Vendor from "../models/vendor.model.js"
 
 export const registerUser = async (req, res) => {
   const {
@@ -87,13 +88,20 @@ export const verifyOTP = async (req, res) => {
 
   user.isVerified = true;
 
-  const accessToken = generateAccessToken(user);
-  const refreshToken = generateRefreshToken(user);
+  const accessToken = generateAccessToken(user._id, user.role);
+  const refreshToken = generateRefreshToken(user._id);
 
   user.refreshToken = hashToken(refreshToken);
 
   await user.save();
   await Otp.deleteOne({ userId })
+
+  res.cookie("accessToken", accessToken, {
+    httpOnly: true,
+    sameSite: "strict",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 15 * 60 * 1000, // 15 minutes
+  });
 
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
@@ -103,7 +111,6 @@ export const verifyOTP = async (req, res) => {
   });
 
   return res.status(200).json({
-    accessToken,
     user: {
       id: user._id,
       fullName: user.fullName,
@@ -121,35 +128,52 @@ export const loginUser = async (req, res) => {
   if (!user)
     throw new AppError("Invalid Credentials", 400)
 
-  if (!user.isVerified)
-    throw new AppError("Please verify your email to login", 400)
-
+  if (!user.isVerified){
+    const otp = generateOTP()
+    console.log("Email verify Otp : ",otp)
+    await Otp.create({
+      userId : user._id,
+      otp
+    })
+    return res.status(403).json({
+      success : false , 
+      code : "EMAIL_NOT_VERIFIED",
+      message : "Please verify you email first" ,
+      userId : user._id})
+  }
   const match = await bcrypt.compare(password, user.password)
 
   if (!match)
     throw new AppError("Password is Incorrect", 400)
 
 
-  const accessToken = generateAccessToken(user)
-  const refreshToken = generateRefreshToken(user)
+  const accessToken = generateAccessToken(user._id, user.role)
+  const refreshToken = generateRefreshToken(user._id)
 
   user.refreshToken = hashToken(refreshToken)
   await user.save();
   
+  res.cookie("accessToken", accessToken, {
+    httpOnly: true,
+    sameSite: "strict",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 15 * 60 * 1000, // 15 minutes
+  });
+
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
-    secure: false,
+    secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
     maxAge: 7 * 24 * 60 * 60 * 1000,
   })
 
   return res.json({
-    accessToken,
     user: {
       id: user._id,
       fullName: user.fullName,
       email: user.email,
-      role: user.role
+      role: user.role,
+      isVerified : user.isVerified
     }
   })
 }
@@ -169,14 +193,30 @@ export const refreshAccessToken = async (req, res) => {
     throw new AppError("Invalid Refresh Token", 403)
   }
 
-  const user = await User.findById(decode.id)
+  let userId = decode.id;
+  if (typeof userId === 'object' && userId.type === 'Buffer') {
+    userId = Buffer.from(userId.data).toString('hex');
+  }
+
+  let user = await User.findById(userId)
+
+  if (!user) {
+    user = await Vendor.findById(userId)
+  }
 
   if (!user || user.refreshToken !== hashToken(token))
     throw new AppError("Invalid RefreshToken", 403)
 
-  const newAccessToken = generateAccessToken(user)
+  const newAccessToken = generateAccessToken(user._id, user.role)
 
-  res.json({ accessToken: newAccessToken })
+  res.cookie("accessToken", newAccessToken, {
+    httpOnly: true,
+    sameSite: "strict",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 15 * 60 * 1000, // 15 minutes
+  });
+
+  res.json({ message: "Token refreshed successfully" })
 }
 
 
@@ -191,11 +231,33 @@ export const logoutUser = async (req, res) => {
     )
   }
 
+  res.clearCookie("accessToken", {
+    httpOnly: true,
+    sameSite: "strict",
+    secure: process.env.NODE_ENV === "production"
+  })
+
   res.clearCookie("refreshToken", {
     httpOnly: true,
     sameSite: "strict",
-    secure: false
+    secure: process.env.NODE_ENV === "production"
   })
 
   return res.status(200).json({ message: "Logged out Successfully" })
+}
+
+export const getMe = async (req, res) => {
+  const user = req.user;
+  if (!user) {
+    return res.status(401).json({ message: "Not Authorized" });
+  }
+
+  return res.status(200).json({
+    user: {
+      id: user._id,
+      fullName: user.fullName,
+      email: user.email,
+      role: user.role
+    }
+  });
 }

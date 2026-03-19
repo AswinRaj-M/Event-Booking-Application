@@ -25,3 +25,7 @@ export const approveVendorApplication = (id,message) =>{
 export const rejectVendorAppplication = (id,message) =>{
   return axiosInstance.patch(`/admin/vendors/reject-application`,{id,message})
 }
+
+export const getAdminMe = () => {
+  return axiosInstance.get("/admin/me")
+}

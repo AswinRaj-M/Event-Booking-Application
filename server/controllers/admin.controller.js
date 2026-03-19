@@ -28,20 +28,26 @@ export const AdminLogin = async (req, res) => {
   }
 
   const accessToken = generateAccessToken(admin._id, admin.role)
-  const refreshToken = generateRefreshToken(admin._id, admin.role)
+  const refreshToken = generateRefreshToken(admin._id)
   admin.refreshToken = hashToken(refreshToken)
   await admin.save()
 
+  res.cookie("accessToken", accessToken, {
+    httpOnly: true,
+    sameSite: "strict",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 15 * 60 * 1000,
+  })
+
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
-    secure: false,
+    secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
     maxAge: 7 * 24 * 60 * 60 * 1000,
   })
 
   res.status(200).json({
     message: "Admin Logged In Successfully",
-    accessToken,
     admin: {
       id: admin._id,
       name: admin.fullName,
@@ -63,12 +69,34 @@ export const logoutAdmin = async (req, res) => {
     )
   }
 
+  res.clearCookie("accessToken", {
+    httpOnly: true,
+    sameSite: "strict",
+    secure: process.env.NODE_ENV === "production"
+  })
+
   res.clearCookie("refreshToken", {
     httpOnly: true,
     sameSite: "strict",
-    secure: false
+    secure: process.env.NODE_ENV === "production"
   })
   return res.status(200).json({ message: "Admin Logged Out Successfully" })
+}
+
+export const getAdminMe = async (req, res) => {
+  const admin = req.user;
+  if (!admin || admin.role !== "admin") {
+    return res.status(401).json({ message: "Not Authorized as Admin" });
+  }
+
+  return res.status(200).json({
+    admin: {
+      id: admin._id,
+      name: admin.fullName,
+      email: admin.email,
+      role: admin.role
+    }
+  });
 }
 
 export const getAllVendors = async (req, res) => {

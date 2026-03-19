@@ -43,11 +43,22 @@ export const vendorLogoutThunk = createAsyncThunk(
   }
 )
 
+export const checkVendorAuthThunk = createAsyncThunk(
+  "vendor/checkAuth",
+  async (_, thunkAPI) => {
+    try {
+      const response = await vendorAPI.getVendorMe()
+      return response.data.vendor
+    } catch (error) {
+      return thunkAPI.rejectWithValue("Not Authenticated")
+    }
+  }
+)
+
 const vendorSlice = createSlice({
   name: "vendor",
   initialState: {
     vendor: null,
-    accessToken: null,
     success: false,
     loading: false,
     error: false
@@ -55,7 +66,6 @@ const vendorSlice = createSlice({
   reducers: {
     vendorLogoutState: (state) => {
       state.vendor = null
-      state.accessToken = null
       state.error = null
       state.success = false
     },
@@ -94,7 +104,6 @@ const vendorSlice = createSlice({
         state.loading = false
         state.success = true
         state.vendor = action.payload.vendor
-        state.accessToken = action.payload.accessToken
         state.error = null
       })
 
@@ -102,6 +111,19 @@ const vendorSlice = createSlice({
         state.loading = false
         state.success = false
         state.error = action.payload
+      })
+
+      .addCase(checkVendorAuthThunk.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(checkVendorAuthThunk.fulfilled, (state, action) => {
+        state.vendor = action.payload;
+        state.success = true;
+        state.loading = false;
+      })
+      .addCase(checkVendorAuthThunk.rejected, (state) => {
+        state.vendor = null;
+        state.loading = false;
       })
   }
 })

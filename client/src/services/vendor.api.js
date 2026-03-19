@@ -11,3 +11,7 @@ export const vendorLogin = (data) =>{
 export const vendorLogout = () =>{
   return axiosInstance.post("/vendor/logout")
 }
+
+export const getVendorMe = () => {
+  return axiosInstance.get("/vendor/me")
+}

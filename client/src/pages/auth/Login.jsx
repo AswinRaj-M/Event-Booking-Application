@@ -34,7 +34,8 @@
             password,
           }),
         );
-      } else {
+      }
+       else {
         dispatch(
           vendorLoginThunk({
             businessEmail: email,
@@ -74,7 +75,15 @@
       }
 
       if (isLogin && userState.error) {
-        toast.error(userState.error);
+
+        if(userState.errorCode === "EMAIL_NOT_VERIFIED"){
+          toast.warning("Verify your email")
+          navigate("/verify-otp",{
+            state : {email,userId : userState.userId}
+          });
+        }else{
+          toast.error(userState.error);
+        }
         dispatch(clearMessages());
       }
 

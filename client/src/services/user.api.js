@@ -20,3 +20,7 @@ export const logoutUser = ()=>{
 export const refreshUser = ()=>{
   return axiosInstance.get("/users/refresh-token")
 }
+
+export const getUserMe = () => {
+  return axiosInstance.get("/users/me")
+}

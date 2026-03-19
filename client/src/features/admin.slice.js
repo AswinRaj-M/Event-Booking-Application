@@ -44,11 +44,22 @@ export  const getVendorByIdThunk =createAsyncThunk(
     }
   }
 )
+
+export const checkAdminAuthThunk = createAsyncThunk(
+  "admin/checkAuth",
+  async (_, thunkAPI) => {
+    try {
+      const response = await adminAPI.getAdminMe()
+      return response.data.admin
+    } catch (error) {
+      return thunkAPI.rejectWithValue("Not Authenticated")
+    }
+  }
+)
 const adminSlice = createSlice({
   name :"admin",
   initialState : {
     admin : null,
-    accessToken : null,
     loading : false,
     success : false,
     error : null,
@@ -59,7 +70,6 @@ const adminSlice = createSlice({
   reducers :{
     logoutAdminState : (state) =>{
       state.admin = null
-      state.accessToken = null
       state.success = false
       state.error = null
     },
@@ -78,7 +88,6 @@ const adminSlice = createSlice({
       .addCase(adminLoginThunk.fulfilled,(state,action)=>{
         state.success = true
         state.admin =action.payload.admin 
-        state.accessToken = action.payload.accessToken
         state.loading = false
         state.error = null
       })
@@ -124,6 +133,19 @@ const adminSlice = createSlice({
         state.success = false
         state.loading = false
         state.error = action.payload
+      })
+
+      .addCase(checkAdminAuthThunk.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(checkAdminAuthThunk.fulfilled, (state, action) => {
+        state.admin = action.payload;
+        state.success = true;
+        state.loading = false;
+      })
+      .addCase(checkAdminAuthThunk.rejected, (state) => {
+        state.admin = null;
+        state.loading = false;
       })
   }
 })

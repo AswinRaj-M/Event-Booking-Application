@@ -31,17 +31,19 @@ export const verifyOTPThunk = createAsyncThunk(
 
 export const loginUserThunk = createAsyncThunk(
   "users/login",
-  async(data,thunkAPI) =>{
+  async (data, thunkAPI) => {
     try {
-      const response = await userAPI.loginUser(data)
-      return response.data
-
+      const response = await userAPI.loginUser(data);
+      return response.data;
     } catch (error) {
-      const errorMessage = error.response?.data?.message || "Failed To Login";
-      return thunkAPI.rejectWithValue(typeof errorMessage === 'string' ? errorMessage : "Failed To Login");
+      return thunkAPI.rejectWithValue({
+        message: error.response?.data?.message || "Failed To Login",
+        code: error.response?.data?.code,
+        userId : error.response?.data?.userId
+      });
     }
   }
-)
+);
 
 export const logoutUserThunk = createAsyncThunk(
   "users/logout",
@@ -67,22 +69,32 @@ export const refreshUserToken = createAsyncThunk(
   }
 )
 
+export const checkUserAuthThunk = createAsyncThunk(
+  "users/checkAuth",
+  async (_, thunkAPI) => {
+    try {
+      const response = await userAPI.getUserMe();
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue("Not Authenticated");
+    }
+  }
+)
 
 const userSlice = createSlice({
   name :"user",
   initialState : {
     user : null,
     userId : null,
-    accessToken : null,
     loading : false,
     error : null,
-    success : false
+    success : false,
+    errorCode : null
   },
 
   reducers : {
     logoutUserState : (state) =>{
       state.user = null
-      state.accessToken = null
       state.success = false
       state.error = null
     },
@@ -117,8 +129,7 @@ const userSlice = createSlice({
       .addCase(verifyOTPThunk.fulfilled,(state,action) =>{
         state.loading = false;
         state.success = true;
-        state.user = action.payload;
-        state.accessToken = action.payload.accessToken;
+        state.user = action.payload.user;
         state.error = null;
       })
       .addCase(verifyOTPThunk.rejected,(state,action)=> {
@@ -135,30 +146,41 @@ const userSlice = createSlice({
         state.loading = false;
         state.success = true;
         state.user = action.payload.user;
-        state.accessToken = action.payload.accessToken;
         state.error = null;
       })
       .addCase(loginUserThunk.rejected,(state,action)=>{
         state.loading = false
-        state.error = action.payload
+        state.error = action.payload.message
+        state.errorCode = action.payload?.code
+        state.userId = action.payload.userId
       })
 
       .addCase(logoutUserThunk.fulfilled, (state) => {
         state.user = null;
         state.userId = null;
-        state.accessToken = null;
         state.success = false;
         state.error = null;
       })
 
 
       .addCase(refreshUserToken.fulfilled,(state,action)=>{
-        state.accessToken = action.payload.accessToken;
         state.error = null;
       })
       .addCase(refreshUserToken.rejected,(state,action)=>{
         state.user = null
-        state.accessToken = null
+      })
+
+      .addCase(checkUserAuthThunk.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(checkUserAuthThunk.fulfilled, (state, action) => {
+        state.loading = false;
+        state.user = action.payload.user;
+        state.success = true;
+      })
+      .addCase(checkUserAuthThunk.rejected, (state, action) => {
+        state.loading = false;
+        state.user = null;
       })
       
   }

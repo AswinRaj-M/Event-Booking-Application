@@ -1,11 +1,29 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useDispatch } from 'react-redux';
+import { useLocation } from 'react-router-dom';
 import AppRoutes from './routes/AppRoutes';
 import AdminRoutes from './routes/AdminRoutes';
 import VendorRoutes from './routes/vendorRoutes';
 import { Toaster } from "sonner";
 import { Routes, Route} from 'react-router-dom';
+import { checkUserAuthThunk } from './features/user.slice.js';
+import { checkAdminAuthThunk } from './features/admin.slice.js';
+import { checkVendorAuthThunk } from './features/vendorSlice.js';
 
 function App() {
+  const dispatch = useDispatch();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.pathname.startsWith('/admin')) {
+      dispatch(checkAdminAuthThunk());
+    } else if (location.pathname.startsWith('/vendor')) {
+      dispatch(checkVendorAuthThunk());
+    } else {
+      dispatch(checkUserAuthThunk());
+    }
+  }, [dispatch]);
+
   return (
     <>
       <Toaster position="bottom-center" theme='dark'

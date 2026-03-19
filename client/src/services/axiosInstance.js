@@ -12,46 +12,43 @@ const axiosInstance = axios.create({
   withCredentials: true
 })
 
-axiosInstance.interceptors.request.use((config) => {
-  const state = store.getState()
-  let token = state.user?.accessToken;
-
-  if (config.url?.startsWith('/admin')) {
-    token = state.admin?.accessToken;
-  } else if (config.url?.startsWith('/vendor')) {
-    token = state.vendor?.accessToken;
-  }
-
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config;
-})
-
-
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
+    if (originalRequest.url?.endsWith('/me')) {
+      return Promise.reject(error);
+    }
+
+    if (originalRequest.url?.includes('/login') || originalRequest.url?.includes('/refresh-token')) {
+      return Promise.reject(error);
+    }
+
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
       try {
-        await store.dispatch(refreshUserToken())
+        await store.dispatch(refreshUserToken()).unwrap()
         return axiosInstance(originalRequest)
-      } catch (error) {
-        store.dispatch(logoutUserState())
-        window.location.href = "/login"
+      } catch (err) {
+        if (window.location.pathname.startsWith('/admin')) {
+          const { logoutAdminState } = await import('../features/admin.slice.js');
+          store.dispatch(logoutAdminState());
+          window.location.href = "/admin/login";
+        } else if (window.location.pathname.startsWith('/vendor')) {
+          const { vendorLogoutState } = await import('../features/vendorSlice.js');
+          store.dispatch(vendorLogoutState());
+          window.location.href = "/login";
+        } else {
+          store.dispatch(logoutUserState());
+          window.location.href = "/login";
+        }
       }
     }
 
     return Promise.reject(error)
   }
-
 )
-
-
-
 
 export default axiosInstance

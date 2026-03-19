@@ -1,5 +1,5 @@
 import express from 'express'
-import { applyVendor, vendorLogin, vendorLogout } from "../controllers/vendor.controller.js"
+import { applyVendor, vendorLogin, vendorLogout, getVendorMe } from "../controllers/vendor.controller.js"
 import upload from '../middleware/upload.js'
 import { asyncHandler } from '../middleware/error.middleware.js'
 import { requireRole } from '../middleware/role.middleware.js'
@@ -25,5 +25,6 @@ router.post(
 
 router.post("/login", vendorLoginValidation, validate, asyncHandler(vendorLogin))
 router.post("/logout", protect, requireRole("vendor"), asyncHandler(vendorLogout))
+router.get("/me", protect, requireRole("vendor"), asyncHandler(getVendorMe))
 
 export default router
