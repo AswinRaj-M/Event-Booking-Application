@@ -29,7 +29,7 @@ router.post('/resend-otp',validate,asyncHandler(resendOtp))
 router.post('/forgot-password',validate,asyncHandler(forgotPassword))
 router.patch('/reset-password',validate,asyncHandler(resetPassword))
 router.get('/refresh-token', asyncHandler(refreshAccessToken))
-router.post('/logout', protect, requireRole("user"), asyncHandler(logoutUser))
+router.post('/logout', protect, asyncHandler(logoutUser))
 router.get('/me', protect, asyncHandler(getMe))
 
 export default router

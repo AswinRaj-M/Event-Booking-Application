@@ -2,6 +2,7 @@ import { useSelector } from "react-redux"
 import { Navigate, useLocation } from "react-router-dom"
 
 export const ProtectedRoute = ({ children, role = "user" }) => {
+  const location = useLocation()
   const user = useSelector((state) => state.user?.user)
   const vendor = useSelector((state) => state.vendor?.vendor)
   const admin = useSelector((state) => state.admin?.admin)
@@ -29,7 +30,7 @@ export const PublicRoute = ({ children }) => {
   const admin = useSelector((state) => state.admin?.admin)
   const location = useLocation()
 
-  if (admin && location.pathname.startsWith("/admin")) {
+  if (admin) {
     return <Navigate to="/admin/dashboard" replace />
   } else if (vendor) {
     if (vendor.applicationStatus === "pending" || vendor.applicationStatus === "rejected") {

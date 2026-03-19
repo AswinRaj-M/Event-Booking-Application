@@ -38,7 +38,7 @@ const AdminVendorApplicationView = () => {
     const rejectApplication = async() =>{
         try {
             if(!message){
-                toast.error("Please enter the rejection reason")
+                return toast.error("Please enter the rejection reason")
             }
             await rejectVendorAppplication(id,message)
             toast.success("Successfully rejected status")

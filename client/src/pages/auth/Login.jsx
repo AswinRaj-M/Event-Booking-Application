@@ -282,7 +282,7 @@ import Loader from "../../components/common/Loader";
                   <div className="relative group">
                     <input
                       id="password"
-                      type={showPassword ? "password" : "text"}
+                      type={showPassword ? "text" : "password"}
                       placeholder="••••••••"
                       className="w-full px-4 py-3 pl-11 pr-11 bg-black/50 border border-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all placeholder:text-gray-600 text-white group-hover:border-gray-700"
                       value={password}

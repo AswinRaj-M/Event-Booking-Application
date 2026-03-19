@@ -24,7 +24,7 @@ const AdminLogin = () => {
     useEffect(()=>{
         if(success){
             dispatch(adminClearMessages())
-            navigate("/admin/dashboard")
+            navigate("/admin/dashboard", { replace: true })
         }
     },[success,navigate,dispatch])
     return (
