@@ -86,14 +86,14 @@ export const applyVendor = async (req, res) => {
   vendor.refreshToken = hashToken(refreshToken)
   await vendor.save()
 
-  res.cookie("accessToken", accessToken, {
+  res.cookie("vendorAccessToken", accessToken, {
     httpOnly: true,
     sameSite: "strict",
     secure: process.env.NODE_ENV === "production",
     maxAge: 15 * 60 * 1000
   })
 
-  res.cookie("refreshToken", refreshToken, {
+  res.cookie("vendorRefreshToken", refreshToken, {
     httpOnly: true,
     sameSite: "strict",
     secure: process.env.NODE_ENV === "production",
@@ -116,7 +116,7 @@ export const applyVendor = async (req, res) => {
 
 
 export const vendorLogout = async(req,res) =>{
-  const token = req.cookies.refreshToken
+  const token = req.cookies.vendorRefreshToken
   if(token){
     const hashed = hashToken(token)
     await Vendor.findOneAndUpdate(
@@ -125,13 +125,13 @@ export const vendorLogout = async(req,res) =>{
     )
   }
 
-  res.clearCookie("accessToken", {
+  res.clearCookie("vendorAccessToken", {
     httpOnly: true,
     sameSite: "strict",
     secure: process.env.NODE_ENV === "production"
   })
 
-  res.clearCookie("refreshToken",{
+  res.clearCookie("vendorRefreshToken",{
     httpOnly : true,
     sameSite : "strict",
     secure : process.env.NODE_ENV === "production"

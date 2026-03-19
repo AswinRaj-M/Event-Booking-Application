@@ -32,14 +32,14 @@ export const AdminLogin = async (req, res) => {
   admin.refreshToken = hashToken(refreshToken)
   await admin.save()
 
-  res.cookie("accessToken", accessToken, {
+  res.cookie("adminAccessToken", accessToken, {
     httpOnly: true,
     sameSite: "strict",
     secure: process.env.NODE_ENV === "production",
     maxAge: 15 * 60 * 1000,
   })
 
-  res.cookie("refreshToken", refreshToken, {
+  res.cookie("adminRefreshToken", refreshToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
@@ -59,7 +59,7 @@ export const AdminLogin = async (req, res) => {
 
 
 export const logoutAdmin = async (req, res) => {
-  const token = req.cookies.refreshToken
+  const token = req.cookies.adminRefreshToken
 
   if (token) {
     const hashed = hashToken(token)
@@ -69,13 +69,13 @@ export const logoutAdmin = async (req, res) => {
     )
   }
 
-  res.clearCookie("accessToken", {
+  res.clearCookie("adminAccessToken", {
     httpOnly: true,
     sameSite: "strict",
     secure: process.env.NODE_ENV === "production"
   })
 
-  res.clearCookie("refreshToken", {
+  res.clearCookie("adminRefreshToken", {
     httpOnly: true,
     sameSite: "strict",
     secure: process.env.NODE_ENV === "production"

@@ -24,7 +24,7 @@ router.post(
 )
 
 router.post("/login", vendorLoginValidation, validate, asyncHandler(vendorLogin))
-router.post("/logout", protect, requireRole("vendor"), asyncHandler(vendorLogout))
+router.post("/logout", protect, asyncHandler(vendorLogout))
 router.get("/me", protect, requireRole("vendor"), asyncHandler(getVendorMe))
 
 export default router

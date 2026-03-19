@@ -5,7 +5,7 @@ import mongoose from 'mongoose'
 
 export const protect = async (req, res, next) => {
   try {
-    let token = req.cookies.accessToken;
+    let token = req.cookies.adminAccessToken || req.cookies.vendorAccessToken || req.cookies.accessToken;
 
     if (!token) {
       return res.status(401).json({

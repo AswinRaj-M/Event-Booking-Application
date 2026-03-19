@@ -3,7 +3,27 @@ import Vendor from "../models/vendor.model.js";
 import bcrypt from "bcryptjs";
 
 export const vendorApplyValidation = [
+body().custom((value, { req }) => {
+  const {
+    organizerName,
+    businessName,
+    businessEmail,
+    password,
+    contactPhone,
+  } = req.body;
 
+  if (
+    !organizerName ||
+    !businessName ||
+    !businessEmail ||
+    !password ||
+    !contactPhone
+  ) {
+    throw new Error("All fields are required");
+  }
+
+  return true;
+}).bail(),
   body("organizerName")
     .trim()
     .notEmpty()

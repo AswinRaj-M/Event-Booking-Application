@@ -258,7 +258,7 @@ export const resetPassword = async(req,res) =>{
 
 
 export const refreshAccessToken = async (req, res) => {
-  const token = req.cookies.refreshToken
+  const token = req.cookies.adminRefreshToken || req.cookies.vendorRefreshToken || req.cookies.refreshToken
 
   if (!token)
     throw new AppError("No Refresh Token", 401)
@@ -285,8 +285,12 @@ export const refreshAccessToken = async (req, res) => {
     throw new AppError("Invalid RefreshToken", 403)
 
   const newAccessToken = generateAccessToken(user._id, user.role)
+  
+  let cookieName = "accessToken";
+  if (user.role === "admin") cookieName = "adminAccessToken";
+  else if (user.role === "vendor") cookieName = "vendorAccessToken";
 
-  res.cookie("accessToken", newAccessToken, {
+  res.cookie(cookieName, newAccessToken, {
     httpOnly: true,
     sameSite: "strict",
     secure: process.env.NODE_ENV === "production",
