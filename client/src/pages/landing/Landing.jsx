@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { ROUTES } from "../../constants/routes";
 import Navbar from "../../components/layout/Navbar.jsx";
 import logo from "../../assets/logo.jpeg";
 
@@ -74,7 +75,7 @@ const LandingPage = () => {
               <p className="text-gray-400 text-sm mb-8 leading-relaxed max-w-sm mx-auto">
                 Browse exclusive events, book tickets instantly, and immerse yourself in amazing experiences curated just for you.
               </p>
-              <Link to="/signup">
+              <Link to={ROUTES.SIGNUP}>
                 <button className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 py-4 rounded-xl font-bold transition flex items-center justify-center gap-2 shadow-lg shadow-purple-900/20">
                   Explore Events <span className="group-hover:translate-x-1 transition-transform">→</span>
                 </button>
@@ -95,9 +96,11 @@ const LandingPage = () => {
               <p className="text-gray-400 text-sm mb-8 leading-relaxed max-w-sm mx-auto">
                 Create stunning event pages, manage ticket sales, and grow your audience with powerful hosting tools.
               </p>
-              <button className="w-full bg-white/5 hover:bg-white/10 border border-white/10 py-4 rounded-xl font-bold transition flex items-center justify-center gap-2">
-                Host an Event
-              </button>
+              <Link to={ROUTES.VENDOR_APPLICATION}>
+                <button className="w-full bg-white/5 hover:bg-white/10 border border-white/10 py-4 rounded-xl font-bold transition flex items-center justify-center gap-2 text-white">
+                  Host an Event
+                </button>
+              </Link>
             </div>
           </div>
 

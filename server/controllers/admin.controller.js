@@ -86,7 +86,7 @@ export const logoutAdmin = async (req, res) => {
 export const getAdminMe = async (req, res) => {
   const admin = req.user;
   if (!admin || admin.role !== "admin") {
-    return res.status(401).json({ message: "Not Authorized as Admin" });
+    return res.status(200).json({ admin: null });
   }
 
   return res.status(200).json({

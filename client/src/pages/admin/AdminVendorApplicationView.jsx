@@ -5,7 +5,8 @@ import {
     User, Calendar, Building, Search, Bell, Sidebar
 } from 'lucide-react';
 import AdminSidebar from '../../components/admin/AdminSidebar';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
+import { ROUTES } from '../../constants/routes';
 import { useDispatch, useSelector } from 'react-redux';
 import { getVendorByIdThunk } from '../../features/admin.slice';
 import { approveVendorApplication, rejectVendorAppplication } from '../../services/admin.api';
@@ -106,10 +107,10 @@ const AdminVendorApplicationView = () => {
                     <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4 mb-8 shrink-0">
                         <div>
                             <div className="flex items-center space-x-4 mb-2">
-                                <button className="flex items-center space-x-2 px-3 py-1.5 bg-[#151221] hover:bg-[#2A204C] border border-gray-800 hover:border-purple-500/50 rounded-lg text-sm transition-colors text-purple-300">
+                                <Link to={ROUTES.ADMIN_VENDORS} className="flex items-center space-x-2 px-3 py-1.5 bg-[#151221] hover:bg-[#2A204C] border border-gray-800 hover:border-purple-500/50 rounded-lg text-sm transition-colors text-purple-300">
                                     <ArrowLeft size={16} />
                                     <span className="hidden sm:inline">Back to list</span>
-                                </button>
+                                </Link>
                                 <span className="px-3 py-1 bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 rounded-md text-xs font-medium uppercase">
                                     {vendorDetails?.applicationStatus || 'Status'}
                                 </span>

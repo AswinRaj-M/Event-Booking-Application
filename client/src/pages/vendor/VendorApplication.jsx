@@ -8,6 +8,7 @@ import { vendorApplicationThunk } from "../../features/vendorSlice";
 import { useEffect } from "react";
 import { toast } from "sonner";
 import Loader from "../../components/common/Loader";
+import { ROUTES } from "../../constants/routes";
 
 const VendorApplication = () => {
   const navigate = useNavigate();
@@ -118,7 +119,7 @@ const VendorApplication = () => {
 
   useEffect(() => {
     if (success) {
-      navigate("/vendor/status", {
+      navigate(ROUTES.VENDOR_STATUS, {
         state: {
           businessName: form.businessName,
         },
@@ -172,7 +173,7 @@ const VendorApplication = () => {
           <div className="hidden md:flex items-center gap-4">
             <span className="text-gray-400 text-sm">Already a vendor?</span>
             <Link
-              to="/login"
+              to={ROUTES.LOGIN}
               className="text-white hover:text-violet-400 transition text-sm font-medium"
             >
               Login

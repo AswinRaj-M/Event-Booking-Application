@@ -2,6 +2,7 @@ import React from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { logoutAdminState } from '../../features/admin.slice'
+import { ROUTES } from '../../constants/routes'
 import {
     LayoutDashboard,
     Users,
@@ -24,7 +25,7 @@ function AdminSidebar() {
 
     const handleLogout = () => {
         dispatch(logoutAdminState())
-        navigate("/admin/login")
+        navigate(ROUTES.ADMIN_LOGIN)
     }
 
     const isActive = (path) => location.pathname === path
@@ -44,20 +45,20 @@ function AdminSidebar() {
                 <div className="px-4 mb-6">
                     <p className="px-4 text-[11px] font-semibold text-gray-500 mb-2 uppercase">Platform</p>
                     <nav className="space-y-1">
-                        <Link to="/admin/dashboard" className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive('/admin/dashboard') ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
-                            <LayoutDashboard className={`mr-3 h-5 w-5 ${isActive('/admin/dashboard') ? 'text-purple-400' : 'text-gray-500'}`} />
+                        <Link to={ROUTES.ADMIN_DASHBOARD} className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive(ROUTES.ADMIN_DASHBOARD) ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
+                            <LayoutDashboard className={`mr-3 h-5 w-5 ${isActive(ROUTES.ADMIN_DASHBOARD) ? 'text-purple-400' : 'text-gray-500'}`} />
                             Dashboard
                         </Link>
-                        <Link to="#" className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive('/admin/users') ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
-                            <Users className={`mr-3 h-5 w-5 ${isActive('/admin/users') ? 'text-purple-400' : 'text-gray-500'}`} />
+                        <Link to={ROUTES.ADMIN_USER_MANAGEMENT} className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive(ROUTES.ADMIN_USER_MANAGEMENT) ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
+                            <Users className={`mr-3 h-5 w-5 ${isActive(ROUTES.ADMIN_USER_MANAGEMENT) ? 'text-purple-400' : 'text-gray-500'}`} />
                             Users
                         </Link>
-                        <Link to="/admin/vendors" className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive('/admin/vendors') ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
-                            <Store className={`mr-3 h-5 w-5 ${isActive('/admin/vendors') ? 'text-purple-400' : 'text-gray-500'}`} />
+                        <Link to={ROUTES.ADMIN_VENDORS} className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive(ROUTES.ADMIN_VENDORS) ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
+                            <Store className={`mr-3 h-5 w-5 ${isActive(ROUTES.ADMIN_VENDORS) ? 'text-purple-400' : 'text-gray-500'}`} />
                             Vendors
                         </Link>
-                        <Link to="#" className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive('/admin/events') ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
-                            <Calendar className={`mr-3 h-5 w-5 ${isActive('/admin/events') ? 'text-purple-400' : 'text-gray-500'}`} />
+                        <Link to={ROUTES.ADMIN_EVENT_MANAGEMENT} className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive(ROUTES.ADMIN_EVENT_MANAGEMENT) ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
+                            <Calendar className={`mr-3 h-5 w-5 ${isActive(ROUTES.ADMIN_EVENT_MANAGEMENT) ? 'text-purple-400' : 'text-gray-500'}`} />
                             Events
                         </Link>
                     </nav>
@@ -66,16 +67,16 @@ function AdminSidebar() {
                 <div className="px-4 mb-6">
                     <p className="px-4 text-[11px] font-semibold text-gray-500 mb-2 uppercase">Management</p>
                     <nav className="space-y-1">
-                        <Link to="#" className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive('/admin/bookings') ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
-                            <Ticket className={`mr-3 h-5 w-5 ${isActive('/admin/bookings') ? 'text-purple-400' : 'text-gray-500'}`} />
+                        <Link to={ROUTES.ADMIN_BOOKING_MANAGEMENT} className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive(ROUTES.ADMIN_BOOKING_MANAGEMENT) ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
+                            <Ticket className={`mr-3 h-5 w-5 ${isActive(ROUTES.ADMIN_BOOKING_MANAGEMENT) ? 'text-purple-400' : 'text-gray-500'}`} />
                             Bookings
                         </Link>
-                        <Link to="#" className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive('/admin/payments') ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
-                            <CreditCard className={`mr-3 h-5 w-5 ${isActive('/admin/payments') ? 'text-purple-400' : 'text-gray-500'}`} />
+                        <Link to={ROUTES.ADMIN_PAYMENT_MANAGEMENT} className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive(ROUTES.ADMIN_PAYMENT_MANAGEMENT) ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
+                            <CreditCard className={`mr-3 h-5 w-5 ${isActive(ROUTES.ADMIN_PAYMENT_MANAGEMENT) ? 'text-purple-400' : 'text-gray-500'}`} />
                             Payments
                         </Link>
-                        <Link to="#" className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive('/admin/analytics') ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
-                            <BarChart3 className={`mr-3 h-5 w-5 ${isActive('/admin/analytics') ? 'text-purple-400' : 'text-gray-500'}`} />
+                        <Link to={ROUTES.ADMIN_ANALYTICS} className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive(ROUTES.ADMIN_ANALYTICS) ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
+                            <BarChart3 className={`mr-3 h-5 w-5 ${isActive(ROUTES.ADMIN_ANALYTICS) ? 'text-purple-400' : 'text-gray-500'}`} />
                             Analytics
                         </Link>
                     </nav>
@@ -84,8 +85,8 @@ function AdminSidebar() {
                 <div className="px-4">
                     <p className="px-4 text-[11px] font-semibold text-gray-500 mb-2 uppercase">System</p>
                     <nav className="space-y-1">
-                        <Link to="#" className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive('/admin/settings') ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
-                            <Settings className={`mr-3 h-5 w-5 ${isActive('/admin/settings') ? 'text-purple-400' : 'text-gray-500'}`} />
+                        <Link to={ROUTES.ADMIN_SETTINGS} className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive(ROUTES.ADMIN_SETTINGS) ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
+                            <Settings className={`mr-3 h-5 w-5 ${isActive(ROUTES.ADMIN_SETTINGS) ? 'text-purple-400' : 'text-gray-500'}`} />
                             Settings
                         </Link>
                     </nav>

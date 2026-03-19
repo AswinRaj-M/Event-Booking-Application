@@ -330,7 +330,7 @@ export const logoutUser = async (req, res) => {
 export const getMe = async (req, res) => {
   const user = req.user;
   if (!user) {
-    return res.status(401).json({ message: "Not Authorized" });
+    return res.status(200).json({ user: null });
   }
 
   return res.status(200).json({

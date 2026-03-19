@@ -4,6 +4,7 @@ import { Lock, Key, Shield, Eye, EyeOff, ArrowRight, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import { resetPassword } from '../../services/user.api';
 import Loader from '../../components/common/Loader';
+import { ROUTES } from '../../constants/routes';
 
 const ResetPassword = () => {
   const [password, setPassword] = useState('');
@@ -67,7 +68,7 @@ const ResetPassword = () => {
       setTimeout(() => {
         setLoading(false);
         toast.success("Password reset Successfully");
-        navigate('/login');
+        navigate(ROUTES.LOGIN);
       }, 1500);
     } catch (error) {
       console.error("Error from reset password: ", error);
@@ -228,7 +229,7 @@ const ResetPassword = () => {
         {/* Back to login */}
         <div className="mt-8 text-center text-sm">
           <span className="text-gray-400">Remember your password? </span>
-          <Link to="/login" className="text-purple-400 hover:text-purple-300 font-medium transition-colors">
+          <Link to={ROUTES.LOGIN} className="text-purple-400 hover:text-purple-300 font-medium transition-colors">
             Log in
           </Link>
         </div>

@@ -1,5 +1,6 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
+import { ROUTES } from "../../constants/routes";
 import {
     LayoutDashboard,
     CalendarDays,
@@ -17,17 +18,17 @@ const VendorSidebar = () => {
 
     // Navigation Links Data
     const mainLinks = [
-        { path: "/vendor/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-        { path: "/vendor/events", icon: CalendarDays, label: "My Events" },
-        { path: "/vendor/events/drafts", icon: FileEdit, label: "Draft Events" },
-        { path: "/vendor/events/create", icon: PlusCircle, label: "Create Event" },
-        { path: "/vendor/bookings", icon: Ticket, label: "Bookings" },
-        { path: "/vendor/earnings", icon: Wallet, label: "Earnings" },
+        { path: ROUTES.VENDOR_DASHBOARD, icon: LayoutDashboard, label: "Dashboard" },
+        { path: ROUTES.VENDOR_EVENTS, icon: CalendarDays, label: "My Events" },
+        { path: ROUTES.VENDOR_DRAFT_EVENTS, icon: FileEdit, label: "Draft Events" },
+        { path: ROUTES.VENDOR_CREATE_EVENT, icon: PlusCircle, label: "Create Event" },
+        { path: ROUTES.VENDOR_BOOKINGS, icon: Ticket, label: "Bookings" },
+        { path: ROUTES.VENDOR_EARNINGS, icon: Wallet, label: "Earnings" },
     ];
 
     const accountLinks = [
-        { path: "/vendor/profile", icon: UserCircle, label: "Vendor Profile" },
-        { path: "/vendor/settings", icon: Settings, label: "Settings" },
+        { path: ROUTES.VENDOR_PROFILE, icon: UserCircle, label: "Vendor Profile" },
+        { path: ROUTES.VENDOR_SETTINGS, icon: Settings, label: "Settings" },
     ];
 
     return (
@@ -107,7 +108,7 @@ const VendorSidebar = () => {
 
             {/* User Profile Footer (Sticky bottom) */}
             <div className="p-4 border-t border-white/5 bg-[#0B091A]">
-                <Link to="/vendor/profile" className="flex items-center gap-3 group">
+                <Link to={ROUTES.VENDOR_PROFILE} className="flex items-center gap-3 group">
                     <div className="w-10 h-10 rounded-full bg-gray-700/50 flex items-center justify-center border border-white/10 overflow-hidden cursor-pointer group-hover:border-purple-500 transition-colors">
                         <UserCircle className="w-6 h-6 text-gray-400 group-hover:text-purple-400 transition-colors" />
                     </div>

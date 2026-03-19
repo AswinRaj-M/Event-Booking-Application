@@ -4,6 +4,7 @@ import { Lock, Mail, ArrowRight, ShieldCheck } from 'lucide-react';
 import { forgotPassword } from '../../services/user.api';
 import { toast } from 'sonner';
 import Loader from '../../components/common/Loader';
+import { ROUTES } from '../../constants/routes';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
@@ -23,7 +24,7 @@ const ForgotPassword = () => {
         setLoading(false);
       }, 1500);
       toast.success("Reset link send Successfully")
-      navigate('/login')
+      navigate(ROUTES.LOGIN)
     } catch (error) {
       console.error("Error from the forgot password : ",error)
       toast.error(error)
@@ -96,7 +97,7 @@ const ForgotPassword = () => {
         {/* Back to login */}
         <div className="mt-8 text-center text-sm">
           <span className="text-gray-400">Remembered your password? </span>
-          <Link to="/login" className="text-purple-400 hover:text-purple-300 font-medium transition-colors">
+          <Link to={ROUTES.LOGIN} className="text-purple-400 hover:text-purple-300 font-medium transition-colors">
             Login
           </Link>
         </div>

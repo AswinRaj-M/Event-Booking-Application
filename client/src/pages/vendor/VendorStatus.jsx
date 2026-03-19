@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { vendorLogoutState } from '../../features/vendorSlice';
 import logo from '../../assets/logo.jpeg';
 import { LogOut } from 'lucide-react';
+import { ROUTES } from '../../constants/routes';
 import VendorRejectStatus from '../../components/vendor/VendorRejectStatus';
 import VendorPendingStatus from '../../components/vendor/VendorPendingStatus';
 
@@ -18,13 +19,13 @@ const VendorStatus = () => {
     
     useEffect(() => {
         if (status === 'approved') {
-            navigate('/vendor/dashboard', { replace: true });
+            navigate(ROUTES.VENDOR_DASHBOARD, { replace: true });
         }
     }, [status, navigate]);
 
     const handleLogout = () => {
         dispatch(vendorLogoutState());
-        navigate('/login', { replace: true });
+        navigate(ROUTES.LOGIN, { replace: true });
     };
 
     const renderStatusContent = () => {

@@ -3,7 +3,7 @@ import { applyVendor, vendorLogin, vendorLogout, getVendorMe } from "../controll
 import upload from '../middleware/upload.js'
 import { asyncHandler } from '../middleware/error.middleware.js'
 import { requireRole } from '../middleware/role.middleware.js'
-import { protect } from '../middleware/auth.middleware.js'
+import { protect, optionalProtect } from '../middleware/auth.middleware.js'
 import { validate } from '../middleware/validate.middleware.js'
 import { 
   vendorApplyValidation, 
@@ -25,6 +25,6 @@ router.post(
 
 router.post("/login", vendorLoginValidation, validate, asyncHandler(vendorLogin))
 router.post("/logout", protect, asyncHandler(vendorLogout))
-router.get("/me", protect, requireRole("vendor"), asyncHandler(getVendorMe))
+router.get("/me", optionalProtect, asyncHandler(getVendorMe))
 
 export default router

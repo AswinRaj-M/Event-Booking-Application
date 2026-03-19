@@ -61,7 +61,8 @@ const vendorSlice = createSlice({
     vendor: null,
     success: false,
     loading: false,
-    error: false
+    error: false,
+    authChecked: false
   },
   reducers: {
     vendorLogoutState: (state) => {
@@ -120,10 +121,12 @@ const vendorSlice = createSlice({
         state.vendor = action.payload;
         state.success = true;
         state.loading = false;
+        state.authChecked = true;
       })
       .addCase(checkVendorAuthThunk.rejected, (state) => {
         state.vendor = null;
         state.loading = false;
+        state.authChecked = true;
       })
   }
 })

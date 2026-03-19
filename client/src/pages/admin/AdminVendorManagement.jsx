@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
+import { ROUTES } from "../../constants/routes";
 import AdminSidebar from "../../components/admin/AdminSidebar";
 import {
   Search,
@@ -208,7 +209,7 @@ function AdminVendorManagement() {
                                 <td  className="px-6 py-4">{vendor.eventCategory}</td>
                                 <td  className="px-6 py-4">{new Date(vendor.createdAt).toLocaleDateString()}</td>
                                 <td  className="px-6 py-4">{vendor.applicationStatus}</td>
-                                <td  className="px-6 py-4"><Link to={`/admin/vendor-application/${vendor._id}`} className="text-purple-400 hover:underline">View Application</Link></td>
+                                <td  className="px-6 py-4"><Link to={ROUTES.ADMIN_VENDOR_VIEW.replace(':id', vendor._id)} className="text-purple-400 hover:underline">View Application</Link></td>
                                 
                             </tr>   
                         ))

@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { clearMessages, registerUserThunk } from "../../features/user.slice";
 import { toast } from "sonner";
 import Loader from "../../components/common/Loader";
+import { ROUTES } from "../../constants/routes";
 
 const Signup = () => {
   const dispatch = useDispatch();
@@ -75,7 +76,7 @@ const Signup = () => {
   useEffect(() => {
     if (success && userId) {
       dispatch(clearMessages());
-      navigate("/verify-otp", {
+      navigate(ROUTES.VERIFY_OTP, {
         state: {
           userId,
           email: email,
@@ -463,7 +464,7 @@ const Signup = () => {
               <div className="flex justify-center mt-2">
                 <p className="text-sm text-gray-400">
                   Already have an account?{" "}
-                  <Link to="/login" className="text-purple-500 hover:text-purple-400 transition-colors font-medium">
+                  <Link to={ROUTES.LOGIN} className="text-purple-500 hover:text-purple-400 transition-colors font-medium">
                     Log in
                   </Link>
                 </p>

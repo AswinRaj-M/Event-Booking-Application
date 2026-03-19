@@ -8,49 +8,50 @@ import { ProtectedRoute, PublicRoute } from '../auth/ProtectedRoute.jsx';
 import Loader from '../components/common/Loader.jsx';
 import ForgotPassword from '../pages/auth/ForgotPassword.jsx';
 import ResetPassword from '../pages/auth/ResetPassword.jsx';
+import { ROUTES } from '../constants/routes';
 
 const AppRoutes = () => {
     return (
         <Routes>
 
-            <Route path='/home' element={
+            <Route path={ROUTES.HOME} element={
                 <ProtectedRoute role="user">
                     <Home />
                 </ProtectedRoute>
             } />
-            <Route path='/forgot-password' element={
+            <Route path={ROUTES.FORGOT_PASSWORD} element={
                 <PublicRoute>
                      <ForgotPassword/>
                 </PublicRoute>
             } />
-                <Route path='/reset-password/:token' element={
+                <Route path={ROUTES.RESET_PASSWORD} element={
                 <PublicRoute>
                      <ResetPassword/>
                 </PublicRoute>
             } />
-            <Route path="/" element={
+            <Route path={ROUTES.LANDING} element={
                 <PublicRoute>
                     <Landing />
                 </PublicRoute>
             } />
 
-            <Route path="/login" element={
+            <Route path={ROUTES.LOGIN} element={
                 <PublicRoute>
                     <Login />
                 </PublicRoute>
             } />
-            <Route path="/signup" element={
+            <Route path={ROUTES.SIGNUP} element={
                 <PublicRoute>
                     <Signup />
                 </PublicRoute>
             } />
-            <Route path="/verify-otp" element={
+            <Route path={ROUTES.VERIFY_OTP} element={
                 <PublicRoute>
                     <VerifyOtp />
                 </PublicRoute>
             } />
 
-            <Route path="/spinner" element={<Loader />} />
+            <Route path={ROUTES.SPINNER} element={<Loader />} />
         </Routes>
     );
 };

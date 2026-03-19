@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Bell, PlusCircle, Calendar, CalendarDays, Users } from 'lucide-react';
 import { vendorLogoutState } from '../../features/vendorSlice';
 import VendorSidebar from '../../components/vendor/VendorSidebar';
+import { ROUTES } from '../../constants/routes';
 
 const VendorHome = () => {
   const dispatch = useDispatch();
@@ -11,7 +12,7 @@ const VendorHome = () => {
 
   const handleLogout = () => {
     dispatch(vendorLogoutState());
-    navigate("/login");
+    navigate(ROUTES.LOGIN);
   };
 
   return (

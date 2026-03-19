@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { adminClearMessages, adminLoginThunk } from "../../features/admin.slice";
+import { ROUTES } from "../../constants/routes";
 
 
 const AdminLogin = () => {
@@ -24,7 +25,7 @@ const AdminLogin = () => {
     useEffect(()=>{
         if(success){
             dispatch(adminClearMessages())
-            navigate("/admin/dashboard", { replace: true })
+            navigate(ROUTES.ADMIN_DASHBOARD, { replace: true })
         }
     },[success,navigate,dispatch])
     return (

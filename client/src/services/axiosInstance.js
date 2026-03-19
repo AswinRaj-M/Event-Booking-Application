@@ -1,5 +1,6 @@
 import axios from "axios"
 import { refreshUserToken, logoutUserState } from "../features/user.slice.js"
+import { ROUTES } from "../constants/routes";
 
 let store;
 
@@ -32,17 +33,17 @@ axiosInstance.interceptors.response.use(
         await store.dispatch(refreshUserToken()).unwrap()
         return axiosInstance(originalRequest)
       } catch (err) {
-        if (window.location.pathname.startsWith('/admin')) {
+        if (window.location.pathname.startsWith(ROUTES.ADMIN_ROOT)) {
           const { logoutAdminState } = await import('../features/admin.slice.js');
           store.dispatch(logoutAdminState());
-          window.location.href = "/admin/login";
-        } else if (window.location.pathname.startsWith('/vendor')) {
+          window.location.href = ROUTES.ADMIN_LOGIN;
+        } else if (window.location.pathname.startsWith(ROUTES.VENDOR_ROOT)) {
           const { vendorLogoutState } = await import('../features/vendorSlice.js');
           store.dispatch(vendorLogoutState());
-          window.location.href = "/login";
+          window.location.href = ROUTES.LOGIN;
         } else {
           store.dispatch(logoutUserState());
-          window.location.href = "/login";
+          window.location.href = ROUTES.LOGIN;
         }
       }
     }

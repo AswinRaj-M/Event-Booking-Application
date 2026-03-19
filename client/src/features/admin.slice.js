@@ -65,7 +65,8 @@ const adminSlice = createSlice({
     error : null,
     vendors : [],
     vendorDetails: null,
-    count : 0
+    count : 0,
+    authChecked: false
   },
   reducers :{
     logoutAdminState : (state) =>{
@@ -142,10 +143,12 @@ const adminSlice = createSlice({
         state.admin = action.payload;
         state.success = true;
         state.loading = false;
+        state.authChecked = true;
       })
       .addCase(checkAdminAuthThunk.rejected, (state) => {
         state.admin = null;
         state.loading = false;
+        state.authChecked = true;
       })
   }
 })

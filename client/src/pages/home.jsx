@@ -5,6 +5,7 @@ import Footer from '../components/layout/Footer';
 import { Search, MapPin, Calendar, Clock, ArrowRight, Ticket, Star } from 'lucide-react';
 import { useDispatch } from 'react-redux';
 import { logoutUserThunk, logoutUserState } from '../features/user.slice';
+import { ROUTES } from '../constants/routes';
 
 const Home = () => {
   const dispatch = useDispatch();
@@ -12,7 +13,7 @@ const Home = () => {
 
   const handleLogout = async () => {
     dispatch(logoutUserThunk());
-    navigate('/login');
+    navigate(ROUTES.LOGIN);
   };
 
   return (
@@ -45,7 +46,7 @@ const Home = () => {
             <Link to="#" className="px-8 py-3.5 bg-white text-black font-bold rounded-full hover:bg-gray-100 transition-colors shadow-[0_0_20px_rgba(255,255,255,0.2)]">
               Explore Events
             </Link>
-            <Link to="/vendor/application" className="px-8 py-3.5 text-white font-medium hover:text-purple-400 transition-colors flex items-center gap-2 group">
+            <Link to={ROUTES.VENDOR_APPLICATION} className="px-8 py-3.5 text-white font-medium hover:text-purple-400 transition-colors flex items-center gap-2 group">
               Become a Vendor <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>

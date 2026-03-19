@@ -1,9 +1,10 @@
 import React, { useEffect } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { useLocation } from 'react-router-dom';
 import AppRoutes from './routes/AppRoutes';
 import AdminRoutes from './routes/AdminRoutes';
 import VendorRoutes from './routes/vendorRoutes';
+import { ROUTES } from './constants/routes';
 import { Toaster } from "sonner";
 import { Routes, Route} from 'react-router-dom';
 import { checkUserAuthThunk } from './features/user.slice.js';
@@ -15,14 +16,17 @@ function App() {
   const location = useLocation();
 
   useEffect(() => {
-    if (location.pathname.startsWith('/admin')) {
+    const isRootAdmin = location.pathname.startsWith(ROUTES.ADMIN_ROOT);
+    const isRootVendor = location.pathname.startsWith(ROUTES.VENDOR_ROOT);
+
+    if (isRootAdmin) {
       dispatch(checkAdminAuthThunk());
-    } else if (location.pathname.startsWith('/vendor')) {
+    } else if (isRootVendor) {
       dispatch(checkVendorAuthThunk());
     } else {
       dispatch(checkUserAuthThunk());
     }
-  }, [dispatch]);
+  }, [dispatch, location.pathname]);
 
   return (
     <>
@@ -36,8 +40,8 @@ function App() {
  />
     <Routes>
       <Route path="/*" element={<AppRoutes />}/>
-      <Route path="/admin/*" element={<AdminRoutes/>}/>
-      <Route path='/vendor/*' element={<VendorRoutes/>}/>
+      <Route path={`${ROUTES.ADMIN_ROOT}/*`} element={<AdminRoutes/>}/>
+      <Route path={`${ROUTES.VENDOR_ROOT}/*`} element={<VendorRoutes/>}/>
     </Routes>
     </>
   );

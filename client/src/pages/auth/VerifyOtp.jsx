@@ -5,6 +5,7 @@ import { verifyOTPThunk } from '../../features/user.slice';
 import { resendOtp } from '../../services/user.api';
 import { toast } from 'sonner';
 import Loader from '../../components/common/Loader';
+import { ROUTES } from '../../constants/routes';
 
 const VerifyOtp = () => {
   const dispatch = useDispatch();
@@ -30,7 +31,7 @@ const VerifyOtp = () => {
 
   useEffect(() => {
     if (success) {
-      navigate('/home', { replace: true });
+      navigate(ROUTES.HOME, { replace: true });
     }
   }, [success, navigate]);
 
@@ -196,7 +197,7 @@ const VerifyOtp = () => {
         <div className="mt-6 text-center">
           <p className="text-xs text-gray-500">
             Entered the wrong email?{' '}
-            <Link to="/signup" className="text-purple-400 hover:text-purple-300 transition-colors">
+            <Link to={ROUTES.SIGNUP} className="text-purple-400 hover:text-purple-300 transition-colors">
               Change details
             </Link>
           </p>

@@ -89,7 +89,8 @@ const userSlice = createSlice({
     loading : false,
     error : null,
     success : false,
-    errorCode : null
+    errorCode : null,
+    authChecked: false
   },
 
   reducers : {
@@ -147,6 +148,7 @@ const userSlice = createSlice({
         state.success = true;
         state.user = action.payload.user;
         state.error = null;
+        state.authChecked = true;
       })
       .addCase(loginUserThunk.rejected,(state,action)=>{
         state.loading = false
@@ -160,6 +162,7 @@ const userSlice = createSlice({
         state.userId = null;
         state.success = false;
         state.error = null;
+        state.authChecked = true;
       })
 
 
@@ -177,10 +180,12 @@ const userSlice = createSlice({
         state.loading = false;
         state.user = action.payload.user;
         state.success = true;
+        state.authChecked = true;
       })
       .addCase(checkUserAuthThunk.rejected, (state, action) => {
         state.loading = false;
         state.user = null;
+        state.authChecked = true;
       })
       
   }

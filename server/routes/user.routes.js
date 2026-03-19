@@ -10,7 +10,7 @@ import {
   forgotPassword,
   resetPassword
 } from "../controllers/user.controller.js"
-import { protect } from "../middleware/auth.middleware.js"
+import { protect, optionalProtect } from "../middleware/auth.middleware.js"
 import { requireRole } from "../middleware/role.middleware.js"
 import { asyncHandler } from '../middleware/error.middleware.js'  
 import { validate } from "../middleware/validate.middleware.js"
@@ -30,6 +30,6 @@ router.post('/forgot-password',validate,asyncHandler(forgotPassword))
 router.patch('/reset-password',validate,asyncHandler(resetPassword))
 router.get('/refresh-token', asyncHandler(refreshAccessToken))
 router.post('/logout', protect, asyncHandler(logoutUser))
-router.get('/me', protect, asyncHandler(getMe))
+router.get('/me', optionalProtect, asyncHandler(getMe))
 
 export default router

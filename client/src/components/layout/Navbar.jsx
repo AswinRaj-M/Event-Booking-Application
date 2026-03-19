@@ -3,11 +3,13 @@ import { Link } from "react-router-dom";
 import { Bell, Menu, ArrowRight } from "lucide-react";
 import logo from "../../assets/logo.jpeg";
 
+import { ROUTES } from "../../constants/routes";
+
 const Navbar = () => {
     const [activeMenu, setActiveMenu] = useState("Explore");
 
     const menuItems = [
-        { name: "Explore", path: "#explore" },
+        { name: "Explore", path: ROUTES.LANDING },
         { name: "Browse", path: "#browse" },
         { name: "Events", path: "#events" },
         { name: "About Us", path: "#about" }
@@ -49,7 +51,7 @@ const Navbar = () => {
                     <Bell className="w-5 h-5" fill="currentColor" />
                     <span className="absolute top-0 right-0 w-2 h-2 bg-[#ff3366] rounded-full border border-black"></span>
                 </button>
-                <Link to="/signup" className="hidden sm:flex bg-[#4c1d95] hover:bg-[#3b0764] transition-all duration-300 transform hover:scale-105 text-white px-5 py-2 shadow-[0_4px_14px_0_rgba(76,29,149,0.39)] rounded-full text-sm font-semibold items-center gap-2">
+                <Link to={ROUTES.SIGNUP} className="hidden sm:flex bg-[#4c1d95] hover:bg-[#3b0764] transition-all duration-300 transform hover:scale-105 text-white px-5 py-2 shadow-[0_4px_14px_0_rgba(76,29,149,0.39)] rounded-full text-sm font-semibold items-center gap-2">
                     Get Started
                     <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
                 </Link>

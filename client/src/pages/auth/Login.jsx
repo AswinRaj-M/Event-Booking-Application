@@ -10,6 +10,7 @@
     vendorLoginThunk,
   } from "../../features/vendorSlice";
 import Loader from "../../components/common/Loader";
+import { ROUTES } from "../../constants/routes";
 
   const Login = () => {
     const navigate = useNavigate();
@@ -54,7 +55,7 @@ import Loader from "../../components/common/Loader";
     useEffect(() => {
       if (isLogin && userState.success) {
         dispatch(clearMessages());
-        navigate("/home", { replace: true });
+        navigate(ROUTES.HOME, { replace: true });
       }
 
       if (!isLogin && vendorState.success) {
@@ -64,14 +65,14 @@ import Loader from "../../components/common/Loader";
           vendorState.vendor?.applicationStatus === "pending" ||
           vendorState.vendor?.applicationStatus === "rejected"
         ) {
-          navigate("/vendor/status", {
+          navigate(ROUTES.VENDOR_STATUS, {
             replace: true,
             state: {
               businessName: vendorState.vendor?.businessName,
             },
           });
         } else {
-          navigate("/vendor/dashboard", { replace: true });
+          navigate(ROUTES.VENDOR_DASHBOARD, { replace: true });
         }
       }
 
@@ -79,7 +80,7 @@ import Loader from "../../components/common/Loader";
 
         if(userState.errorCode === "EMAIL_NOT_VERIFIED"){
           toast.warning("Verify your email")
-          navigate("/verify-otp",{
+          navigate(ROUTES.VERIFY_OTP,{
             state : {email,userId : userState.userId}
           });
         }else{
@@ -351,7 +352,7 @@ import Loader from "../../components/common/Loader";
                   </div>
                   <div className="flex justify-center">
                     <Link
-                      to="/forgot-password"
+                      to={ROUTES.FORGOT_PASSWORD}
                       className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
                     >
                       Forgot password?
@@ -415,14 +416,14 @@ import Loader from "../../components/common/Loader";
                     Don't have an account?{" "}
                     {isLogin ? (
                       <Link
-                        to="/signup"
+                        to={ROUTES.SIGNUP}
                         className=" text-purple-500 hover:text-purple-400  text-primary hover:text-primary/80 transition-colors font-medium"
                       >
                         Sign up
                       </Link>
                     ) : (
                       <Link
-                        to="/vendor/application"
+                        to={ROUTES.VENDOR_APPLICATION}
                         className=" text-purple-500 hover:text-purple-400  text-primary hover:text-primary/80 transition-colors font-medium"
                       >
                         Appply as a Vendor

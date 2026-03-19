@@ -143,7 +143,7 @@ export const vendorLogout = async(req,res) =>{
 export const getVendorMe = async (req, res) => {
   const vendor = req.user;
   if (!vendor || vendor.role !== "vendor") {
-    return res.status(401).json({ message: "Not Authorized as Vendor" });
+    return res.status(200).json({ vendor: null });
   }
 
   return res.status(200).json({
