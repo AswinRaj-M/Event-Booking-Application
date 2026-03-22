@@ -12,8 +12,12 @@ const Home = () => {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    dispatch(logoutUserThunk());
-    navigate(ROUTES.LOGIN);
+    try {
+      await dispatch(logoutUserThunk()).unwrap();
+      navigate(ROUTES.LOGIN, { replace: true });
+    } catch (error) {
+      console.error("User logout failed:", error);
+    }
   };
 
   return (

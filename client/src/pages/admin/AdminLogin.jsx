@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { adminClearMessages, adminLoginThunk } from "../../features/admin.slice";
 import { ROUTES } from "../../constants/routes";
-
+import Loader from "../../components/common/Loader";
 
 const AdminLogin = () => {
 
@@ -28,6 +28,9 @@ const AdminLogin = () => {
             navigate(ROUTES.ADMIN_DASHBOARD, { replace: true })
         }
     },[success,navigate,dispatch])
+
+    if (loading) return <Loader />;
+
     return (
         <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#1b1b24] text-white p-4 font-sans selection:bg-purple-500/30">
             {/* Top Logo & Text */}

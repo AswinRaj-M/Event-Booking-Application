@@ -116,6 +116,7 @@ const VerifyOtp = () => {
   }
 
   const isOtpComplete = otp.join('').length === 6;
+
   if (loading) return <Loader />;
 
   return (

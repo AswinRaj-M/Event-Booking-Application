@@ -1,12 +1,11 @@
 import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useLocation } from 'react-router-dom';
+import { useLocation, Routes, Route } from 'react-router-dom';
 import AppRoutes from './routes/AppRoutes';
 import AdminRoutes from './routes/AdminRoutes';
-import VendorRoutes from './routes/vendorRoutes';
+import VendorRoutes from './routes/VendorRoutes';
 import { ROUTES } from './constants/routes';
 import { Toaster } from "sonner";
-import { Routes, Route} from 'react-router-dom';
 import { checkUserAuthThunk } from './features/user.slice.js';
 import { checkAdminAuthThunk } from './features/admin.slice.js';
 import { checkVendorAuthThunk } from './features/vendorSlice.js';
@@ -14,19 +13,27 @@ import { checkVendorAuthThunk } from './features/vendorSlice.js';
 function App() {
   const dispatch = useDispatch();
   const location = useLocation();
+  
+  const userState = useSelector((state) => state.user);
+  const vendorState = useSelector((state) => state.vendor);
+  const adminState = useSelector((state) => state.admin);
 
   useEffect(() => {
-    const isRootAdmin = location.pathname.startsWith(ROUTES.ADMIN_ROOT);
-    const isRootVendor = location.pathname.startsWith(ROUTES.VENDOR_ROOT);
-
-    if (isRootAdmin) {
+    // Check Admin Auth
+    if (!adminState.authChecked && !adminState.loading) {
       dispatch(checkAdminAuthThunk());
-    } else if (isRootVendor) {
+    }
+
+    // Check Vendor Auth
+    if (!vendorState.authChecked && !vendorState.loading) {
       dispatch(checkVendorAuthThunk());
-    } else {
+    }
+
+    // Check User Auth
+    if (!userState.authChecked && !userState.loading) {
       dispatch(checkUserAuthThunk());
     }
-  }, [dispatch, location.pathname]);
+  }, [dispatch, adminState.authChecked, vendorState.authChecked, userState.authChecked, adminState.loading, vendorState.loading, userState.loading]);
 
   return (
     <>
@@ -39,9 +46,9 @@ function App() {
         }}
  />
     <Routes>
-      <Route path="/*" element={<AppRoutes />}/>
       <Route path={`${ROUTES.ADMIN_ROOT}/*`} element={<AdminRoutes/>}/>
       <Route path={`${ROUTES.VENDOR_ROOT}/*`} element={<VendorRoutes/>}/>
+      <Route path="/*" element={<AppRoutes />}/>
     </Routes>
     </>
   );

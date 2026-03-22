@@ -1,18 +1,20 @@
 import React, { useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { vendorLogoutState } from '../../features/vendorSlice';
+import { vendorLogoutThunk } from '../../features/vendorSlice';
 import logo from '../../assets/logo.jpeg';
 import { LogOut } from 'lucide-react';
 import { ROUTES } from '../../constants/routes';
 import VendorRejectStatus from '../../components/vendor/VendorRejectStatus';
 import VendorPendingStatus from '../../components/vendor/VendorPendingStatus';
+import Loader from '../../components/common/Loader';
 
 const VendorStatus = () => {
     const location = useLocation()
     const dispatch = useDispatch()
     const navigate = useNavigate()
     const vendor = useSelector((state) => state.vendor?.vendor)
+    const loading = useSelector((state) => state.vendor?.loading)
     
     const status = vendor?.applicationStatus || 'pending';
     const businessName = vendor?.businessName || location.state?.businessName || "";
@@ -23,9 +25,13 @@ const VendorStatus = () => {
         }
     }, [status, navigate]);
 
-    const handleLogout = () => {
-        dispatch(vendorLogoutState());
-        navigate(ROUTES.LOGIN, { replace: true });
+    const handleLogout = async () => {
+        try {
+            await dispatch(vendorLogoutThunk()).unwrap();
+            navigate(ROUTES.LOGIN, { replace: true });
+        } catch (error) {
+            console.error("Vendor logout failed:", error);
+        }
     };
 
     const renderStatusContent = () => {
@@ -37,6 +43,8 @@ const VendorStatus = () => {
                 return <VendorPendingStatus businessName={businessName} />;
         }
     };
+
+    if (loading) return <Loader />;
 
     return (
         <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-violet-500/30">

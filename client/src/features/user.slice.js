@@ -132,6 +132,7 @@ const userSlice = createSlice({
         state.success = true;
         state.user = action.payload.user;
         state.error = null;
+        state.authChecked = true;
       })
       .addCase(verifyOTPThunk.rejected,(state,action)=> {
         state.loading = false,

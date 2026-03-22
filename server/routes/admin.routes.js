@@ -15,11 +15,11 @@ import { asyncHandler } from '../middleware/error.middleware.js'
 const router = express.Router()
 
 router.post('/login', asyncHandler(AdminLogin))
-router.post('/logout', protect, requireRole("admin"), asyncHandler(logoutAdmin))
-router.get("/vendorManagement", protect, requireRole("admin"), asyncHandler(getAllVendors))
-router.get('/vendor-application/:id', protect, requireRole("admin"), asyncHandler(getVendorById))
-router.patch('/vendors/approve-application', protect, requireRole("admin"), asyncHandler(vendorApprove))
-router.patch('/vendors/reject-application', protect, requireRole("admin"), asyncHandler(vendorReject))
-router.get('/me', optionalProtect, asyncHandler(getAdminMe))
+router.post('/logout', protect(['admin']), requireRole("admin"), asyncHandler(logoutAdmin))
+router.get("/vendorManagement", protect(['admin']), requireRole("admin"), asyncHandler(getAllVendors))
+router.get('/vendor-application/:id', protect(['admin']), requireRole("admin"), asyncHandler(getVendorById))
+router.patch('/vendors/approve-application', protect(['admin']), requireRole("admin"), asyncHandler(vendorApprove))
+router.patch('/vendors/reject-application', protect(['admin']), requireRole("admin"), asyncHandler(vendorReject))
+router.get('/me', optionalProtect(['admin']), asyncHandler(getAdminMe))
 
 export default router

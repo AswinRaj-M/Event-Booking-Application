@@ -87,6 +87,7 @@ const vendorSlice = createSlice({
         state.loading = false
         state.vendor = action.payload.data
         state.error = null
+        state.authChecked = true
       })
       .addCase(vendorApplicationThunk.rejected, (state, action) => {
         state.success = false
@@ -106,6 +107,7 @@ const vendorSlice = createSlice({
         state.success = true
         state.vendor = action.payload.vendor
         state.error = null
+        state.authChecked = true
       })
 
       .addCase(vendorLoginThunk.rejected, (state, action) => {
@@ -126,6 +128,18 @@ const vendorSlice = createSlice({
       .addCase(checkVendorAuthThunk.rejected, (state) => {
         state.vendor = null;
         state.loading = false;
+        state.authChecked = true;
+      })
+      .addCase(vendorLogoutThunk.fulfilled, (state) => {
+        state.vendor = null;
+        state.success = false;
+        state.error = null;
+        state.authChecked = true;
+      })
+      .addCase(vendorLogoutThunk.rejected, (state) => {
+        state.vendor = null;
+        state.success = false;
+        state.error = null;
         state.authChecked = true;
       })
   }

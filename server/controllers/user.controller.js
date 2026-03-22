@@ -1,13 +1,13 @@
-import User from "../models/user.model.js"
+import * as userService from "../services/user.service.js"
+import * as otpService from "../services/otp.service.js"
+import * as vendorService from "../services/vendor.service.js"
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
 import { generateOTP } from "../utils/generateOtp.js"
-import { sendMail, sendOTP } from "../utils/sendMail.js"
+import { sendOTP, sendMail } from "../utils/sendMail.js"
 import { generateAccessToken, generateRefreshToken, generateResetToken } from "../utils/generateToken.js"
 import { hashToken } from "../utils/hashToken.js"
-import Otp from "../models/user.otp.model.js"
 import { AppError } from "../utils/AppError.js"
-import Vendor from "../models/vendor.model.js"
 
 export const registerUser = async (req, res) => {
   const {
@@ -26,21 +26,21 @@ export const registerUser = async (req, res) => {
     throw new AppError("You must agree to the terms and conditions", 400)
   }
 
-  const existingUser = await User.findOne({ email });
+  const existingUser = await userService.findUserByEmail(email);
   if (existingUser) {
     if (existingUser.isVerified) {
       console.log(" Error: Email already verified", email)
       throw new AppError("Email Already Registered", 400);
     } else {
       console.log("register Info: Found unverified user, deleting to allow re-registration", email)
-      await User.deleteOne({ _id: existingUser._id });
+      await userService.deleteUserById(existingUser._id);
     }
   }
 
   const hashedPassword = await bcrypt.hash(password, 10)
 
 
-  const user = await User.create({
+  const user = await userService.createUser({
     fullName,
     email,
     phoneNumber,
@@ -49,24 +49,21 @@ export const registerUser = async (req, res) => {
   });
   const otp = generateOTP()
 
-  await Otp.create({
-    userId: user._id,
-    otp
+  await otpService.createOTP(user._id, otp)
+  try {
+    await sendOTP(email, otp)
+  } catch (mailError) {
+    console.error("Failed to send OTP:", mailError)
+    throw new AppError("User registered but failed to send verification email. Please try to login to resend OTP.", 500)
+  }
+
+  console.log("otp is ", otp)
+  console.log("OTP sent to", email)
+
+  return res.status(201).json({
+    message: "Otp Send To Email",
+    userId: user._id
   })
-    try {
-      await sendOTP(email, otp)
-    } catch (mailError) {
-      console.error("Failed to send OTP:", mailError)
-      throw new AppError("User registered but failed to send verification email. Please try to login to resend OTP.", 500)
-    }
-
-    console.log("otp is ", otp)
-    console.log("OTP sent to", email)
-
-    return res.status(201).json({
-      message: "Otp Send To Email",
-      userId: user._id
-    })
 }
 
 export const verifyOTP = async (req, res) => {
@@ -76,31 +73,30 @@ export const verifyOTP = async (req, res) => {
     throw new AppError("otp Required", 404)
   }
 
-  const user = await User.findById(userId);
+  const user = await userService.findUserById(userId);
 
   if (!user)
     throw new AppError("User not found", 400);
 
-  const otpDoc = await Otp.findOne({ userId, otp })
+  const otpDoc = await otpService.findOTPRecord(userId, otp)
   if (!otpDoc) {
     throw new AppError("Invalid or Expired Otp", 400)
   }
 
-  user.isVerified = true;
-
   const accessToken = generateAccessToken(user._id, user.role);
   const refreshToken = generateRefreshToken(user._id);
 
+  user.isVerified = true;
   user.refreshToken = hashToken(refreshToken);
 
   await user.save();
-  await Otp.deleteOne({ userId })
+  await otpService.deleteOTPRecord(userId)
 
   res.cookie("accessToken", accessToken, {
     httpOnly: true,
     sameSite: "strict",
     secure: process.env.NODE_ENV === "production",
-    maxAge: 15 * 60 * 1000, 
+    maxAge: 15 * 60 * 1000,
   });
 
   res.cookie("refreshToken", refreshToken, {
@@ -120,63 +116,58 @@ export const verifyOTP = async (req, res) => {
   });
 }
 
-export const resendOtp = async(req,res) =>{
-  const {userId} = req.body
+export const resendOtp = async (req, res) => {
+  const { userId } = req.body
 
-  if(!userId)
-    throw new AppError("Failed to Fetch userId",400)
+  if (!userId)
+    throw new AppError("Failed to Fetch userId", 400)
 
-  const user = await User.findById(userId)
+  const user = await userService.findUserById(userId)
 
-  if(!user)
-    throw new AppError("User not Found",404)
+  if (!user)
+    throw new AppError("User not Found", 404)
 
-  
-  await Otp.deleteMany({userId})
 
-  const otp =  generateOTP()
+  await otpService.deleteAllOTPByUserId(userId)
 
-  await Otp.create({
-    userId : user._id,
-    otp
-  })
+  const otp = generateOTP()
 
-  
+  await otpService.createOTP(user._id, otp)
+
+
   try {
-    await sendOTP(user.email,otp)
+    await sendOTP(user.email, otp)
   } catch (error) {
-    throw new AppError("Failed to resend Otp",500)
+    throw new AppError("Failed to resend Otp", 500)
   }
-  console.log("resend Otp",otp)
+  console.log("resend Otp", otp)
 
 
   return res.status(200).json({
-    message : "Otp resent Successfully"
+    message: "Otp resent Successfully"
   })
 }
 
 
 export const loginUser = async (req, res) => {
-  const { email, password } = req.body  
+  const { email, password } = req.body
 
-  const user = await User.findOne({ email })
+  const user = await userService.findUserByEmail(email)
   if (!user)
     throw new AppError("Invalid Credentials", 400)
 
-  if (!user.isVerified){
+  if (!user.isVerified) {
     const otp = generateOTP()
-    console.log("Email verify Otp : ",otp)
-    await Otp.create({
-      userId : user._id,
-      otp
-    })
+    console.log("Email verify Otp : ", otp)
+    await otpService.createOTP(user._id, otp)
 
-    await sendOTP(user.email,otp)
+    await sendOTP(user.email, otp)
     return res.status(403).json({
-      success : false , 
-      code : "EMAIL_NOT_VERIFIED",
-      message : "Please verify you email first" ,
-      userId : user._id})
+      success: false,
+      code: "EMAIL_NOT_VERIFIED",
+      message: "Please verify you email first",
+      userId: user._id
+    })
   }
   const match = await bcrypt.compare(password, user.password)
 
@@ -189,12 +180,12 @@ export const loginUser = async (req, res) => {
 
   user.refreshToken = hashToken(refreshToken)
   await user.save();
-  
+
   res.cookie("accessToken", accessToken, {
     httpOnly: true,
     sameSite: "strict",
     secure: process.env.NODE_ENV === "production",
-    maxAge: 15 * 60 * 1000, 
+    maxAge: 15 * 60 * 1000,
   });
 
   res.cookie("refreshToken", refreshToken, {
@@ -210,50 +201,50 @@ export const loginUser = async (req, res) => {
       fullName: user.fullName,
       email: user.email,
       role: user.role,
-      isVerified : user.isVerified
+      isVerified: user.isVerified
     }
   })
 }
 
 
 
-export const forgotPassword = async(req,res) =>{
-  const {email} = req.body
-  const user = await User.findOne({email});
+export const forgotPassword = async (req, res) => {
+  const { email } = req.body
+  const user = await userService.findUserByEmail(email);
 
-  if(!user) {
+  if (!user) {
     throw new AppError("User not found", 404)
   }
-  const resetToken = generateResetToken(user._id,user.email)
+  const resetToken = generateResetToken(user._id, user.email)
   const resetLink = `${process.env.CLIENT_PORT}/reset-password/${resetToken}`
 
-  await sendMail(email,`your reset password link ${resetLink}`,"reset password")
-  console.log("Password reset link",resetLink)
+  await sendMail(email, `your reset password link ${resetLink}`, "reset password")
+  console.log("Password reset link", resetLink)
 
-  return res.json({message : "Reset link sent to Email"})
+  return res.json({ message: "Reset link sent to Email" })
 }
 
 
-export const resetPassword = async(req,res) =>{
-  const {token,password} = req.body  
+export const resetPassword = async (req, res) => {
+  const { token, password } = req.body
   let decoded;
   try {
-    decoded = jwt.verify(token,process.env.JWT_RESET_SECRET)
+    decoded = jwt.verify(token, process.env.JWT_RESET_SECRET)
   } catch (error) {
     throw new AppError('invalid Access token')
   }
 
-  const user = await User.findById(decoded.id)
-  if(!user){
-    throw new AppError("User not found",404)
+  const user = await userService.findUserById(decoded.id)
+  if (!user) {
+    throw new AppError("User not found", 404)
   }
 
-  const hashedPassword = await bcrypt.hash(password,10)
+  const hashedPassword = await bcrypt.hash(password, 10)
 
   user.password = hashedPassword
-  await user.save() 
+  await user.save()
 
-  return res.json({message : "Password reset Successfully"})
+  return res.json({ message: "Password reset Successfully" })
 }
 
 
@@ -275,17 +266,17 @@ export const refreshAccessToken = async (req, res) => {
     userId = Buffer.from(userId.data).toString('hex');
   }
 
-  let user = await User.findById(userId)
+  let user = await userService.findUserById(userId)
 
   if (!user) {
-    user = await Vendor.findById(userId)
+    user = await vendorService.findVendorById(userId)
   }
 
   if (!user || user.refreshToken !== hashToken(token))
     throw new AppError("Invalid RefreshToken", 403)
 
   const newAccessToken = generateAccessToken(user._id, user.role)
-  
+
   let cookieName = "accessToken";
   if (user.role === "admin") cookieName = "adminAccessToken";
   else if (user.role === "vendor") cookieName = "vendorAccessToken";
@@ -294,7 +285,7 @@ export const refreshAccessToken = async (req, res) => {
     httpOnly: true,
     sameSite: "strict",
     secure: process.env.NODE_ENV === "production",
-    maxAge: 15 * 60 * 1000, // 15 minutes
+    maxAge: 15 * 60 * 1000,
   });
 
   res.json({ message: "Token refreshed successfully" })
@@ -306,10 +297,7 @@ export const logoutUser = async (req, res) => {
   const token = req.cookies.refreshToken;
   if (token) {
     const hashed = hashToken(token)
-    await User.findOneAndUpdate(
-      { refreshToken: hashed },
-      { $set: { refreshToken: null } }
-    )
+    await userService.clearUserRefreshToken(hashed)
   }
 
   res.clearCookie("accessToken", {
@@ -341,4 +329,4 @@ export const getMe = async (req, res) => {
       role: user.role
     }
   });
-}
+}

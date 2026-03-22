@@ -1,4 +1,4 @@
-import Vendor from "../models/vendor.model.js"
+import * as vendorService from "../services/vendor.service.js"
 import cloudinary from "../config/cloudinary.js"
 import streamifier from 'streamifier'
 import bcrypt from "bcryptjs"
@@ -41,7 +41,7 @@ export const applyVendor = async (req, res) => {
     "vendorApplication/idProofs"
   );
 
-  const vendor = await Vendor.create({
+  const vendor = await vendorService.createVendor({
     organizerName: req.body.organizerName,
     businessName: req.body.businessName,
     businessEmail: req.body.businessEmail,
@@ -77,7 +77,7 @@ export const applyVendor = async (req, res) => {
   })
 }
 
- export const vendorLogin = async(req,res) =>{
+export const vendorLogin = async (req, res) => {
   const vendor = req.vendor
 
   const accessToken = generateAccessToken(vendor._id, vendor.role)
@@ -102,27 +102,24 @@ export const applyVendor = async (req, res) => {
 
 
   res.status(200).json({
-    vendor : {
-      id : vendor._id,
-      organizerName : vendor.organizerName,
-      businessEmail : vendor.businessEmail,
-      businessName : vendor.businessName,
-      role : vendor.role,
-      applicationStatus : vendor.applicationStatus
+    vendor: {
+      id: vendor._id,
+      organizerName: vendor.organizerName,
+      businessEmail: vendor.businessEmail,
+      businessName: vendor.businessName,
+      role: vendor.role,
+      applicationStatus: vendor.applicationStatus
     }
   })
 
 }
 
 
-export const vendorLogout = async(req,res) =>{
+export const vendorLogout = async (req, res) => {
   const token = req.cookies.vendorRefreshToken
-  if(token){
+  if (token) {
     const hashed = hashToken(token)
-    await Vendor.findOneAndUpdate(
-      {refreshToken : hashed},
-      {$set : {refreshToken : null}}
-    )
+    await vendorService.clearVendorRefreshToken(hashed)
   }
 
   res.clearCookie("vendorAccessToken", {
@@ -131,13 +128,13 @@ export const vendorLogout = async(req,res) =>{
     secure: process.env.NODE_ENV === "production"
   })
 
-  res.clearCookie("vendorRefreshToken",{
-    httpOnly : true,
-    sameSite : "strict",
-    secure : process.env.NODE_ENV === "production"
+  res.clearCookie("vendorRefreshToken", {
+    httpOnly: true,
+    sameSite: "strict",
+    secure: process.env.NODE_ENV === "production"
   })
 
-  return res.status(200).json({message : "Logged out Successfully"})
+  return res.status(200).json({ message: "Logged out Successfully" })
 }
 
 export const getVendorMe = async (req, res) => {
@@ -147,13 +144,13 @@ export const getVendorMe = async (req, res) => {
   }
 
   return res.status(200).json({
-    vendor : {
-      id : vendor._id,
-      organizerName : vendor.organizerName,
-      businessEmail : vendor.businessEmail,
-      businessName : vendor.businessName,
-      role : vendor.role,
-      applicationStatus : vendor.applicationStatus
+    vendor: {
+      id: vendor._id,
+      organizerName: vendor.organizerName,
+      businessEmail: vendor.businessEmail,
+      businessName: vendor.businessName,
+      role: vendor.role,
+      applicationStatus: vendor.applicationStatus
     }
   })
 }

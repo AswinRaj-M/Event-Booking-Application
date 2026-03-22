@@ -56,6 +56,19 @@ export const checkAdminAuthThunk = createAsyncThunk(
     }
   }
 )
+
+export const logoutAdminThunk = createAsyncThunk(
+  "admin/logout",
+  async (_, thunkAPI) => {
+    try {
+      await adminAPI.logoutAdmin()
+      return true
+    } catch (error) {
+      return thunkAPI.rejectWithValue("Logout Failed")
+    }
+  }
+)
+
 const adminSlice = createSlice({
   name :"admin",
   initialState : {
@@ -91,6 +104,7 @@ const adminSlice = createSlice({
         state.admin =action.payload.admin 
         state.loading = false
         state.error = null
+        state.authChecked = true
       })
       .addCase(adminLoginThunk.rejected,(state,action)=>{
         state.success = false
@@ -148,6 +162,12 @@ const adminSlice = createSlice({
       .addCase(checkAdminAuthThunk.rejected, (state) => {
         state.admin = null;
         state.loading = false;
+        state.authChecked = true;
+      })
+      .addCase(logoutAdminThunk.fulfilled, (state) => {
+        state.admin = null;
+        state.success = false;
+        state.error = null;
         state.authChecked = true;
       })
   }

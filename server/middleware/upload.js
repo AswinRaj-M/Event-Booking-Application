@@ -7,19 +7,20 @@ const fileFilter = (req,file,cb) =>{
     "application/pdf",
     "image/jpeg",
     "image/jpg",
-    "image/png"
+    "image/png",
+    "image/svg+xml"
   ]
 
   if(allowedTypes.includes(file.mimetype)){
     cb(null,true)
   }else{
-    cb(new Error("only pdf jpg jpeg png files are allowed"),false)
+    cb(new Error("Only PDF, JPG, JPEG, PNG, and SVG files are allowed"),false)
   }
 }
 
 const upload = multer({
   storage,
-  limits:{fileSize : 2 * 1024 * 1024},
+  limits:{fileSize : 5 * 1024 * 1024},
   fileFilter,
 })
 

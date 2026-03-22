@@ -1,9 +1,9 @@
 import bcrypt from "bcryptjs";
-import User from "../models/user.model.js";
+import * as userService from "../services/user.service.js";
+import * as vendorService from "../services/vendor.service.js";
+import * as adminService from "../services/admin.service.js";
 import { generateAccessToken, generateRefreshToken } from "../utils/generateToken.js";
 import { hashToken } from "../utils/hashToken.js";
-import Vendor from "../models/vendor.model.js";
-import { sendMail } from "../utils/sendMail.js";
 import { AppError } from "../utils/AppError.js";
 
 export const AdminLogin = async (req, res) => {
@@ -12,7 +12,7 @@ export const AdminLogin = async (req, res) => {
     throw new AppError("Email and Password are Required", 400)
   }
 
-  const admin = await User.findOne({ email })
+  const admin = await userService.findUserByEmail(email)
   if (!admin) {
     throw new AppError("Invalid Credentials", 401)
   }
@@ -63,10 +63,7 @@ export const logoutAdmin = async (req, res) => {
 
   if (token) {
     const hashed = hashToken(token)
-    await User.findOneAndUpdate(
-      { refreshToken: hashed },
-      { $set: { refreshToken: null } }
-    )
+    await userService.clearUserRefreshToken(hashed)
   }
 
   res.clearCookie("adminAccessToken", {
@@ -108,9 +105,7 @@ export const getAllVendors = async (req, res) => {
     filter.applicationStatus = status
   }
 
-  const vendors = await Vendor.find(filter)
-    .select("-password")
-    .sort({ createdAt: -1 })
+  const vendors = await vendorService.findVendorsWithFilter(filter)
 
 
   return res.status(200).json({
@@ -123,8 +118,7 @@ export const getAllVendors = async (req, res) => {
 
 export const getVendorById = async (req, res) => {
   const id = req.params.id
-  const vendor = await Vendor.findById(id)
-    .select("-password")
+  const vendor = await vendorService.findVendorByIdWithSelection(id)
 
   if (!vendor) {
     throw new AppError("Vendor not Found", 404)
@@ -139,25 +133,12 @@ export const getVendorById = async (req, res) => {
 
 export const vendorApprove = async (req, res) => {
   const { id, message } = req.body
-  const vendor = await Vendor.findById(id)
-  if (!vendor) {
-    throw new AppError("Vendor not found", 404)
-  }
-  vendor.applicationStatus = "approved"
-  await vendor.save()
-  sendMail(vendor.businessEmail, message, "Vendor Application Approved!")
+  await adminService.approveVendorApplication(id, message)
   return res.status(200).json({ message: "Application Approved" })
 }
 
 export const vendorReject = async (req, res) => {
   const { id, message } = req.body
-  const vendor = await Vendor.findById(id)
-  if (!vendor) {
-    throw new AppError("Vendor not found", 404)
-  }
-  vendor.applicationStatus = 'rejected'
-  vendor.rejectionReason = message
-  await vendor.save()
-  await sendMail(vendor.businessEmail, message, 'Vendor Application rejected!')
+  await adminService.rejectVendorApplication(id, message)
   return res.status(200).json({ message: 'Application Rejected!' })
-}
+}

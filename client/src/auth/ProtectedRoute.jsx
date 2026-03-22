@@ -1,6 +1,7 @@
 import { useSelector } from "react-redux"
 import { Navigate, useLocation } from "react-router-dom"
 import { ROUTES } from "../constants/routes"
+import Loader from "../components/common/Loader"
 
 export const ProtectedRoute = ({ children, role = "user" }) => {
   const location = useLocation()
@@ -11,14 +12,27 @@ export const ProtectedRoute = ({ children, role = "user" }) => {
   const vendorAuthChecked = useSelector((state) => state.vendor?.authChecked)
   const adminAuthChecked = useSelector((state) => state.admin?.authChecked)
 
-  // Show nothing or a loader while the initial auth check is in progress
-  if (role === "admin" && !adminAuthChecked) return null;
-  if (role === "vendor" && !vendorAuthChecked) return null;
-  if (role === "user" && !userAuthChecked) return null;
+  // Show a loader while the initial auth check is in progress
+  if (role === "admin" && !adminAuthChecked) return <Loader />;
+  if (role === "vendor" && !vendorAuthChecked) return <Loader />;
+  if (role === "user" && !userAuthChecked) return <Loader />;
 
-  if (role === "admin" && !admin) return <Navigate to={ROUTES.ADMIN_LOGIN} replace />
-  if (role === "vendor" && !vendor) return <Navigate to={ROUTES.LOGIN} replace />
-  if (role === "user" && !user) return <Navigate to={ROUTES.LOGIN} replace />
+  // Redirect to correct login or dashboard if unauthorized
+  if (role === "admin" && !admin) {
+    if (vendor) return <Navigate to={ROUTES.VENDOR_DASHBOARD} replace />;
+    if (user) return <Navigate to={ROUTES.HOME} replace />;
+    return <Navigate to={ROUTES.ADMIN_LOGIN} replace />
+  }
+  if (role === "vendor" && !vendor) {
+    if (admin) return <Navigate to={ROUTES.ADMIN_DASHBOARD} replace />;
+    if (user) return <Navigate to={ROUTES.HOME} replace />;
+    return <Navigate to={ROUTES.LOGIN} replace />
+  }
+  if (role === "user" && !user) {
+    if (admin) return <Navigate to={ROUTES.ADMIN_DASHBOARD} replace />;
+    if (vendor) return <Navigate to={ROUTES.VENDOR_DASHBOARD} replace />;
+    return <Navigate to={ROUTES.LOGIN} replace />
+  }
 
   if (role === "vendor" && vendor) {
     const isStatusPage = location.pathname.includes(ROUTES.VENDOR_STATUS);
@@ -41,23 +55,20 @@ export const PublicRoute = ({ children }) => {
   const adminAuthChecked = useSelector((state) => state.admin?.authChecked)
   const location = useLocation()
 
-  const isRootAdmin = location.pathname.startsWith(ROUTES.ADMIN_ROOT);
-  const isRootVendor = location.pathname.startsWith(ROUTES.VENDOR_ROOT);
+  // Wait for ALL auth checks before making public routing decisions
+  if (!userAuthChecked || !vendorAuthChecked || !adminAuthChecked) return <Loader />;
 
-  if (isRootAdmin && !adminAuthChecked) return null;
-  if (isRootVendor && !vendorAuthChecked) return null;
-  if (!isRootAdmin && !isRootVendor && !userAuthChecked) return null;
-
-  if (admin) {
-    return <Navigate to={ROUTES.ADMIN_DASHBOARD} replace />
-  } else if (vendor) {
+  // Cross-role protection: if any role is logged in, redirect them to their home base
+  if (admin) return <Navigate to={ROUTES.ADMIN_DASHBOARD} replace />;
+  
+  if (vendor) {
     if (vendor.applicationStatus === "pending" || vendor.applicationStatus === "rejected") {
-      return <Navigate to={ROUTES.VENDOR_STATUS} replace />
+      return <Navigate to={ROUTES.VENDOR_STATUS} replace />;
     }
-    return <Navigate to={ROUTES.VENDOR_DASHBOARD} replace />
-  } else if (user) {
-    return <Navigate to={ROUTES.HOME} replace />
+    return <Navigate to={ROUTES.VENDOR_DASHBOARD} replace />;
   }
 
-  return children
-}
+  if (user) return <Navigate to={ROUTES.HOME} replace />;
+
+  return children;
+};

@@ -18,7 +18,7 @@ axiosInstance.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    if (originalRequest.url?.endsWith('/me')) {
+    if (originalRequest.url?.includes('/me')) {
       return Promise.reject(error);
     }
 
@@ -30,20 +30,33 @@ axiosInstance.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        await store.dispatch(refreshUserToken()).unwrap()
-        return axiosInstance(originalRequest)
+        await store.dispatch(refreshUserToken()).unwrap();
+        return axiosInstance(originalRequest);
       } catch (err) {
-        if (window.location.pathname.startsWith(ROUTES.ADMIN_ROOT)) {
+        // If refresh fails, log out only the specific role based on the request URL if that role is currently active
+        const url = originalRequest.url || '';
+        const state = store.getState();
+        
+        if (url.includes('/admin/')) {
           const { logoutAdminState } = await import('../features/admin.slice.js');
           store.dispatch(logoutAdminState());
-          window.location.href = ROUTES.ADMIN_LOGIN;
-        } else if (window.location.pathname.startsWith(ROUTES.VENDOR_ROOT)) {
+          // Only force redirect if we were actually expecting to be an admin
+          if (state.admin?.admin) {
+            window.location.href = ROUTES.ADMIN_LOGIN;
+          }
+        } else if (url.includes('/vendor/')) {
           const { vendorLogoutState } = await import('../features/vendorSlice.js');
           store.dispatch(vendorLogoutState());
-          window.location.href = ROUTES.LOGIN;
+          // Only force redirect if we were actually expecting to be a vendor
+          if (state.vendor?.vendor) {
+            window.location.href = ROUTES.LOGIN;
+          }
         } else {
           store.dispatch(logoutUserState());
-          window.location.href = ROUTES.LOGIN;
+          // Only force redirect if we were actually expecting to be a user
+          if (state.user?.user) {
+            window.location.href = ROUTES.LOGIN;
+          }
         }
       }
     }

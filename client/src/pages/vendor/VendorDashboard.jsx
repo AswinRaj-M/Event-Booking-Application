@@ -2,7 +2,7 @@ import React from 'react';
 import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { Bell, PlusCircle, Calendar, CalendarDays, Users } from 'lucide-react';
-import { vendorLogoutState } from '../../features/vendorSlice';
+import { vendorLogoutThunk } from '../../features/vendorSlice';
 import VendorSidebar from '../../components/vendor/VendorSidebar';
 import { ROUTES } from '../../constants/routes';
 
@@ -10,9 +10,13 @@ const VendorHome = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    dispatch(vendorLogoutState());
-    navigate(ROUTES.LOGIN);
+  const handleLogout = async () => {
+    try {
+      await dispatch(vendorLogoutThunk()).unwrap();
+      navigate(ROUTES.LOGIN);
+    } catch (error) {
+      console.error("Vendor logout failed:", error);
+    }
   };
 
   return (

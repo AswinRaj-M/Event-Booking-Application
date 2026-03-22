@@ -1,34 +1,31 @@
 import React from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { vendorLogoutThunk } from "../../features/vendorSlice";
 import { ROUTES } from "../../constants/routes";
 import {
     LayoutDashboard,
-    CalendarDays,
-    FileEdit,
-    PlusCircle,
-    Ticket,
-    Wallet,
     UserCircle,
-    Settings,
     LogOut
 } from "lucide-react";
 
 const VendorSidebar = () => {
     const location = useLocation();
+    const navigate = useNavigate();
+    const dispatch = useDispatch();
+
+    const handleLogout = async () => {
+        try {
+            await dispatch(vendorLogoutThunk()).unwrap();
+            navigate(ROUTES.LOGIN);
+        } catch (error) {
+            console.error("Vendor logout failed:", error);
+        }
+    };
 
     // Navigation Links Data
     const mainLinks = [
-        { path: ROUTES.VENDOR_DASHBOARD, icon: LayoutDashboard, label: "Dashboard" },
-        { path: ROUTES.VENDOR_EVENTS, icon: CalendarDays, label: "My Events" },
-        { path: ROUTES.VENDOR_DRAFT_EVENTS, icon: FileEdit, label: "Draft Events" },
-        { path: ROUTES.VENDOR_CREATE_EVENT, icon: PlusCircle, label: "Create Event" },
-        { path: ROUTES.VENDOR_BOOKINGS, icon: Ticket, label: "Bookings" },
-        { path: ROUTES.VENDOR_EARNINGS, icon: Wallet, label: "Earnings" },
-    ];
-
-    const accountLinks = [
-        { path: ROUTES.VENDOR_PROFILE, icon: UserCircle, label: "Vendor Profile" },
-        { path: ROUTES.VENDOR_SETTINGS, icon: Settings, label: "Settings" },
+        { path: ROUTES.VENDOR_DASHBOARD, icon: LayoutDashboard, label: "Dashboard" }
     ];
 
     return (
@@ -78,27 +75,12 @@ const VendorSidebar = () => {
                         Account
                     </h3>
                     <div className="space-y-1">
-                        {accountLinks.map((link) => {
-                            const Icon = link.icon;
-                            const isActive = location.pathname === link.path;
-
-                            return (
-                                <Link
-                                    key={link.path}
-                                    to={link.path}
-                                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${isActive
-                                        ? "bg-white/5 text-white"
-                                        : "text-gray-300 hover:text-white hover:bg-white/5"
-                                        }`}
-                                >
-                                    <Icon className={`w-5 h-5 ${isActive ? "text-purple-400" : "text-gray-400"}`} />
-                                    <span className="text-sm font-medium">{link.label}</span>
-                                </Link>
-                            );
-                        })}
 
                         {/* Logout Button */}
-                        <button className="flex w-full items-center gap-3 px-3 py-2.5 rounded-xl text-red-500 hover:bg-red-500/10 hover:text-red-400 transition-all mt-1">
+                        <button 
+                            onClick={handleLogout}
+                            className="flex w-full items-center gap-3 px-3 py-2.5 rounded-xl text-red-500 hover:bg-red-500/10 hover:text-red-400 transition-all mt-1"
+                        >
                             <LogOut className="w-5 h-5" />
                             <span className="text-sm font-medium">Logout</span>
                         </button>
@@ -108,15 +90,15 @@ const VendorSidebar = () => {
 
             {/* User Profile Footer (Sticky bottom) */}
             <div className="p-4 border-t border-white/5 bg-[#0B091A]">
-                <Link to={ROUTES.VENDOR_PROFILE} className="flex items-center gap-3 group">
-                    <div className="w-10 h-10 rounded-full bg-gray-700/50 flex items-center justify-center border border-white/10 overflow-hidden cursor-pointer group-hover:border-purple-500 transition-colors">
+                <div className="flex items-center gap-3 group cursor-default">
+                    <div className="w-10 h-10 rounded-full bg-gray-700/50 flex items-center justify-center border border-white/10 overflow-hidden group-hover:border-purple-500 transition-colors">
                         <UserCircle className="w-6 h-6 text-gray-400 group-hover:text-purple-400 transition-colors" />
                     </div>
                     <div className="flex flex-col">
                         <span className="text-sm font-bold text-gray-300 group-hover:text-white transition-colors">Your Profile</span>
                         <span className="text-[11px] text-gray-500 group-hover:text-gray-400 transition-colors">Vendor Account</span>
                     </div>
-                </Link>
+                </div>
             </div>
 
         </div>

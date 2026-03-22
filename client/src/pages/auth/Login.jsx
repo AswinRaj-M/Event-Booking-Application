@@ -22,15 +22,18 @@ import { ROUTES } from "../../constants/routes";
     const dispatch = useDispatch();
     const userState = useSelector((state) => state.user);
     const vendorState = useSelector((state) => state.vendor);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    
     const togglePasswordVisibility = () => {
       setShowPassword(!showPassword);
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
       e.preventDefault();
-
+      
+      setIsSubmitting(true);
       if (isLogin) {
-        dispatch(
+        await dispatch(
           loginUserThunk({
             email,
             password,
@@ -38,13 +41,14 @@ import { ROUTES } from "../../constants/routes";
         );
       }
        else {
-        dispatch(
+        await dispatch(
           vendorLoginThunk({
             businessEmail: email,
             password,
           }),
         );
       }
+      setIsSubmitting(false);
     };
 
     useEffect(() => {
@@ -108,7 +112,9 @@ import { ROUTES } from "../../constants/routes";
       dispatch(clearMessages());
       dispatch(vendorClearMessages());
     };
-    if (userState.loading || vendorState.loading) return <Loader />;
+
+    const isLoadingState = userState.loading || vendorState.loading;
+    if (isLoadingState) return <Loader />;
 
     return (
       <div className="flex min-h-screen w-full bg-black text-foreground font-sans selection:bg-primary/30 overflow-hidden">
@@ -362,10 +368,10 @@ import { ROUTES } from "../../constants/routes";
 
                 <button
                   type="submit"
-                  disabled={isLogin ? userState.loading : vendorState.loading}
+                  disabled={isSubmitting}
                   className="w-full py-3.5 px-4 bg-gradient-to-r from-primary to-violet-600 hover:from-violet-600 hover:to-primary text-white font-medium rounded-xl shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all duration-200 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  {(isLogin ? userState.loading : vendorState.loading) ? (
+                  {isSubmitting ? (
                     <>
                       <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                       <span>Processing...</span>

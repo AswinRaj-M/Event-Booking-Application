@@ -11,6 +11,7 @@ const Signup = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { loading, error, success, userId } = useSelector((state) => state.user);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -41,7 +42,7 @@ const Signup = () => {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!fullName.trim() || !email.trim() || !phoneNumber.trim() || !password.trim() || !confirmPassword.trim()) {
@@ -56,7 +57,8 @@ const Signup = () => {
       return toast.error("Passwords do not match");
     }
 
-    dispatch(
+    setIsSubmitting(true);
+    await dispatch(
       registerUserThunk({
         fullName,
         email,
@@ -66,6 +68,7 @@ const Signup = () => {
         agreeTermsAndConditions,
       }),
     );
+    setIsSubmitting(false);
   };
 
 
@@ -91,6 +94,7 @@ const Signup = () => {
       dispatch(clearMessages());
     }
   }, [error, dispatch]);
+
   if (loading) return <Loader />;
 
   return (
@@ -419,9 +423,10 @@ const Signup = () => {
 
               <button
                 type="submit"
-                className="w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-medium rounded-xl shadow-lg shadow-purple-900/40 hover:shadow-purple-900/60 transition-all duration-200 transform hover:-translate-y-0.5 mt-2"
+                disabled={isSubmitting}
+                className="w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-medium rounded-xl shadow-lg shadow-purple-900/40 hover:shadow-purple-900/60 transition-all duration-200 transform hover:-translate-y-0.5 mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? "Creating..." : "Create Account"}
+                {isSubmitting ? "Creating..." : "Create Account"}
               </button>
             </form>
 

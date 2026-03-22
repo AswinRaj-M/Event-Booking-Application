@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { ROUTES } from "../../constants/routes";
 import AdminSidebar from "../../components/admin/AdminSidebar";
+import Loader from "../../components/common/Loader";
 import {
   Search,
   Bell,
@@ -30,6 +31,8 @@ function AdminVendorManagement() {
   useEffect(() => {
     dispatch(getAllVendorsThunk({ status: activeTab }));
   }, [dispatch, activeTab]);
+
+  if (loading) return <Loader />;
 
   return (
     <div className="flex h-screen bg-[#0B0914] text-white font-sans overflow-hidden">

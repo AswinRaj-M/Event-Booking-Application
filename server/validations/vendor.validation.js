@@ -57,8 +57,10 @@ body().custom((value, { req }) => {
 
   body("contactPhone")
     .trim()
-    .matches(/^[0-9]{10,15}$/)
-    .withMessage("Phone number must be between 10 and 15 digits"),
+    .notEmpty()
+    .withMessage("Phone number is required")
+    .matches(/^[\+\d\s\(\)\-]{10,20}$/)
+    .withMessage("Invalid phone number format"),
 
   body("eventCategory")
     .notEmpty()
@@ -71,31 +73,24 @@ body().custom((value, { req }) => {
   body("description")
     .trim()
     .isLength({ min: 20 })
-    .withMessage("Description must be at least 20 characters"),
+    .withMessage("Description must be at least 20 characters long"),
 
   body("agreeTermsAndConditions")
     .notEmpty()
     .withMessage("Terms must be accepted")
 ];
 
-
-
 export const vendorLoginValidation = [
-
   body("businessEmail")
     .trim()
     .isEmail()
     .withMessage("Valid email is required")
     .custom(async (email, { req }) => {
-
       const vendor = await Vendor.findOne({ businessEmail: email });
-
       if (!vendor) {
         throw new Error("Invalid Credentials");
       }
-
       req.vendor = vendor;
-
       return true;
     }),
 
@@ -103,16 +98,12 @@ export const vendorLoginValidation = [
     .notEmpty()
     .withMessage("Password is required")
     .custom(async (password, { req }) => {
-
       const vendor = req.vendor;
       if (!vendor) return true;
-
       const match = await bcrypt.compare(password, vendor.password);
-
       if (!match) {
         throw new Error("Incorrect Password");
       }
-
       return true;
     })
 ];
