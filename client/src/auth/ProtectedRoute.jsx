@@ -37,7 +37,7 @@ export const PublicRoute = ({ children }) => {
     }
     return <Navigate to="/vendor/dashboard" replace />
   } else if (user) {
-    return <Navigate to="/home" replace />
+    return <Navigate to="/user/home" replace />
   }
 
   return children

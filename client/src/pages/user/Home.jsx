@@ -1,10 +1,10 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import Navbar from '../components/layout/Navbar';
-import Footer from '../components/layout/Footer';
+import Navbar from '../../components/layout/Navbar';
+import Footer from '../../components/layout/Footer';
 import { Search, MapPin, Calendar, Clock, ArrowRight, Ticket, Star } from 'lucide-react';
 import { useDispatch } from 'react-redux';
-import { logoutUserThunk, logoutUserState } from '../features/user.slice';
+import { logoutUserThunk, logoutUserState } from '../../features/user.slice';
 
 const Home = () => {
   const dispatch = useDispatch();

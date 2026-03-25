@@ -52,7 +52,7 @@
     useEffect(() => {
       if (isLogin && userState.success) {
         dispatch(clearMessages());
-        navigate("/home", { replace: true });
+        navigate("/user/home", { replace: true });
       }
 
       if (!isLogin && vendorState.success) {

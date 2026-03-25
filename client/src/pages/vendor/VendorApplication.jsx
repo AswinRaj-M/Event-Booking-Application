@@ -452,7 +452,7 @@ const VendorApplication = () => {
                                                 </span>
                                             </div>
                                             <p className="text-xs text-gray-500">
-                                                SVG, PNG, JPG or PDF (max. 5MB)
+                                                SVG, PNG, JPG or PDF (max. 10MB)
                                             </p>
                                         </div>
                                     </div>
@@ -490,7 +490,7 @@ const VendorApplication = () => {
                                                 </span>
                                             </div>
                                             <p className="text-xs text-gray-500">
-                                                PDF, JPG or PNG
+                                                PDF, JPG or PNG (max 10MB)
                                             </p>
                                         </div>
                                     </div>

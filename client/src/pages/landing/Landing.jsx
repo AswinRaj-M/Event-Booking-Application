@@ -11,7 +11,7 @@ const LandingPage = () => {
       <div className="fixed inset-0 z-0 pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-600/20 rounded-full blur-[120px]" />
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-pink-600/10 rounded-full blur-[120px]" />
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150 mix-blend-overlay"></div>
+        <div className="absolute inset-0 noise-bg opacity-20 brightness-100 contrast-150 mix-blend-overlay"></div>
       </div>
 
       <div className="relative z-10 flex flex-col min-h-screen">

@@ -27,7 +27,7 @@ const VerifyOtp = () => {
 
   useEffect(() => {
     if (success) {
-      navigate('/home', { replace: true });
+      navigate('/user/home', { replace: true });
     }
   }, [success, navigate]);
 
