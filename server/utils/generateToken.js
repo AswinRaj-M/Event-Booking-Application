@@ -12,8 +12,16 @@ export const generateAccessToken = (user) =>{
 
 export const generateRefreshToken = (user) =>{
   return jwt.sign(
-    {id : user.id},
+    {id : user._id},
     process.env.JWT_REFRESH_SECRET,
     {expiresIn : process.env.REFRESH_TOKEN_EXPIRES}
+  )
+}
+
+export const generateResetToken = (user) => {
+  return jwt.sign(
+    {id : user.id},
+    process.env.JWT_RESET_SECRET,
+    {expiresIn : "10m"}
   )
 }

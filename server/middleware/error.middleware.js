@@ -2,7 +2,7 @@ import { AppError } from "../utils/AppError.js";
 
 
 export const globalErrorHandler = (err, req, res, next) => {
-  console.error("ERROR 💥:", err);
+  console.error("ERROR :", err);
 
   let statusCode = typeof err.statusCode === 'number' ? err.statusCode : 500;
   let status = err.status || 'error';

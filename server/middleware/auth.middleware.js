@@ -24,6 +24,12 @@ export const protect =  async(req,res,next) =>{
         })
       }
 
+      if (!user.isVerified) {
+        return res.status(403).json({
+          message: "Account not verified. Please verify your email."
+        });
+      }
+
       req.user = user 
 
       next()

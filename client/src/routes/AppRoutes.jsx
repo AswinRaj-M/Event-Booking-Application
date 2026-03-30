@@ -6,6 +6,9 @@ import VerifyOtp from '../pages/auth/VerifyOtp.jsx';
 import Home from '../pages/user/Home.jsx'
 import { ProtectedRoute, PublicRoute } from '../auth/ProtectedRoute.jsx';
 import Loader from '../components/common/Loader.jsx';
+import ForgotPassword from '../pages/auth/ForgotPassword.jsx';
+import ResetPassword from '../pages/auth/ResetPassword.jsx';
+import GoogleAuthSuccess from '../pages/auth/GoogleAuthSuccess.jsx';
 
 const AppRoutes = () => {
     return (
@@ -19,6 +22,17 @@ const AppRoutes = () => {
             <Route path="/" element={
                 <PublicRoute>
                     <Landing />
+                </PublicRoute>
+            } />
+
+            <Route path="/forgot-password" element={
+                <PublicRoute>
+                    <ForgotPassword />
+                </PublicRoute>
+            } />
+            <Route path="/reset-password/:resetToken" element={
+                <PublicRoute>
+                    <ResetPassword/>
                 </PublicRoute>
             } />
 
@@ -37,6 +51,7 @@ const AppRoutes = () => {
                     <VerifyOtp />
                 </PublicRoute>
             } />
+            <Route path="/auth/success" element={<GoogleAuthSuccess />} />
 
             <Route path="/spinner" element={<Loader />} />
         </Routes>

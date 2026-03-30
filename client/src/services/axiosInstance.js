@@ -1,5 +1,4 @@
 import axios from "axios"
-import { refreshUserToken, logoutUserState } from "../features/user.slice.js"
 
 let store;
 
@@ -38,9 +37,11 @@ axiosInstance.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
+        const { refreshUserToken } = await import("../features/user.slice.js")
         await store.dispatch(refreshUserToken())
         return axiosInstance(originalRequest)
       } catch (error) {
+        const { logoutUserState } = await import("../features/user.slice.js")
         store.dispatch(logoutUserState())
         window.location.href = "/login"
       }

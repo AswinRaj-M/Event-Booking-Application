@@ -1,19 +1,21 @@
-import dotenv from "dotenv"
-dotenv.config()
+import "dotenv/config"
 import express from "express"
 import cors from "cors"
 import cookieParser from "cookie-parser"
 import connectDB from "./config/db.js"
+import passport from "passport"
+import "./config/passport.js"
 import userRoutes from './routes/user.routes.js'
 import adminRoutes from "./routes/admin.routes.js"
 import vendorRoutes from "./routes/vendor.routes.js"
 import { globalErrorHandler } from "./middleware/error.middleware.js"
 
-
 connectDB()
 
 
 const app = express()
+
+app.use(passport.initialize())
 
 
 app.use(express.json())

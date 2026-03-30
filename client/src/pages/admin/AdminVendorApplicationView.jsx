@@ -45,6 +45,7 @@ const AdminVendorApplicationView = () => {
             dispatch(getVendorByIdThunk(id))
         } catch (error) {
             console.error("Error : ",error)
+            toast.error("Something went wrong")
         }
     }
 

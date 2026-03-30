@@ -2,15 +2,26 @@ import { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { verifyOTPThunk } from '../../features/user.slice';
+import { resendOtp } from '../../services/user.api';
+import { toast } from 'sonner';
+import Loader from '../../components/common/Loader';
 
 const VerifyOtp = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { loading, success, error } = useSelector((state) => state.user);
+  const { loading, success, error, userId: reduxUserId, tempEmail } = useSelector((state) => state.user);
 
-  const { email, userId } = location.state || {};
+  const { email: stateEmail, userId: stateUserId } = location.state || {};
+  const email = stateEmail || tempEmail;
+  const userId = stateUserId || reduxUserId;
+
+  useEffect(() => {
+    if (!userId) {
+      navigate('/login', { replace: true });
+    }
+  }, [userId, navigate]);
 
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [timer, setTimer] = useState(60);
@@ -92,7 +103,21 @@ const VerifyOtp = () => {
 
   };
 
+  const handleResend = async()=>{
+    try {
+      await resendOtp(userId)
+      toast.success("Resend otp Successfully")
+    } catch (error) {
+      console.log("Error from hadleResend : ",error)
+      toast.error("Something went Wrong ")
+    }
+  }
+
   const isOtpComplete = otp.join('').length === 6;
+
+  if(loading){
+    return <Loader/>
+  }
 
   return (
     <div className="h-screen w-screen bg-[#050505] flex items-center justify-center relative overflow-hidden font-sans text-white">
@@ -143,6 +168,7 @@ const VerifyOtp = () => {
             disabled={timer > 0}
             className="font-medium text-purple-400 hover:text-purple-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => {
+              handleResend()
               setTimer(60);
             }}
           >

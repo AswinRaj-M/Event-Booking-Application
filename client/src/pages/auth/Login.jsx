@@ -9,6 +9,7 @@
     vendorClearMessages,
     vendorLoginThunk,
   } from "../../features/vendorSlice";
+import Loader from "../../components/common/Loader";
 
   const Login = () => {
     const navigate = useNavigate();
@@ -18,6 +19,7 @@
     const [isLogin, setIsLogin] = useState(true);
 
     const dispatch = useDispatch();
+    const {loading} = useSelector((state) => state.user)
     const userState = useSelector((state) => state.user);
     const vendorState = useSelector((state) => state.vendor);
     const togglePasswordVisibility = () => {
@@ -51,8 +53,18 @@
 
     useEffect(() => {
       if (isLogin && userState.success) {
-        dispatch(clearMessages());
-        navigate("/user/home", { replace: true });
+        if (userState.unverified) {
+          navigate("/verify-otp", {
+            state: {
+              userId: userState.userId,
+              email: userState.tempEmail
+            }
+          });
+          toast.warning("Account is not verified. verify to login")
+        } else {
+          dispatch(clearMessages());
+          navigate("/user/home", { replace: true });
+        }
       }
 
       if (!isLogin && vendorState.success) {
@@ -97,6 +109,11 @@
       dispatch(clearMessages());
       dispatch(vendorClearMessages());
     };
+
+
+    if(loading){
+      return <Loader/>
+    }
 
     return (
       <div className="flex min-h-screen w-full bg-black text-foreground font-sans selection:bg-primary/30 overflow-hidden">
@@ -378,7 +395,10 @@
               </div>
 
               <div className="flex flex-col gap-4">
-                <button className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-[#121212] hover:bg-[#1a1a1a] border border-gray-800 rounded-xl transition-colors group">
+                <button 
+                  onClick={() => window.location.href = `${import.meta.env.VITE_API_URL}/users/google`}
+                  className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-[#121212] hover:bg-[#1a1a1a] border border-gray-800 rounded-xl transition-colors group"
+                >
                   <svg className="h-5 w-5" viewBox="0 0 24 24">
                     <path
                       d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"

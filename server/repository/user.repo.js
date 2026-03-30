@@ -4,8 +4,6 @@ import Otp from "../models/user.otp.model.js";
 
 
 
-
-
 export const findUserByEmail = async (email) => {
   return await User.findOne({ email });
 };
@@ -52,7 +50,7 @@ export const findByRefreshToken = async (token) => {
 export const upsertOtp = async (userId, otp) => {
   return await Otp.findOneAndUpdate(
     { userId },
-    { otp },
+    { otp, createdAt: Date.now() },
     { upsert: true, new: true }
   );
 };
@@ -62,6 +60,16 @@ export const findOtpByUserId = async (userId) => {
   return await Otp.findOne({ userId });
 };
 
+export const updatePassword = async(userId,password) =>{
+  return await User.findByIdAndUpdate(
+    userId,
+    {
+      password,
+      passwordChangedAt : Date.now()
+    },
+    {new : true}
+  )
+}
 
 export const deleteOtpByUserId = async (userId) => {
   return await Otp.deleteOne({ userId });

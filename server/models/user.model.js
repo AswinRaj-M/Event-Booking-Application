@@ -14,12 +14,16 @@ const userSchema = new mongoose.Schema({
     },
     phoneNumber :{
       type : String,
-      required : true,
-      unique : true
+      unique : true,
+      sparse: true,
     },
     password : {
       type : String,
-      required : true
+    },
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true,
     },
     role : {
       type : String,
@@ -35,7 +39,7 @@ const userSchema = new mongoose.Schema({
     },
     agreeTermsAndConditions  :{
       type : Boolean,
-      required : true
+      default: true
     },
     isVerified : {
       type : Boolean,
@@ -43,7 +47,8 @@ const userSchema = new mongoose.Schema({
     },
     refreshToken : {
       type : String,  
-    }
+    },
+    passwordChangedAt : Date,
 
 },{timestamps : true})
 

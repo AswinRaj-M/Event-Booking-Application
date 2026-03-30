@@ -76,7 +76,9 @@ const userSlice = createSlice({
     accessToken : null,
     loading : false,
     error : null,
-    success : false
+    success : false,
+    unverified: false,
+    tempEmail: null
   },
 
   reducers : {
@@ -85,10 +87,21 @@ const userSlice = createSlice({
       state.accessToken = null
       state.success = false
       state.error = null
+      state.unverified = false
+      state.userId = null
+      state.tempEmail = null
     },
     clearMessages : (state) =>{
       state.error = null
       state.success= false  
+      state.unverified = false
+    },
+    setGoogleAuthData : (state,action) =>{
+      state.user = action.payload.user;
+      state.accessToken = action.payload.accessToken;
+      state.success = true;
+      state.error = null;
+      state.unverified = false;
     }
   },
   extraReducers : (builder) => {
@@ -97,11 +110,13 @@ const userSlice = createSlice({
         state.loading = true
         state.error = null
         state.success = false
+        state.unverified = false
       })
       .addCase(registerUserThunk.fulfilled, (state,action) =>{
         state.loading = false
         state.success = true
         state.userId = action.payload.userId
+        state.tempEmail = action.payload.email
       })
       .addCase(registerUserThunk.rejected,(state,action) =>{
         state.loading = false
@@ -117,9 +132,10 @@ const userSlice = createSlice({
       .addCase(verifyOTPThunk.fulfilled,(state,action) =>{
         state.loading = false;
         state.success = true;
-        state.user = action.payload;
+        state.user = action.payload.user;
         state.accessToken = action.payload.accessToken;
         state.error = null;
+        state.unverified = false;
       })
       .addCase(verifyOTPThunk.rejected,(state,action)=> {
         state.loading = false,
@@ -130,17 +146,26 @@ const userSlice = createSlice({
         state.loading = true;
         state.success = false;
         state.error = null;
+        state.unverified = false;
       })
       .addCase(loginUserThunk.fulfilled,(state,action)=>{
         state.loading = false;
         state.success = true;
-        state.user = action.payload.user;
-        state.accessToken = action.payload.accessToken;
+        if (action.payload.unverified) {
+          state.unverified = true;
+          state.userId = action.payload.userId;
+          state.tempEmail = action.payload.email;
+        } else {
+          state.user = action.payload.user;
+          state.accessToken = action.payload.accessToken;
+          state.unverified = false;
+        }
         state.error = null;
       })
       .addCase(loginUserThunk.rejected,(state,action)=>{
         state.loading = false
         state.error = action.payload
+        state.unverified = false
       })
 
       .addCase(logoutUserThunk.fulfilled, (state) => {
@@ -165,5 +190,5 @@ const userSlice = createSlice({
 })
 
 
-export const { logoutUserState, clearMessages} =userSlice.actions
+export const { logoutUserState, clearMessages, setGoogleAuthData } = userSlice.actions
 export default userSlice.reducer;

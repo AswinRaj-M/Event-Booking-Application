@@ -2,8 +2,6 @@ import bcrypt from "bcryptjs";
 import { hashToken } from "../utils/hashToken.js";
 import { AppError } from "../utils/AppError.js";
 
-
-
 import {
   findUserByEmail,
   createUser,
@@ -11,13 +9,12 @@ import {
   findUserById,
   updateRefreshToken,
   findByRefreshToken,
-
   upsertOtp,
   findOtpByUserId,
   deleteOtpByUserId,
+  updatePassword,
 } from "../repository/user.repo.js";
-
-
+import { generateResetToken } from "../utils/generateToken.js";
 
 export const registerUserService = async (data) => {
   const {
@@ -62,17 +59,45 @@ export const registerUserService = async (data) => {
   });
 };
 
+export const resendOtpService = async(userId,otp)=>{
+  if(!userId) throw new AppError("User id is required",400)
 
+  const user =  await findUserById(userId)
+  
+  if(!user) throw new AppError("User not found",400)
+  
+  if(user.isVerified) throw new AppError("User already verified",400)
+
+  await upsertOtp(user._id, otp)
+
+  return user;
+}
+
+export const forgotPasswordService = async(email)=>{
+  const user = await findUserByEmail(email)
+
+  if(!user) throw new AppError("User not found!",400)
+  
+  const resetToken = generateResetToken(user)
+
+  return {resetToken,user}
+}
+
+export const resetPasswordService = async(userId,password) =>{
+  const user = await findUserById(userId)
+  if(!user) throw new AppError("User not found!", 400)
+  
+  const hashedPassword = await bcrypt.hash(password,10)
+
+  await updatePassword(userId,hashedPassword)
+  return true
+}
 
 export const createOtpService = async (userId, otp) => {
-  const hashedOtp = await bcrypt.hash(otp, 10);
-
-  return await upsertOtp(userId, hashedOtp);
+  return await upsertOtp(userId, otp);
 };
 
-
-
-export const verifyOtpService = async (userId, otp, refreshToken) => {
+export const verifyOtpService = async (userId, otp) => {
   if (!userId || !otp) {
     throw new AppError("OTP Required", 400);
   }
@@ -87,13 +112,11 @@ export const verifyOtpService = async (userId, otp, refreshToken) => {
     throw new AppError("Invalid or Expired OTP", 400);
   }
 
-  const isMatch = await bcrypt.compare(otp, otpDoc.otp);
-  if (!isMatch) {
+  if (otp !== otpDoc.otp) {
     throw new AppError("Invalid OTP", 400);
   }
 
   user.isVerified = true;
-  user.refreshToken = hashToken(refreshToken);
 
   await user.save();
   await deleteOtpByUserId(userId);
@@ -101,17 +124,11 @@ export const verifyOtpService = async (userId, otp, refreshToken) => {
   return user;
 };
 
-
-
-export const loginUserService = async (email, password, refreshToken) => {
+export const loginUserService = async (email, password) => {
   const user = await findUserByEmail(email);
 
   if (!user) {
     throw new AppError("Invalid Credentials", 400);
-  }
-
-  if (!user.isVerified) {
-    throw new AppError("Please verify your email to login", 400);
   }
 
   const match = await bcrypt.compare(password, user.password);
@@ -119,14 +136,17 @@ export const loginUserService = async (email, password, refreshToken) => {
     throw new AppError("Password is Incorrect", 400);
   }
 
-  const hashedToken = hashToken(refreshToken);
+  if (!user.isVerified) {
+    return { user, unverified: true };
+  }
 
-  await updateRefreshToken(user._id, hashedToken);
-
-  return user;
+  return { user, unverified: false };
 };
 
-
+export const updateRefreshTokenService = async (userId, refreshToken) => {
+  const hashedToken = hashToken(refreshToken);
+  await updateRefreshToken(userId, hashedToken);
+};
 
 export const refreshAccessTokenService = async (token, decoded) => {
   const user = await findUserById(decoded.id);
@@ -137,6 +157,7 @@ export const refreshAccessTokenService = async (token, decoded) => {
 
   return user;
 };
+
 
 
 
