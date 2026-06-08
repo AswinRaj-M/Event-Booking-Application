@@ -1,79 +1,80 @@
 import mongoose, { mongo } from "mongoose";
 
 const fileSchema = new mongoose.Schema({
-  fileUrl : {
-    type : String,
-    required : true
+  fileUrl: {
+    type: String,
+    required: true
   },
-  publicId :{
-    type : String,
-    required : true
+  publicId: {
+    type: String,
+    required: true
   },
-  fileType : String
+  fileType: String
 })
 
 const vendorSchema = new mongoose.Schema({
-  organizerName : {
-    type : String,
-    required : true,
-    trim : true
+  organizerName: {
+    type: String,
+    required: true,
+    trim: true
   },
-  businessName : {
-    type : String,
-    required : true,
-    trim : true
+  businessName: {
+    type: String,
+    required: true,
+    trim: true
   },
-  businessEmail : {
-    type : String,
-    required : true
+  businessEmail: {
+    type: String,
+    required: true
   },
-  password :{
-    type : String,
-    required : true
+  password: {
+    type: String,
+    required: true
   },
-  role:{
-    type : String,
-    default : "vendor"
+  role: {
+    type: String,
+    default: "vendor"
   },
-  contactPhone : {
-    type : String,
-    required : true,
+  contactPhone: {
+    type: String,
+    required: true,
   },
-  agreeTermsAndConditions  :{
-      type : Boolean,
-      required : true
-    },
-    emailVerify :{
-      type : Boolean,
-      defualt :false
-    },
-  eventCategory : String,
-  experience : String,
-  description : String,
-  websiteOrInstagram : String,
-  businessDocument :{
-    type : fileSchema,
-    required : true
+  agreeTermsAndConditions: {
+    type: Boolean,
+    required: true
   },
-  idProof :{
-    type : fileSchema,
-    required : true
+  emailVerify: {
+    type: Boolean,
+    defualt: false
   },
-  isBlocked :{
-    type : Boolean,
-    default : false
-  },  
-  location : {
-    city : String,
-    state : String,
-    country : String
+  eventCategory: String,
+  experience: String,
+  description: String,
+  websiteOrInstagram: String,
+  businessDocument: {
+    type: fileSchema,
+    required: true
   },
-  applicationStatus :{
-    type : String,
-    enum : ["pending","approved","rejected"],
-    default : "pending"
+  idProof: {
+    type: fileSchema,
+    required: true
   },
-  rejectionReason : String,
-},{timestamps : true})
+  isBlocked: {
+    type: Boolean,
+    default: false
+  },
+  location: {
+    city: String,
+    state: String,
+    country: String
+  },
+  applicationStatus: {
+    type: String,
+    enum: ["pending", "approved", "rejected"],
+    default: "pending"
+  },
+  rejectionReason: String,
+  refreshToken: String,
+}, { timestamps: true })
 
-export default mongoose.model("Vendor",vendorSchema)
+export default mongoose.model("Vendor", vendorSchema)

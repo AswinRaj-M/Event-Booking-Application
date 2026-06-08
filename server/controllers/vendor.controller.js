@@ -101,7 +101,7 @@ export const vendorLogin = async (req, res) => {
  */
 export const vendorLogout = async (req, res) => {
   const token = req.cookies.refreshToken;
-  console.log(`[Vendor Logout] Logout request received. Clearing cookies with sameSite=lax...`);
+ 
 
   await vendorLogoutService(token);
 

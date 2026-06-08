@@ -53,7 +53,15 @@ export const getAllVendorsService = async (status, page, limit, search, category
   let filter = {};
 
   if (status) {
-    filter.applicationStatus = status;
+    if (status === "approved") {
+      filter.applicationStatus = "approved";
+      filter.isBlocked = { $ne: true };
+    } else if (status === "suspended") {
+      filter.applicationStatus = "approved";
+      filter.isBlocked = true;
+    } else {
+      filter.applicationStatus = status;
+    }
   }
 
   if (category && category !== "all") {
@@ -117,6 +125,31 @@ export const vendorRejectService = async (id, message) => {
 
   return vendor;
 };
+
+export const vendorSuspendService = async(id,message) => {
+  const vendor = await findVendorById(id)
+
+  if(!vendor){
+    throw new AppError("Vendor not Found!")
+  }
+  vendor.isBlocked = true
+  vendor.refreshToken = null
+  
+  await saveVendor(vendor)
+  return vendor
+}
+
+export const vendorUnsuspendService = async(id) => {
+  const vendor = await findVendorById(id)
+
+  if(!vendor){
+    throw new AppError("Vendor not Found!")
+  }
+  vendor.isBlocked = false
+  
+  await saveVendor(vendor)
+  return vendor
+}
 
 
 export const createCategoryService = async(name,description,icon) =>{

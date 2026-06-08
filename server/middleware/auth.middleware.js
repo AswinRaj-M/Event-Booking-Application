@@ -31,6 +31,26 @@ export const protect = async (req, res, next) => {
       })
     }
 
+    if (user.isBlocked) {
+      res.clearCookie("refreshToken", {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+      });
+
+      res.clearCookie("accessToken", {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+      });
+
+      return res.status(403).json({
+        message: "Your account has been suspended by the administrator."
+      });
+    }
+
     if (decoded.role === 'user' && !user.isVerified) {
       return res.status(403).json({
         message: "Account not verified. Please verify your email."

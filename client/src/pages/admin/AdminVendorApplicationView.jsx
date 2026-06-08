@@ -24,6 +24,8 @@ import { getVendorByIdThunk } from "../../features/admin.slice";
 import {
   approveVendorApplication,
   rejectVendorAppplication,
+  suspendVendor,
+  unsuspendVendor,
   VendorSendEmail,
 } from "../../services/admin.api";
 import { toast } from "sonner";
@@ -67,6 +69,32 @@ const AdminVendorApplicationView = () => {
     }
   };
 
+  const handleSuspendvendor = async() =>{
+    try {
+      if(!message) {
+        return toast.error("Please enter suspention reason!")
+      }
+      await suspendVendor(id,message)
+      toast.success("Vendor suspended Successfully!")
+      setMessage("")
+      dispatch(getVendorByIdThunk(id))
+    } catch (error) {
+      console.error("Error from suspend vendor : ",error)
+      toast.error("Something went Wrong! ")
+    }
+  }
+
+  const handleUnsuspendvendor = async() =>{
+    try {
+      await unsuspendVendor(id, message)
+      toast.success("Vendor unsuspended Successfully!")
+      setMessage("")
+      dispatch(getVendorByIdThunk(id))
+    } catch (error) {
+      console.error("Error from unsuspend vendor : ",error)
+      toast.error("Something went Wrong! ")
+    }
+  }
   const sendEmail = async() =>{
     try {
       if(!message){
@@ -82,6 +110,34 @@ const AdminVendorApplicationView = () => {
       toast.error("Something Went Wrong")
     }
   }
+
+  const getStatusBadge = () => {
+    if (vendorDetails?.isBlocked) {
+      return {
+        text: "suspended",
+        className: "bg-red-500/10 text-red-500 border border-red-500/20"
+      };
+    }
+    const status = vendorDetails?.applicationStatus;
+    if (status === "approved") {
+      return {
+        text: "approved",
+        className: "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
+      };
+    }
+    if (status === "rejected") {
+      return {
+        text: "rejected",
+        className: "bg-rose-500/10 text-rose-500 border border-rose-500/20"
+      };
+    }
+    return {
+      text: status || "Status",
+      className: "bg-yellow-500/10 text-yellow-500 border border-yellow-500/20"
+    };
+  };
+
+  const badge = getStatusBadge();
 
   if (loading) {
     return <Loader />;
@@ -135,8 +191,8 @@ const AdminVendorApplicationView = () => {
                   <ArrowLeft size={16} />
                   <span className="hidden sm:inline">Back to list</span>
                 </button>
-                <span className="px-3 py-1 bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 rounded-md text-xs font-medium uppercase">
-                  {vendorDetails?.applicationStatus || "Status"}
+                <span className={`px-3 py-1 rounded-md text-xs font-medium uppercase ${badge.className}`}>
+                  {badge.text}
                 </span>
                 <span className="text-sm text-gray-500">
                   ID: {vendorDetails?._id?.substring(0, 8) || "#"}
@@ -420,10 +476,17 @@ const AdminVendorApplicationView = () => {
                   )}
 
                   {vendorDetails.applicationStatus === "approved" ? (
-                    <button className="w-full flex items-center justify-center space-x-2 py-3 bg-[#0B0914] hover:bg-red-500/10 border border-red-500/30 hover:border-red-500 text-red-500 rounded-xl text-sm font-semibold transition-all">
-                      <XCircle size={16} />
-                      <span>Suspend Vendor</span>
-                    </button>
+                    vendorDetails.isBlocked ? (
+                      <button onClick={handleUnsuspendvendor} className="w-full flex items-center justify-center space-x-2 py-3 bg-[#0B0914] hover:bg-emerald-500/10 border border-emerald-500/30 hover:border-emerald-500 text-emerald-500 rounded-xl text-sm font-semibold transition-all">
+                        <CheckCircle size={16} />
+                        <span>Unsuspend Vendor</span>
+                      </button>
+                    ) : (
+                      <button onClick={handleSuspendvendor} className="w-full flex items-center justify-center space-x-2 py-3 bg-[#0B0914] hover:bg-red-500/10 border border-red-500/30 hover:border-red-500 text-red-500 rounded-xl text-sm font-semibold transition-all">
+                        <XCircle size={16} />
+                        <span>Suspend Vendor</span>
+                      </button>
+                    )
                   ) : vendorDetails.applicationStatus === "rejected" ? (
                     <div className="pt-4 space-y-4">
                       <div>

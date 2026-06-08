@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  getAllCategories,
   createCategory,
   updateCategory,
   toggleCategoryStatus,
@@ -22,6 +21,7 @@ import {
 } from "../../services/admin.api";
 import CreateCategoryModal from "../../components/admin/CreateCategoryModal";
 import UpdateCategoryModal from "../../components/admin/UpdateCategoryModal";
+import { getAllCategories } from '../../services/common.api';
 
 
 

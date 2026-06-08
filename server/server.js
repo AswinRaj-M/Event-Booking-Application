@@ -8,6 +8,7 @@ import "./config/passport.js"
 import userRoutes from './routes/user.routes.js'
 import adminRoutes from "./routes/admin.routes.js"
 import vendorRoutes from "./routes/vendor.routes.js"
+import commonRoutes from "./routes/common.routes.js"
 import { globalErrorHandler } from "./middleware/error.middleware.js"
 
 connectDB()
@@ -20,24 +21,25 @@ app.use(passport.initialize())
 
 app.use(express.json())
 app.use(cookieParser());
-app.use(cors({ 
-  origin : process.env.CLIENT_PORT,
-  credentials : true
+app.use(cors({
+  origin: process.env.CLIENT_PORT,
+  credentials: true
 }))
 
-app.use("/api/users",userRoutes)
-app.use("/api/admin",adminRoutes)
-app.use("/api/vendor",vendorRoutes)
+app.use("/api/users", userRoutes)
+app.use("/api/admin", adminRoutes)
+app.use("/api/vendor", vendorRoutes)
+app.use('/api/common', commonRoutes)
 
 
 app.use(globalErrorHandler);
 
 const PORT = process.env.PORT || 5000
 
-app.get("/",(req,res)=>{
+app.get("/", (req, res) => {
   res.send("FESTIVO")
 })
 
-app.listen(PORT,'0.0.0.0',()=>{
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`server is running on localhost : ${PORT}`)
 })  

@@ -1,6 +1,8 @@
 import bcrypt from "bcryptjs";
 import { hashToken } from "../utils/hashToken.js";
 import { AppError } from "../utils/AppError.js";
+import Vendor from "../models/vendor.model.js";
+import User from "../models/user.model.js";
 
 import {
   findUserByEmail,
@@ -149,10 +151,19 @@ export const updateRefreshTokenService = async (userId, refreshToken) => {
 };
 
 export const refreshAccessTokenService = async (token, decoded) => {
-  const user = await findUserById(decoded.id);
+  let user;
+  if (decoded.role === 'vendor') {
+    user = await Vendor.findById(decoded.id);
+  } else {
+    user = await User.findById(decoded.id);
+  }
 
   if (!user || user.refreshToken !== hashToken(token)) {
     throw new AppError("Invalid RefreshToken", 403);
+  }
+
+  if (user.isBlocked) {
+    throw new AppError("Your account has been suspended by the administrator.", 403);
   }
 
   return user;

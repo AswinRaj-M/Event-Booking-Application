@@ -19,6 +19,52 @@ axiosInstance.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // Check for suspended/blocked user
+    const isSuspendedError = error.response?.status === 403 && 
+      (error.response?.data?.message?.toLowerCase().includes("suspended") || 
+       error.response?.data?.message?.toLowerCase().includes("blocked") ||
+       error.response?.data?.message?.toLowerCase().includes("suspend"));
+
+    if (isSuspendedError) {
+      console.warn("[Axios Interceptor] Blocked/Suspended user detected. Logging out...");
+      
+      localStorage.clear();
+      sessionStorage.clear();
+
+      let redirectPath = "/login";
+      
+      try {
+        if (store) {
+          const state = store.getState();
+          if (state.admin?.admin) {
+            const { logoutAdminState } = await import("../features/admin.slice.js");
+            store.dispatch(logoutAdminState());
+            redirectPath = "/admin/login";
+          } else if (state.vendor?.vendor) {
+            const { vendorLogoutState } = await import("../features/vendorSlice.js");
+            store.dispatch(vendorLogoutState());
+            redirectPath = "/login";
+          } else {
+            const { logoutUserState } = await import("../features/user.slice.js");
+            store.dispatch(logoutUserState());
+            redirectPath = "/login";
+          }
+        }
+      } catch (importErr) {
+        console.error("Failed to import/dispatch logout state:", importErr);
+      }
+
+      try {
+        const { toast } = await import("sonner");
+        toast.error("Your account has been suspended by the administrator.");
+      } catch (toastErr) {
+        console.error("Failed to show suspension toast:", toastErr);
+      }
+
+      window.location.href = redirectPath;
+      return Promise.reject(error);
+    }
+
     // Do not attempt token refresh for authentication/login/register paths
     const isAuthRoute = originalRequest.url?.includes('/login') || 
                         originalRequest.url?.includes('/register') ||

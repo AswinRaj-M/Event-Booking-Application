@@ -1,4 +1,3 @@
-import { data } from "react-router-dom";
 import axiosInstance from "./axiosInstance";
 
 
@@ -28,13 +27,19 @@ export const rejectVendorAppplication = (id, message) => {
   return axiosInstance.patch(`/admin/vendors/reject-application`, { id, message })
 }
 
+export const suspendVendor = (id,message) =>{
+  return axiosInstance.patch('/admin/vendors/suspend-vendor',{id,message})
+}
+
+export const unsuspendVendor = (id, message) => {
+  return axiosInstance.patch('/admin/vendors/unsuspend-vendor', { id, message })
+}
+
 export const VendorSendEmail = (businessEmail, message) => {
   return axiosInstance.post(`/admin/vendors/send-email`, { businessEmail, message })
 }
 
-export const getAllCategories = () => {
-  return axiosInstance.get("/admin/categories")
-}
+
 
 export const createCategory = (data) => {
   return axiosInstance.post("/admin/create-category", data)

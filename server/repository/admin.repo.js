@@ -28,13 +28,14 @@ export const findAllVendors = async (filter, skip, limit) => {
 };
 
 export const getVendorStats = async () => {
-  const [pending, approved, rejected, total] = await Promise.all([
+  const [pending, approved, rejected, suspended, total] = await Promise.all([
     Vendor.countDocuments({ applicationStatus: "pending" }),
-    Vendor.countDocuments({ applicationStatus: "approved" }),
+    Vendor.countDocuments({ applicationStatus: "approved", isBlocked: { $ne: true } }),
     Vendor.countDocuments({ applicationStatus: "rejected" }),
+    Vendor.countDocuments({ applicationStatus: "approved", isBlocked: true }),
     Vendor.countDocuments({}),
   ]);
-  return { pending, approved, rejected, total };
+  return { pending, approved, rejected, suspended, total };
 };
 
 export const findVendorById = async (id) => {

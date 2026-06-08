@@ -74,6 +74,10 @@ export const vendorLoginValidation = [
         throw new Error("Invalid Credentials");
       }
 
+      if (vendor.isBlocked) {
+        throw new Error("You have been suspended");
+      }
+
       req.vendor = vendor;
 
       return true;

@@ -25,5 +25,12 @@ router.post(
 
 router.post("/login", vendorLoginValidation, validate, asyncHandler(vendorLogin))
 router.post("/logout", protect, requireRole("vendor"), asyncHandler(vendorLogout))
+router.get("/status", protect, requireRole("vendor"), (req, res) => {
+  res.status(200).json({
+    success: true,
+    status: req.user.applicationStatus,
+    isBlocked: req.user.isBlocked
+  });
+})
 
 export default router

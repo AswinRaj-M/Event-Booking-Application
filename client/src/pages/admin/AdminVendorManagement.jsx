@@ -20,7 +20,7 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import { useEffect } from "react";
 import { getAllVendorsThunk } from "../../features/admin.slice";
-import { getAllCategories } from "../../services/admin.api";
+import { getAllCategories } from "../../services/common.api";
 
 function AdminVendorManagement() {
   const dispatch = useDispatch();
@@ -116,7 +116,7 @@ function AdminVendorManagement() {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 shrink-0">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-6 mb-8 shrink-0">
             <div className="bg-[#151221] border border-gray-800/80 rounded-xl p-6 relative overflow-hidden flex flex-col justify-between h-[140px]">
               <div className="flex justify-between items-start">
                 <p className="text-sm font-medium text-gray-300">
@@ -167,9 +167,24 @@ function AdminVendorManagement() {
             <div className="bg-[#151221] border border-gray-800/80 rounded-xl p-6 relative overflow-hidden flex flex-col justify-between h-[140px]">
               <div className="flex justify-between items-start">
                 <p className="text-sm font-medium text-gray-300">
-                  Rejected (Total)
+                  Suspended Vendors
                 </p>
                 <XCircle className="w-5 h-5 text-red-500" />
+              </div>
+              <div className="mt-4">
+                <h3 className="text-3xl font-bold text-red-500 tracking-tight">
+                  {vendorStats?.suspended || 0}
+                </h3>
+                <p className="text-xs mt-1 text-gray-500">Temporarily blocked</p>
+              </div>
+            </div>
+
+            <div className="bg-[#151221] border border-gray-800/80 rounded-xl p-6 relative overflow-hidden flex flex-col justify-between h-[140px]">
+              <div className="flex justify-between items-start">
+                <p className="text-sm font-medium text-gray-300">
+                  Rejected (Total)
+                </p>
+                <XCircle className="w-5 h-5 text-orange-500" />
               </div>
               <div className="mt-4">
                 <h3 className="text-3xl font-bold text-orange-500 tracking-tight">
@@ -199,6 +214,15 @@ function AdminVendorManagement() {
               className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === "approved" ? "bg-[#2A204C] text-white shadow-sm" : "text-gray-400 hover:text-gray-200"}`}
             >
               Approved Vendors
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab("suspended");
+                setPage(1);
+              }}
+              className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === "suspended" ? "bg-[#2A204C] text-white shadow-sm" : "text-gray-400 hover:text-gray-200"}`}
+            >
+              Suspended Vendors
             </button>
             <button
               onClick={() => {
@@ -298,11 +322,18 @@ function AdminVendorManagement() {
                           {new Date(vendor.createdAt).toLocaleDateString()}
                         </td>
                         <td className="px-6">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium font-sans ${vendor.applicationStatus === 'approved' ? 'bg-emerald-900/30 text-emerald-400' :
-                            vendor.applicationStatus === 'pending' ? 'bg-amber-900/30 text-amber-400' :
-                              'bg-red-900/30 text-red-400'
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium font-sans ${
+                            vendor.isBlocked
+                              ? 'bg-red-900/30 text-red-400 border border-red-800/30'
+                              : vendor.applicationStatus === 'approved'
+                              ? 'bg-emerald-900/30 text-emerald-400'
+                              : vendor.applicationStatus === 'pending'
+                              ? 'bg-amber-900/30 text-amber-400'
+                              : 'bg-red-900/30 text-red-400'
                             }`}>
-                            {vendor.applicationStatus.charAt(0).toUpperCase() + vendor.applicationStatus.slice(1)}
+                            {vendor.isBlocked
+                              ? 'Suspended'
+                              : vendor.applicationStatus.charAt(0).toUpperCase() + vendor.applicationStatus.slice(1)}
                           </span>
                         </td>
                         <td className="px-6 text-right">

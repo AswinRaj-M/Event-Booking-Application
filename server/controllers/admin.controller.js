@@ -16,6 +16,8 @@ import {
   updateCategoryService,
   deleteCategoryService,
   toggleCategoryStatusService,
+  vendorSuspendService,
+  vendorUnsuspendService,
 } from "../services/admin.service.js";
 import { saveAdmin } from "../repository/admin.repo.js"
 import { uploadToCloudinary } from "../utils/cloudinaryUpload.js";
@@ -23,13 +25,12 @@ import { uploadToCloudinary } from "../utils/cloudinaryUpload.js";
 
 export const AdminLogin = async (req, res) => {
   const { email, password } = req.body;
-  console.log(`[Admin Login] Login request received for email: ${email}`);
+ 
 
   const admin = await adminLoginService(email, password);
 
   const accessToken = generateAccessToken(admin);
   const refreshToken = generateRefreshToken(admin);
-  console.log(`[Admin Login] Tokens generated for admin ID: ${admin._id}. Access token prefix: ${accessToken.substring(0, 15)}...`);
 
   admin.refreshToken = hashToken(refreshToken);
   await saveAdmin(admin);
@@ -141,9 +142,46 @@ export const vendorReject = async (req, res) => {
   );
 
   return res.status(200).json({
+    success : true,
     message: "Application Rejected!",
   });
 };
+
+export const vendorSuspend = async(req,res) =>{
+  const {id,message} = req.body
+
+  const vendor = await vendorSuspendService(id,message)
+
+  await sendMail(
+    vendor.businessEmail,
+    message, 
+    "You have been suspended"
+  )
+
+  return res.status(200).json({
+    success : true,
+    message : "Vendor suspended Successfully!"
+  })
+
+}
+
+export const vendorUnsuspend = async(req,res) =>{
+  const {id,message} = req.body
+
+  const vendor = await vendorUnsuspendService(id)
+
+  await sendMail(
+    vendor.businessEmail,
+    message || "Your suspension has been lifted.", 
+    "Suspension Lifted"
+  )
+
+  return res.status(200).json({
+    success : true,
+    message : "Vendor unsuspended Successfully!"
+  })
+
+}
 
 export const VendorSendEmail = async (req, res) => {
   const { businessEmail, message } = req.body;
@@ -241,6 +279,11 @@ export const deleteCategory = async (req, res) => {
     success: true,
     message: "Category Deleted Successfully"
   })
+}
+
+export const getAllUsers = async(req,res) =>{
+
+  
 }
 
 

@@ -11,7 +11,9 @@ import {
   getAllCategories,
   updateCategory,
   toggleCategoryStatus,
-  deleteCategory
+  deleteCategory,
+  vendorSuspend,
+  vendorUnsuspend
 } from "../controllers/admin.controller.js"
 import { protect } from '../middleware/auth.middleware.js'
 import { requireRole } from '../middleware/role.middleware.js'
@@ -26,6 +28,8 @@ router.get("/vendorManagement", protect, requireRole("admin"), asyncHandler(getA
 router.get('/vendor-application/:id', protect, requireRole("admin"), asyncHandler(getVendorById))
 router.patch('/vendors/approve-application', protect, requireRole("admin"), asyncHandler(vendorApprove))
 router.patch('/vendors/reject-application', protect, requireRole("admin"), asyncHandler(vendorReject))
+router.patch('/vendors/suspend-vendor', protect, requireRole("admin"), asyncHandler(vendorSuspend))
+router.patch('/vendors/unsuspend-vendor', protect, requireRole("admin"), asyncHandler(vendorUnsuspend))
 router.post("/vendors/send-email", protect, requireRole("admin"), asyncHandler(VendorSendEmail))
 router.post(
 
@@ -33,7 +37,7 @@ router.post(
   upload.fields([
     { name: "categoryIcon", maxCount: 1 }
   ]), protect, requireRole("admin"), asyncHandler(createCategories))
-router.get('/categories', protect, requireRole("admin"), asyncHandler(getAllCategories))
+
 router.put(
   '/update-category/:id',
   upload.fields([

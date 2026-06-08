@@ -8,7 +8,8 @@ import { vendorApplicationThunk, vendorClearMessages } from '../../features/vend
 import { useEffect } from 'react';
 import Loader from '../../components/common/Loader';
 import { toast } from 'sonner';
-import { getAllCategories } from '../../services/admin.api';
+import { getAllCategories } from '../../services/common.api';
+
 const VendorApplication = () => {
 
     const navigate = useNavigate()
@@ -327,15 +328,16 @@ const VendorApplication = () => {
                                                 className="w-full bg-[#121212] border border-white/5 rounded-xl px-4 py-3.5 text-white appearance-none focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:border-violet-500 transition-all"
                                                 >
                                                <option value="" disabled>Select a category</option>
-                                               {categories.map((category) =>{
-                                                if(category.isActive){
-                                                return (<option key={category.id} value={category.id} 
-                                                        >
-                                                    {category.name}
-                                                </option>)  
-                                                }
-                                               }
-                                               )}     
+                                               {categories.map((category) => {
+                                                 if (category.isActive) {
+                                                   return (
+                                                     <option key={category._id} value={category.name}>
+                                                       {category.name}
+                                                     </option>
+                                                   );
+                                                 }
+                                                 return null;
+                                               })}     
                                                     
                                             </select>
 
