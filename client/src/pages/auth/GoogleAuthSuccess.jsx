@@ -10,13 +10,12 @@ const GoogleAuthSuccess = () => {
   const dispatch = useDispatch();
 
   useEffect(() => {
-    const accessToken = searchParams.get("accessToken");
     const userStr = searchParams.get("user");
 
-    if (accessToken && userStr) {
+    if (userStr) {
       try {
         const user = JSON.parse(decodeURIComponent(userStr));
-        dispatch(setGoogleAuthData({ accessToken, user }));
+        dispatch(setGoogleAuthData({ user }));
         navigate("/user/home", { replace: true });
       } catch (error) {
         console.error("Error parsing Google user data:", error);

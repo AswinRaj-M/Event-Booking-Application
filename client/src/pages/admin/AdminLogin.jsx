@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { adminClearMessages, adminLoginThunk } from "../../features/admin.slice";
+import {toast} from 'sonner'
 
 
 const AdminLogin = () => {
@@ -11,7 +12,7 @@ const AdminLogin = () => {
 
     const dispatch = useDispatch()
     const navigate = useNavigate()
-    const {loading , success} = useSelector((state) => state.admin)
+    const { loginError,loginLoading: loading, loginSuccess: success } = useSelector((state) => state.admin)
    
     const handleSubmit = (e) =>{
         e.preventDefault()
@@ -20,6 +21,13 @@ const AdminLogin = () => {
             password
         }))
     }
+
+    useEffect(() =>{
+        if(!loginError){
+            return 
+        }
+        toast.error(loginError)
+    },[loginError])
 
     useEffect(()=>{
         if(success){

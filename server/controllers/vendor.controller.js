@@ -1,6 +1,5 @@
-import cloudinary from "../config/cloudinary.js";
-import streamifier from "streamifier";
 import { AppError } from "../utils/AppError.js";
+import { uploadToCloudinary } from "../utils/cloudinaryUpload.js";
 import {
   generateAccessToken,
   generateRefreshToken,
@@ -11,29 +10,10 @@ import {
   vendorLogoutService,
 } from "../services/vendor.service.js";
 
-/**
- * CLOUDINARY UPLOAD (UNCHANGED)
- */
-const uploadToCloudinary = (fileBuffer, folder) => {
-  return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      {
-        folder,
-        resource_type: "auto",
-      },
-      (error, result) => {
-        if (error) reject(error);
-        else resolve(result);
-      }
-    );
 
-    streamifier.createReadStream(fileBuffer).pipe(stream);
-  });
-};
 
-/**
- * APPLY VENDOR
- */
+
+
 export const applyVendor = async (req, res) => {
   if (!req.files?.businessDocument || !req.files?.idProof) {
     throw new AppError(
@@ -81,7 +61,7 @@ export const applyVendor = async (req, res) => {
  * VENDOR LOGIN
  */
 export const vendorLogin = async (req, res) => {
-  const vendor = req.vendor; // comes from your middleware (unchanged)
+  const vendor = req.vendor; 
 
   const accessToken = generateAccessToken(vendor);
   const refreshToken = generateRefreshToken(vendor);
@@ -90,13 +70,21 @@ export const vendorLogin = async (req, res) => {
 
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
-    secure: false,
-    sameSite: "strict",
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
     maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: "/",
+  });
+
+  res.cookie("accessToken", accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 15 * 60 * 1000,
+    path: "/",
   });
 
   res.status(200).json({
-    accessToken,
     vendor: {
       id: vendor._id,
       organizerName: vendor.organizerName,
@@ -113,13 +101,22 @@ export const vendorLogin = async (req, res) => {
  */
 export const vendorLogout = async (req, res) => {
   const token = req.cookies.refreshToken;
+  console.log(`[Vendor Logout] Logout request received. Clearing cookies with sameSite=lax...`);
 
   await vendorLogoutService(token);
 
   res.clearCookie("refreshToken", {
     httpOnly: true,
-    sameSite: "strict",
-    secure: false,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+  });
+
+  res.clearCookie("accessToken", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
   });
 
   return res.status(200).json({

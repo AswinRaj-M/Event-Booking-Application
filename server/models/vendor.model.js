@@ -59,6 +59,10 @@ const vendorSchema = new mongoose.Schema({
     type : fileSchema,
     required : true
   },
+  isBlocked :{
+    type : Boolean,
+    default : false
+  },  
   location : {
     city : String,
     state : String,

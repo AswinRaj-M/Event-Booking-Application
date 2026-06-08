@@ -31,7 +31,7 @@ router.get(
   passport.authenticate("google", { scope: ["profile", "email"] })
 );
 
-// Step 2: Callback
+
 router.get(
   "/google/callback",
   passport.authenticate("google", {
@@ -44,6 +44,6 @@ router.post('/resend-otp',validate,asyncHandler(resendOtp))
 router.post("/forgot-password",validate,asyncHandler(forgotPassword))
 router.patch("/reset-password/",validate,asyncHandler(resetPassword))
 router.get('/refresh-token', asyncHandler(refreshAccessToken))
-router.post('/logout', asyncHandler(logoutUser), protect, requireRole("user"))
+router.post('/logout', protect, requireRole("user"), asyncHandler(logoutUser))
 
 export default router

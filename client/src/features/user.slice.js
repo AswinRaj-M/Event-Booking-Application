@@ -73,7 +73,6 @@ const userSlice = createSlice({
   initialState : {
     user : null,
     userId : null,
-    accessToken : null,
     loading : false,
     error : null,
     success : false,
@@ -84,7 +83,6 @@ const userSlice = createSlice({
   reducers : {
     logoutUserState : (state) =>{
       state.user = null
-      state.accessToken = null
       state.success = false
       state.error = null
       state.unverified = false
@@ -98,7 +96,6 @@ const userSlice = createSlice({
     },
     setGoogleAuthData : (state,action) =>{
       state.user = action.payload.user;
-      state.accessToken = action.payload.accessToken;
       state.success = true;
       state.error = null;
       state.unverified = false;
@@ -133,7 +130,6 @@ const userSlice = createSlice({
         state.loading = false;
         state.success = true;
         state.user = action.payload.user;
-        state.accessToken = action.payload.accessToken;
         state.error = null;
         state.unverified = false;
       })
@@ -157,7 +153,6 @@ const userSlice = createSlice({
           state.tempEmail = action.payload.email;
         } else {
           state.user = action.payload.user;
-          state.accessToken = action.payload.accessToken;
           state.unverified = false;
         }
         state.error = null;
@@ -171,19 +166,16 @@ const userSlice = createSlice({
       .addCase(logoutUserThunk.fulfilled, (state) => {
         state.user = null;
         state.userId = null;
-        state.accessToken = null;
         state.success = false;
         state.error = null;
       })
 
 
       .addCase(refreshUserToken.fulfilled,(state,action)=>{
-        state.accessToken = action.payload.accessToken;
         state.error = null;
       })
       .addCase(refreshUserToken.rejected,(state,action)=>{
         state.user = null
-        state.accessToken = null
       })
       
   }

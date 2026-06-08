@@ -10,9 +10,15 @@ import {
   findVendorById,
   findVendorByIdFull,
   saveVendor,
+  getVendorStats,
+  findCategoryByName,
+  createCategory,
+  getAllCategories,
+  getCategoryById,
+  saveCategory,
 } from "../repository/admin.repo.js";
 
-export const adminLoginService = async (email, password, refreshToken) => {
+export const adminLoginService = async (email, password) => {
   if (!email || !password) {
     throw new AppError("Email and Password are Required", 400);
   }
@@ -33,9 +39,6 @@ export const adminLoginService = async (email, password, refreshToken) => {
     throw new AppError("Invalid Password", 401);
   }
 
-  admin.refreshToken = hashToken(refreshToken);
-  await saveAdmin(admin);
-
   return admin;
 };
 
@@ -46,16 +49,35 @@ export const logoutAdminService = async (token) => {
   }
 };
 
-export const getAllVendorsService = async (status) => {
+export const getAllVendorsService = async (status, page, limit, search, category) => {
   let filter = {};
 
   if (status) {
     filter.applicationStatus = status;
   }
 
-  const vendors = await findAllVendors(filter);
+  if (category && category !== "all") {
+    filter.eventCategory = category;
+  }
 
-  return vendors;
+  if (search) {
+    filter.$or = [
+      { businessName: { $regex: search, $options: "i" } },
+      { organizerName: { $regex: search, $options: "i" } },
+      { businessEmail: { $regex: search, $options: "i" } },
+    ];
+  }
+
+  const skip = (page - 1) * limit;
+  const { vendors, total } = await findAllVendors(filter, skip, limit);
+  const stats = await getVendorStats();
+  return {
+    data: vendors,
+    total,
+    stats,
+    currentPage: Number(page),
+    totalPages: Math.ceil(total / limit),
+  };
 };
 
 export const getVendorByIdService = async (id) => {
@@ -95,3 +117,112 @@ export const vendorRejectService = async (id, message) => {
 
   return vendor;
 };
+
+
+export const createCategoryService = async(name,description,icon) =>{
+  if(!name||!description){
+    throw new AppError(
+      "Name and Description required",
+      400
+    )
+  }
+
+  const existingCategory = await findCategoryByName(name)
+
+  if(existingCategory){
+    throw new AppError(
+      "Category Already Exists",
+      400
+    )
+  }
+
+  const category = await createCategory({
+    name,
+    description,
+    categoryIcon:icon
+  })
+  return category
+}
+
+
+export const getAllCategoriesService = async() =>{
+  return await getAllCategories()
+}
+
+
+export const getCategoryByIdService = async(id) =>{
+  const category = await getCategoryById(id)
+
+
+  if(!category) {
+    throw new AppError(
+      "Category not found",
+    404
+    )
+  }
+
+  return category
+}
+
+
+export const updateCategoryService = async(id,name,description,icon) =>{
+  const category = await getCategoryById(id)
+
+  if(!category){
+    throw new AppError(
+      "Category Not Found",
+      404
+    )
+  }
+
+  if(name){
+    category.name = name
+  }
+
+  if(description){
+    category.description = description
+  }
+
+  if(icon) {
+    category.categoryIcon = icon
+  }
+
+  await saveCategory(category)
+
+  return category
+}
+
+
+export const toggleCategoryStatusService = async(id) =>{
+  const category = await getCategoryById(id)
+
+  if(!category) {
+    throw new AppError(
+      "Category Not Found",
+      404
+    )
+  }
+
+  category.isActive = !category.isActive;
+
+  await saveCategory(category)
+
+  return category
+}
+
+
+export const deleteCategoryService = async(id) =>{
+  const category = await getCategoryById(id)
+  if(!category){
+    throw new AppError(
+      "Category Not Found",
+      404
+    )
+  }
+
+  category.isDeleted = true
+
+  await saveCategory(category)
+}
+
+

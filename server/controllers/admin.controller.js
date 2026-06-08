@@ -2,6 +2,7 @@ import {
   generateAccessToken,
   generateRefreshToken,
 } from "../utils/generateToken.js";
+import { hashToken } from "../utils/hashToken.js";
 import { sendMail } from "../utils/sendMail.js";
 import {
   adminLoginService,
@@ -10,29 +11,48 @@ import {
   getVendorByIdService,
   vendorApproveService,
   vendorRejectService,
+  createCategoryService,
+  getAllCategoriesService,
+  updateCategoryService,
+  deleteCategoryService,
+  toggleCategoryStatusService,
 } from "../services/admin.service.js";
+import { saveAdmin } from "../repository/admin.repo.js"
+import { uploadToCloudinary } from "../utils/cloudinaryUpload.js";
 
-/**
- * ADMIN LOGIN
- */
+
 export const AdminLogin = async (req, res) => {
   const { email, password } = req.body;
+  console.log(`[Admin Login] Login request received for email: ${email}`);
 
-  const accessToken = generateAccessToken(email, "admin");
-  const refreshToken = generateRefreshToken(email, "admin");
+  const admin = await adminLoginService(email, password);
 
-  const admin = await adminLoginService(email, password, refreshToken);
+  const accessToken = generateAccessToken(admin);
+  const refreshToken = generateRefreshToken(admin);
+  console.log(`[Admin Login] Tokens generated for admin ID: ${admin._id}. Access token prefix: ${accessToken.substring(0, 15)}...`);
+
+  admin.refreshToken = hashToken(refreshToken);
+  await saveAdmin(admin);
+
 
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
-    secure: false,
-    sameSite: "strict",
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
     maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: "/",
+  });
+
+  res.cookie("accessToken", accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 15 * 60 * 1000,
+    path: "/",
   });
 
   res.status(200).json({
     message: "Admin Logged In Successfully",
-    accessToken,
     admin: {
       id: admin._id,
       name: admin.fullName,
@@ -42,9 +62,7 @@ export const AdminLogin = async (req, res) => {
   });
 };
 
-/**
- * ADMIN LOGOUT
- */
+
 export const logoutAdmin = async (req, res) => {
   const token = req.cookies.refreshToken;
 
@@ -52,8 +70,16 @@ export const logoutAdmin = async (req, res) => {
 
   res.clearCookie("refreshToken", {
     httpOnly: true,
-    sameSite: "strict",
-    secure: false,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+  });
+
+  res.clearCookie("accessToken", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
   });
 
   return res.status(200).json({
@@ -61,24 +87,19 @@ export const logoutAdmin = async (req, res) => {
   });
 };
 
-/**
- * GET ALL VENDORS
- */
-export const getAllVendors = async (req, res) => {
-  const { status } = req.query;
 
-  const vendors = await getAllVendorsService(status);
+export const getAllVendors = async (req, res) => {
+  const { status, page = 1, limit = 4, search, category } = req.query;
+
+  const result = await getAllVendorsService(status, page, limit, search, category)
 
   return res.status(200).json({
     success: true,
-    count: vendors.length,
-    data: vendors,
+    ...result,
   });
 };
 
-/**
- * GET VENDOR BY ID
- */
+
 export const getVendorById = async (req, res) => {
   const id = req.params.id;
 
@@ -90,9 +111,7 @@ export const getVendorById = async (req, res) => {
   });
 };
 
-/**
- * APPROVE VENDOR
- */
+
 export const vendorApprove = async (req, res) => {
   const { id, message } = req.body;
 
@@ -109,9 +128,7 @@ export const vendorApprove = async (req, res) => {
   });
 };
 
-/**
- * REJECT VENDOR
- */
+
 export const vendorReject = async (req, res) => {
   const { id, message } = req.body;
 
@@ -127,3 +144,104 @@ export const vendorReject = async (req, res) => {
     message: "Application Rejected!",
   });
 };
+
+export const VendorSendEmail = async (req, res) => {
+  const { businessEmail, message } = req.body;
+  await sendMail(
+    businessEmail,
+    message,
+    "Message From Admin!"
+  )
+
+  return res.status(200).json({
+    message: "Message send Successfully"
+  })
+}
+
+export const createCategories = async (req, res) => {
+  const { name, description, icon } = req.body
+
+  const uploadIcon = await uploadToCloudinary(
+    req.files.categoryIcon[0].buffer,
+    'profileImages/categoryIcon'
+  )
+
+  const category = await createCategoryService(name, description, {
+    fileUrl: uploadIcon.secure_url,
+    publicId: uploadIcon.public_id,
+    fileType: uploadIcon.resource_type,
+  },)
+
+  return res.status(201).json({
+    success: true,
+    message: "Category Created SuccessfUlly",
+    data: category
+  })
+}
+
+
+export const getAllCategories = async (req, res) => {
+  const categories = await getAllCategoriesService()
+
+  return res.status(200).json({
+    success: true,
+    data: categories
+  })
+}
+
+
+export const updateCategory = async (req, res) => {
+  const { id } = req.params;
+  const { name, description } = req.body;
+
+  let iconData;
+  if (req.files && req.files.categoryIcon && req.files.categoryIcon[0]) {
+    const uploadIcon = await uploadToCloudinary(
+      req.files.categoryIcon[0].buffer,
+      'profileImages/categoryIcon'
+    );
+    iconData = {
+      fileUrl: uploadIcon.secure_url,
+      publicId: uploadIcon.public_id,
+      fileType: uploadIcon.resource_type,
+    };
+  }
+
+  const category = await updateCategoryService(id, name, description, iconData);
+
+  return res.status(200).json({
+    success: true,
+    message: "Category Updated Successfully",
+    data: category
+  });
+}
+
+
+export const toggleCategoryStatus = async (req, res) => {
+
+  const { id } = req.params
+
+  const category = await toggleCategoryStatusService(id)
+
+  return res.status(200).json({
+    success: true,
+    message: "Category Status Updated",
+    data: category
+  })
+}
+
+
+export const deleteCategory = async (req, res) => {
+
+  const { id } = req.params;
+
+  await deleteCategoryService(id)
+
+  return res.status(200).json({
+    success: true,
+    message: "Category Deleted Successfully"
+  })
+}
+
+
+

@@ -1,7 +1,7 @@
 import React from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate, Link, useLocation } from 'react-router-dom'
-import { logoutAdminState } from '../../features/admin.slice'
+import { logoutAdminThunk } from '../../features/admin.slice'
 import {
     LayoutDashboard,
     Users,
@@ -11,6 +11,7 @@ import {
     CreditCard,
     BarChart3,
     Settings,
+    Layers,
     LogOut
 } from 'lucide-react'
 
@@ -23,7 +24,7 @@ function AdminSidebar() {
     const name = adminState.admin?.name
 
     const handleLogout = () => {
-        dispatch(logoutAdminState())
+        dispatch(logoutAdminThunk())
         navigate("/admin/login")
     }
 
@@ -70,6 +71,10 @@ function AdminSidebar() {
                             <Ticket className={`mr-3 h-5 w-5 ${isActive('/admin/bookings') ? 'text-purple-400' : 'text-gray-500'}`} />
                             Bookings
                         </Link>
+                        <Link to="/admin/categories" className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive('/admin/categories') ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
+                            <Layers className={`mr-3 h-5 w-5 ${isActive('/admin/categories') ? 'text-purple-400' : 'text-gray-500'}`} />
+                            Categories
+                        </Link>
                         <Link to="#" className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive('/admin/payments') ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
                             <CreditCard className={`mr-3 h-5 w-5 ${isActive('/admin/payments') ? 'text-purple-400' : 'text-gray-500'}`} />
                             Payments
@@ -102,8 +107,8 @@ function AdminSidebar() {
                             alt="Admin avatar"
                         />
                         <div className="ml-3">
-                            <p className="text-sm font-medium text-white">{name || "Admin" }</p>
-                            <p className="text-xs text-gray-500">{ email || "admin@gmail.com" }</p>
+                            <p className="text-sm font-medium text-white">{name || "Admin"}</p>
+                            <p className="text-xs text-gray-500">{email || "admin@gmail.com"}</p>
                         </div>
                     </div>
                     <button onClick={handleLogout} className="p-1.5 text-gray-400 hover:text-white rounded-md hover:bg-gray-800 transition-colors" title="Logout">

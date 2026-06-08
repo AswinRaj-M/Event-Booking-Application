@@ -7,7 +7,8 @@ const fileFilter = (req,file,cb) =>{
     "application/pdf",
     "image/jpeg",
     "image/jpg",
-    "image/png"
+    "image/png",
+    "image/webp"
   ]
 
   if(allowedTypes.includes(file.mimetype)){

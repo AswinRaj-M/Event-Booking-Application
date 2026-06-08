@@ -60,13 +60,21 @@ export const verifyOTP = async (req, res) => {
 
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
-    sameSite: "strict",
+    sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: "/",
+  });
+
+  res.cookie("accessToken", accessToken, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 15 * 60 * 1000, // 15 minutes
+    path: "/",
   });
 
   return res.status(200).json({
-    accessToken,
     user: {
       id: user._id,
       fullName: user.fullName,
@@ -108,13 +116,21 @@ export const loginUser = async (req, res) => {
 
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
-    secure: false,
-    sameSite: "strict",
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
     maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: "/",
+  });
+
+  res.cookie("accessToken", accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 15 * 60 * 1000,
+    path: "/",
   });
 
   return res.json({
-    accessToken,
     user: {
       id: user._id,
       fullName: user.fullName,
@@ -140,8 +156,18 @@ export const googleCallback = async (req, res) => {
     // send cookie
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      secure: true,
-      sameSite: "strict",
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: "/",
+    });
+
+    res.cookie("accessToken", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 15 * 60 * 1000,
+      path: "/",
     });
 
   
@@ -153,11 +179,11 @@ export const googleCallback = async (req, res) => {
     };
 
     res.redirect(
-      `${process.env.CLIENT_PORT}/auth/success?accessToken=${accessToken}&user=${encodeURIComponent(JSON.stringify(userData))}`
+      `${process.env.CLIENT_PORT}/auth/success?user=${encodeURIComponent(JSON.stringify(userData))}`
     );
   } catch (error) {
     console.log(error);
-    res.redirect("http://localhost:5173/login");
+    res.redirect(`${process.env.CLIENT_PORT}/login`);
   }
 };
 
@@ -183,8 +209,10 @@ export const resendOtp = async(req,res) =>{
 
 export const refreshAccessToken = async (req, res) => {
   const token = req.cookies.refreshToken;
+  console.log(`[Token Refresh] Refresh token request received. Has refresh token in cookies: ${!!token}`);
 
   if (!token) {
+    console.warn(`[Token Refresh] Missing refresh token cookie in req.cookies`);
     throw new AppError("No Refresh Token", 401);
   }
 
@@ -192,15 +220,27 @@ export const refreshAccessToken = async (req, res) => {
 
   try {
     decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+    console.log(`[Token Refresh] Refresh token decoded successfully for user ID: ${decoded.id}`);
   } catch (error) {
+    console.error(`[Token Refresh] JWT verification failed for refresh token:`, error.message);
     throw new AppError("Invalid Refresh Token", 403);
   }
 
   const user = await refreshAccessTokenService(token, decoded);
 
   const newAccessToken = generateAccessToken(user);
+  console.log(`[Token Refresh] Generated new access token for user ID: ${user._id}`);
 
-  return res.json({ accessToken: newAccessToken });
+  console.log(`[Token Refresh] Creating new access token cookie: sameSite=lax, httpOnly=true`);
+  res.cookie("accessToken", newAccessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 15 * 60 * 1000,
+    path: "/",
+  });
+
+  return res.json({ success: true });
 };
 
 export const forgotPassword = async(req,res) =>{
@@ -249,13 +289,22 @@ export const resetPassword = async(req,res) =>{
 
 export const logoutUser = async (req, res) => {
   const token = req.cookies.refreshToken;
+  console.log(`[User Logout] Logout request received. Clearing cookies with sameSite=lax...`);
 
   await logoutUserService(token);
 
   res.clearCookie("refreshToken", {
     httpOnly: true,
-    sameSite: "strict",
-    secure: false,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+  });
+
+  res.clearCookie("accessToken", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
   });
 
   return res.status(200).json({

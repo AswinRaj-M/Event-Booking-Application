@@ -43,11 +43,23 @@ export const vendorLogoutThunk = createAsyncThunk(
   }
 )
 
+export const refreshVendorToken = createAsyncThunk(
+  "vendor/refresh-token",
+  async (_, thunkAPI) => {
+    try {
+      const { refreshUser } = await import("../services/user.api.js")
+      const response = await refreshUser()
+      return response.data
+    } catch (error) {
+      return thunkAPI.rejectWithValue("Session expired")
+    }
+  }
+)
+
 const vendorSlice = createSlice({
   name: "vendor",
   initialState: {
     vendor: null,
-    accessToken: null,
     success: false,
     loading: false,
     error: false
@@ -55,7 +67,6 @@ const vendorSlice = createSlice({
   reducers: {
     vendorLogoutState: (state) => {
       state.vendor = null
-      state.accessToken = null
       state.error = null
       state.success = false
     },
@@ -94,7 +105,6 @@ const vendorSlice = createSlice({
         state.loading = false
         state.success = true
         state.vendor = action.payload.vendor
-        state.accessToken = action.payload.accessToken
         state.error = null
       })
 
@@ -102,6 +112,12 @@ const vendorSlice = createSlice({
         state.loading = false
         state.success = false
         state.error = action.payload
+      })
+      .addCase(refreshVendorToken.fulfilled, (state, action) => {
+        state.error = null
+      })
+      .addCase(refreshVendorToken.rejected, (state) => {
+        state.vendor = null
       })
   }
 })
