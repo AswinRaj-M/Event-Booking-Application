@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom'
 import VendorApplication from '../pages/vendor/VendorApplication'
 import VendorStatus from '../pages/vendor/VendorStatus'
 import VendorDashboard from '../pages/vendor/VendorDashboard'
+import VendorProfilePage from "../pages/vendor/VendorProfilePage.jsx"
 import { ProtectedRoute } from '../auth/ProtectedRoute.jsx'
 
 function VendorRoutes() {
@@ -18,6 +19,11 @@ function VendorRoutes() {
       <Route path="dashboard" element={
         <ProtectedRoute role="vendor">
           <VendorDashboard />
+        </ProtectedRoute>
+      } />
+      <Route path="profile" element={
+        <ProtectedRoute role="vendor">
+          <VendorProfilePage />
         </ProtectedRoute>
       } />
     </Routes>

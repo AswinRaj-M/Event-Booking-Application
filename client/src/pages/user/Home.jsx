@@ -1,20 +1,10 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import { Search, MapPin, Calendar, Clock, ArrowRight, Ticket, Star } from 'lucide-react';
-import { useDispatch } from 'react-redux';
-import { logoutUserThunk, logoutUserState } from '../../features/user.slice';
 
 const Home = () => {
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
-
-  const handleLogout = async () => {
-    dispatch(logoutUserThunk());
-    navigate('/login');
-  };
-
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-purple-500/30 w-full overflow-hidden">
       <Navbar />
@@ -41,7 +31,6 @@ const Home = () => {
 
 
           <div className="flex flex-col sm:flex-row items-center gap-4 mb-24">
-            <button onClick={handleLogout}>logout</button>
             <Link to="#" className="px-8 py-3.5 bg-white text-black font-bold rounded-full hover:bg-gray-100 transition-colors shadow-[0_0_20px_rgba(255,255,255,0.2)]">
               Explore Events
             </Link>

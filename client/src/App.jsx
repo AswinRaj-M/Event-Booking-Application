@@ -1,11 +1,21 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import AppRoutes from './routes/AppRoutes';
 import AdminRoutes from './routes/AdminRoutes';
 import VendorRoutes from './routes/vendorRoutes';
-import { Toaster } from "sonner";
+import { Toaster, toast } from "sonner";
 import { Routes, Route} from 'react-router-dom';
 
 function App() {
+  useEffect(() => {
+    const suspendedMessage = localStorage.getItem("userSuspendedToast");
+    if (suspendedMessage) {
+      toast.error(suspendedMessage);
+      localStorage.removeItem("userSuspendedToast");
+    }
+    console.log('hi');
+    
+  }, []);
+
   return (
     <>
       <Toaster position="bottom-center" theme='dark'

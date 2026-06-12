@@ -32,3 +32,19 @@ export const logoutUser = ()=>{
 export const refreshUser = ()=>{
   return axiosInstance.get("/users/refresh-token")
 }
+
+export const getUserProfile = () => {
+  return axiosInstance.get("/users/profile")
+}
+
+export const updateUserProfile = (data) => {
+  return axiosInstance.put("/users/update-profile", data)
+}
+
+export const updateUserProfilePicture = (formData) => {
+  return axiosInstance.patch("/users/profile/picture", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data"
+    }
+  })
+}

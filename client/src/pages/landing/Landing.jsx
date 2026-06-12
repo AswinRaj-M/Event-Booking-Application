@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import Navbar from "../../components/layout/Navbar.jsx";
+
 import logo from "../../assets/logo.jpeg";
 
 const LandingPage = () => {
@@ -15,7 +15,7 @@ const LandingPage = () => {
       </div>
 
       <div className="relative z-10 flex flex-col min-h-screen">
-        <Navbar />
+
 
         {/* Hero Section */}
         <header className="relative pt-32 pb-20 w-full text-center z-10">

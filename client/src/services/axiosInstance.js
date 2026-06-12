@@ -19,7 +19,6 @@ axiosInstance.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Check for suspended/blocked user
     const isSuspendedError = error.response?.status === 403 && 
       (error.response?.data?.message?.toLowerCase().includes("suspended") || 
        error.response?.data?.message?.toLowerCase().includes("blocked") ||
@@ -54,18 +53,13 @@ axiosInstance.interceptors.response.use(
         console.error("Failed to import/dispatch logout state:", importErr);
       }
 
-      try {
-        const { toast } = await import("sonner");
-        toast.error("Your account has been suspended by the administrator.");
-      } catch (toastErr) {
-        console.error("Failed to show suspension toast:", toastErr);
-      }
+      const toastMessage = error.response?.data?.message || "Your account has been suspended by the administrator.";
+      localStorage.setItem("userSuspendedToast", toastMessage);
 
       window.location.href = redirectPath;
       return Promise.reject(error);
     }
 
-    // Do not attempt token refresh for authentication/login/register paths
     const isAuthRoute = originalRequest.url?.includes('/login') || 
                         originalRequest.url?.includes('/register') ||
                         originalRequest.url?.includes('/verify-otp') ||

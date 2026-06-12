@@ -5,6 +5,7 @@ import {
   generateAccessToken,
   generateRefreshToken,
 } from "../utils/generateToken.js";
+import { uploadToCloudinary } from "../utils/cloudinaryUpload.js";
 import {
   registerUserService,
   createOtpService,
@@ -16,6 +17,8 @@ import {
   resendOtpService,
   forgotPasswordService,
   resetPasswordService,
+  getUserProfileService,
+  updateUserProfileService,
 } from "../services/user.service.js";
 import { AppError } from "../utils/AppError.js";
 
@@ -326,5 +329,79 @@ export const logoutUser = async (req, res) => {
 
   return res.status(200).json({
     message: "Logged out Successfully",
+  });
+};
+
+export const getUserProfile = async (req, res) => {
+  const userId = req.user._id;
+  const user = await getUserProfileService(userId);
+  return res.status(200).json({
+    success: true,
+    user: {
+      id: user._id,
+      fullName: user.fullName,
+      email: user.email,
+      phoneNumber: user.phoneNumber,
+      walletBalance: user.walletBalance,
+      role: user.role,
+      profilePicture: user.profilePicture,
+      createdAt: user.createdAt,
+    },
+  });
+};
+
+export const updateUserProfile = async (req, res) => {
+  const userId = req.user._id;
+  const { fullName, phoneNumber } = req.body;
+  const updatedUser = await updateUserProfileService(userId, { fullName, phoneNumber });
+  return res.status(200).json({
+    success: true,
+    message: "Profile updated successfully",
+    user: {
+      id: updatedUser._id,
+      fullName: updatedUser.fullName,
+      email: updatedUser.email,
+      phoneNumber: updatedUser.phoneNumber,
+      walletBalance: updatedUser.walletBalance,
+      role: updatedUser.role,
+      profilePicture: updatedUser.profilePicture,
+      createdAt: updatedUser.createdAt,
+    },
+  });
+};
+
+export const updateUserProfilePicture = async (req, res) => {
+  const userId = req.user._id;
+  
+  if (!req.file) {
+    throw new AppError("Profile picture file required", 400);
+  }
+  
+  const uploadResult = await uploadToCloudinary(
+    req.file.buffer,
+    "user/profilePictures"
+  );
+  
+  const profilePicture = {
+    fileUrl: uploadResult.secure_url,
+    publicId: uploadResult.public_id,
+    fileType: uploadResult.resource_type
+  };
+  
+  const updatedUser = await updateUserProfileService(userId, { profilePicture });
+  
+  return res.status(200).json({
+    success: true,
+    message: "Profile picture updated successfully",
+    user: {
+      id: updatedUser._id,
+      fullName: updatedUser.fullName,
+      email: updatedUser.email,
+      phoneNumber: updatedUser.phoneNumber,
+      walletBalance: updatedUser.walletBalance,
+      role: updatedUser.role,
+      profilePicture: updatedUser.profilePicture,
+      createdAt: updatedUser.createdAt,
+    },
   });
 };

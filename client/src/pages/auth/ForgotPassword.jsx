@@ -329,7 +329,6 @@ export default function ForgotPassword() {
                   placeholder="name@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  required
                   autoComplete="email"
                 />
               </div>

@@ -99,6 +99,9 @@ const userSlice = createSlice({
       state.success = true;
       state.error = null;
       state.unverified = false;
+    },
+    updateUserData : (state, action) => {
+      state.user = action.payload;
     }
   },
   extraReducers : (builder) => {
@@ -182,5 +185,5 @@ const userSlice = createSlice({
 })
 
 
-export const { logoutUserState, clearMessages, setGoogleAuthData } = userSlice.actions
+export const { logoutUserState, clearMessages, setGoogleAuthData, updateUserData } = userSlice.actions
 export default userSlice.reducer;

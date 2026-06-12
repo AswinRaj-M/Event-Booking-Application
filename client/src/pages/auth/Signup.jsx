@@ -213,7 +213,6 @@ const Signup = () => {
                     value={fullName}
                     autoComplete="name"
                     onChange={handleChange}
-                    required
                   />
                   <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-hover:text-gray-400 transition-colors">
                     <svg
@@ -252,7 +251,6 @@ const Signup = () => {
                     value={email}
                     autoComplete="username"
                     onChange={handleChange}
-                    required
                   />
                   <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-hover:text-gray-400 transition-colors">
                     <svg
@@ -291,7 +289,6 @@ const Signup = () => {
                     value={phoneNumber}
                     autoComplete="tel"
                     onChange={handleChange}
-                    required
                   />
                   <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-hover:text-gray-400 transition-colors">
                     <svg
@@ -369,7 +366,6 @@ const Signup = () => {
                       value={confirmPassword}
                       onChange={handleChange}
                       autoComplete="new-password"
-                      required
                     />
                     <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-hover:text-gray-400 transition-colors">
                       <svg

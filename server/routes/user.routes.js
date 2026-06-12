@@ -8,9 +8,13 @@ import {
   resendOtp,
   forgotPassword,
   resetPassword,
-  googleCallback
+  googleCallback,
+  getUserProfile,
+  updateUserProfile,
+  updateUserProfilePicture
 } from "../controllers/user.controller.js"
 import passport from "passport"
+import upload from "../middleware/upload.js"
 import { protect } from "../middleware/auth.middleware.js"
 import { requireRole } from "../middleware/role.middleware.js"
 import { asyncHandler } from '../middleware/error.middleware.js'  
@@ -45,5 +49,9 @@ router.post("/forgot-password",validate,asyncHandler(forgotPassword))
 router.patch("/reset-password/",validate,asyncHandler(resetPassword))
 router.get('/refresh-token', asyncHandler(refreshAccessToken))
 router.post('/logout', protect, requireRole("user"), asyncHandler(logoutUser))
+
+router.get('/profile', protect, requireRole("user"), asyncHandler(getUserProfile))
+router.put('/update-profile', protect, requireRole("user"), asyncHandler(updateUserProfile))
+router.patch('/profile/picture', protect, requireRole("user"), upload.single('profilePicture'), asyncHandler(updateUserProfilePicture))
 
 export default router

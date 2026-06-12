@@ -18,6 +18,8 @@ import {
   toggleCategoryStatusService,
   vendorSuspendService,
   vendorUnsuspendService,
+  getAllUsersService,
+  toggleUserBlockService,
 } from "../services/admin.service.js";
 import { saveAdmin } from "../repository/admin.repo.js"
 import { uploadToCloudinary } from "../utils/cloudinaryUpload.js";
@@ -118,11 +120,15 @@ export const vendorApprove = async (req, res) => {
 
   const vendor = await vendorApproveService(id);
 
-  sendMail(
-    vendor.businessEmail,
-    message,
-    "Vendor Application Approved!"
-  );
+  try {
+    await sendMail(
+      vendor.businessEmail,
+      message,
+      "Vendor Application Approved!"
+    );
+  } catch (err) {
+    console.error("Error sending approval email:", err.message);
+  }
 
   return res.status(200).json({
     message: "Application Approved",
@@ -135,11 +141,15 @@ export const vendorReject = async (req, res) => {
 
   const vendor = await vendorRejectService(id, message);
 
-  await sendMail(
-    vendor.businessEmail,
-    message,
-    "Vendor Application rejected!"
-  );
+  try {
+    await sendMail(
+      vendor.businessEmail,
+      message,
+      "Vendor Application rejected!"
+    );
+  } catch (err) {
+    console.error("Error sending rejection email:", err.message);
+  }
 
   return res.status(200).json({
     success : true,
@@ -152,11 +162,15 @@ export const vendorSuspend = async(req,res) =>{
 
   const vendor = await vendorSuspendService(id,message)
 
-  await sendMail(
-    vendor.businessEmail,
-    message, 
-    "You have been suspended"
-  )
+  try {
+    await sendMail(
+      vendor.businessEmail,
+      message, 
+      "You have been suspended"
+    );
+  } catch (err) {
+    console.error("Error sending suspension email:", err.message);
+  }
 
   return res.status(200).json({
     success : true,
@@ -170,11 +184,15 @@ export const vendorUnsuspend = async(req,res) =>{
 
   const vendor = await vendorUnsuspendService(id)
 
-  await sendMail(
-    vendor.businessEmail,
-    message || "Your suspension has been lifted.", 
-    "Suspension Lifted"
-  )
+  try {
+    await sendMail(
+      vendor.businessEmail,
+      message,
+      "Suspension Lifted"
+    );
+  } catch (err) {
+    console.error("Error sending unsuspension email:", err.message);
+  }
 
   return res.status(200).json({
     success : true,
@@ -185,11 +203,15 @@ export const vendorUnsuspend = async(req,res) =>{
 
 export const VendorSendEmail = async (req, res) => {
   const { businessEmail, message } = req.body;
-  await sendMail(
-    businessEmail,
-    message,
-    "Message From Admin!"
-  )
+  try {
+    await sendMail(
+      businessEmail,
+      message,
+      "Message From Festivo Admin!"
+    );
+  } catch (err) {
+    console.error("Error sending email to vendor:", err.message);
+  }
 
   return res.status(200).json({
     message: "Message send Successfully"
@@ -282,8 +304,24 @@ export const deleteCategory = async (req, res) => {
 }
 
 export const getAllUsers = async(req,res) =>{
-
+  const users = await getAllUsersService()
   
+  return res.status(200).json({
+    success : true,
+    message : "Users fetched Successfully",
+    data : users
+  })
+}
+
+export const toggleUserBlock = async(req,res) => {
+  const { id } = req.params
+  const user = await toggleUserBlockService(id)
+  
+  return res.status(200).json({
+    success : true,
+    message : `User ${user.isBlocked ? 'Blocked' : 'Unblocked'} Successfully!`,
+    data : user
+  })
 }
 
 

@@ -67,7 +67,6 @@ export const getAllCategories = async() =>{
   }).sort({
     createdAt : -1
   })
-
 }
 
 
@@ -80,4 +79,9 @@ export const  getCategoryById = async(id) =>{
 
 export const saveCategory  =  async(category) =>{
   return await category.save()
+}
+
+export const getallusersRepo = async() =>{
+  return await User.find()
+  .select("-password")
 }

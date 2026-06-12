@@ -10,10 +10,10 @@ const VendorStatus = () => {
     const dispatch = useDispatch()
     const navigate = useNavigate()
     const vendor = useSelector((state) => state.vendor?.vendor)
-    
+
     const status = vendor?.applicationStatus || 'pending';
     const businessName = vendor?.businessName || location.state?.businessName || "";
-    
+
     useEffect(() => {
         if (status === 'approved') {
             navigate('/vendor/dashboard', { replace: true });
@@ -140,7 +140,7 @@ const VendorStatus = () => {
                         <span className="text-white font-bold text-xl tracking-tight">EventConnect</span>
                     </div>
 
-                    <button 
+                    <button
                         onClick={handleLogout}
                         className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all"
                     >

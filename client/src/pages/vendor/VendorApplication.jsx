@@ -59,7 +59,7 @@ const VendorApplication = () => {
     },[])
 
 
-    console.log(categories)
+   
 
 
     const handleSubmit = (e) => {

@@ -13,12 +13,15 @@ import {
   toggleCategoryStatus,
   deleteCategory,
   vendorSuspend,
-  vendorUnsuspend
+  vendorUnsuspend,
+  getAllUsers,
+  toggleUserBlock
 } from "../controllers/admin.controller.js"
 import { protect } from '../middleware/auth.middleware.js'
 import { requireRole } from '../middleware/role.middleware.js'
 import { asyncHandler } from '../middleware/error.middleware.js'
 import upload from '../middleware/upload.js'
+
 
 const router = express.Router()
 
@@ -31,6 +34,8 @@ router.patch('/vendors/reject-application', protect, requireRole("admin"), async
 router.patch('/vendors/suspend-vendor', protect, requireRole("admin"), asyncHandler(vendorSuspend))
 router.patch('/vendors/unsuspend-vendor', protect, requireRole("admin"), asyncHandler(vendorUnsuspend))
 router.post("/vendors/send-email", protect, requireRole("admin"), asyncHandler(VendorSendEmail))
+router.get('/users-management',protect,requireRole("admin"),asyncHandler(getAllUsers))
+router.patch('/users/toggle-block/:id', protect, requireRole("admin"), asyncHandler(toggleUserBlock))
 router.post(
 
   '/create-category',

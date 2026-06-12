@@ -39,7 +39,13 @@ export const VendorSendEmail = (businessEmail, message) => {
   return axiosInstance.post(`/admin/vendors/send-email`, { businessEmail, message })
 }
 
+export const fetchAllUsers = () =>{
+  return axiosInstance.get("/admin/users-management")
+}
 
+export const toggleUserBlock = (id) => {
+  return axiosInstance.patch(`/admin/users/toggle-block/${id}`)
+}
 
 export const createCategory = (data) => {
   return axiosInstance.post("/admin/create-category", data)

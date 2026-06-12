@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken'
+import jwt, { decode } from 'jsonwebtoken'
 import User from '../models/user.model.js'
 import Vendor from '../models/vendor.model.js'
 
@@ -17,7 +17,6 @@ export const protect = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET)
-    
     let user;
     if (decoded.role === 'vendor') {
       user = await Vendor.findById(decoded.id).select("-password")
@@ -66,4 +65,4 @@ export const protect = async (req, res, next) => {
       message: 'Invalid Token'
     })
   }
-}
+}

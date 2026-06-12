@@ -18,7 +18,7 @@ export const ProtectedRoute = ({ children, role = "user" }) => {
         }
       };
 
-      // Initial check
+
       poll();
 
       const interval = setInterval(poll, 30000);

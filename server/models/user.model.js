@@ -1,6 +1,16 @@
 import mongoose from "mongoose";
 
-
+const fileSchema = new mongoose.Schema({
+  fileUrl: {
+    type: String,
+    required: true
+  },
+  publicId: {
+    type: String,
+    required: true
+  },
+  fileType: String
+})
 
 const userSchema = new mongoose.Schema({
     fullName : {
@@ -45,9 +55,11 @@ const userSchema = new mongoose.Schema({
       type : Boolean,
       default : false
     },
+    profilePicture :fileSchema,
     refreshToken : {
       type : String,  
     },
+    
     passwordChangedAt : Date,
 
 },{timestamps : true})

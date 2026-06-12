@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { hashToken } from "../utils/hashToken.js";
 import { AppError } from "../utils/AppError.js";
+import User from "../models/user.model.js";
 
 import {
   findAdminByEmail,
@@ -16,6 +17,7 @@ import {
   getAllCategories,
   getCategoryById,
   saveCategory,
+  getallusersRepo,
 } from "../repository/admin.repo.js";
 
 export const adminLoginService = async (email, password) => {
@@ -258,4 +260,21 @@ export const deleteCategoryService = async(id) =>{
   await saveCategory(category)
 }
 
+
+export const getAllUsersService = async() =>{
+  return await getallusersRepo()
+}
+
+export const toggleUserBlockService = async(id) => {
+  const user = await User.findById(id);
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+  user.isBlocked = !user.isBlocked;
+  if (user.isBlocked) {
+    user.refreshToken = null;
+  }
+  await user.save();
+  return user;
+}
 

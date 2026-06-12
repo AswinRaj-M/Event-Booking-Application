@@ -255,7 +255,6 @@ import Loader from "../../components/common/Loader";
                       className="w-full px-4 py-3 pl-11 bg-black/50 border border-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all placeholder:text-gray-600 text-white group-hover:border-gray-700"
                       value={email}
                       autoComplete="email"
-                      required
                       onChange={(e) => setEmail(e.target.value)}
                     />
                     <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-hover:text-gray-400 transition-colors">
@@ -294,7 +293,6 @@ import Loader from "../../components/common/Loader";
                       className="w-full px-4 py-3 pl-11 pr-11 bg-black/50 border border-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all placeholder:text-gray-600 text-white group-hover:border-gray-700"
                       value={password}
                       autoComplete="current-password"
-                      required
                       onChange={(e) => setPassword(e.target.value)}
                     />
                     <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-hover:text-gray-400 transition-colors">

@@ -49,7 +49,7 @@ function AdminSidebar() {
                             <LayoutDashboard className={`mr-3 h-5 w-5 ${isActive('/admin/dashboard') ? 'text-purple-400' : 'text-gray-500'}`} />
                             Dashboard
                         </Link>
-                        <Link to="#" className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive('/admin/users') ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
+                        <Link to="/admin/users" className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive('/admin/users') ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
                             <Users className={`mr-3 h-5 w-5 ${isActive('/admin/users') ? 'text-purple-400' : 'text-gray-500'}`} />
                             Users
                         </Link>

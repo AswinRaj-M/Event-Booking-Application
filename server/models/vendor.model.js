@@ -31,6 +31,17 @@ const vendorSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  profilePicture : {
+    type : fileSchema,
+  },
+  coverImage : {
+    type : fileSchema
+  },
+  portfolioPictures : {
+    type : [fileSchema],
+    default :[]
+  },
+
   role: {
     type: String,
     default: "vendor"

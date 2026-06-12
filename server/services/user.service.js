@@ -15,8 +15,21 @@ import {
   findOtpByUserId,
   deleteOtpByUserId,
   updatePassword,
+  updateUser,
 } from "../repository/user.repo.js";
 import { generateResetToken } from "../utils/generateToken.js";
+
+export const getUserProfileService = async (userId) => {
+  const user = await findUserById(userId);
+  if (!user) throw new AppError("User not found", 404);
+  return user;
+};
+
+export const updateUserProfileService = async (userId, data) => {
+  const user = await findUserById(userId);
+  if (!user) throw new AppError("User not found", 404);
+  return await updateUser(userId, data);
+};
 
 export const registerUserService = async (data) => {
   const {
@@ -136,6 +149,9 @@ export const loginUserService = async (email, password) => {
   const match = await bcrypt.compare(password, user.password);
   if (!match) {
     throw new AppError("Password is Incorrect", 400);
+  }
+  if (user.isBlocked){
+    throw new AppError("You have been blocked", 401);
   }
 
   if (!user.isVerified) {

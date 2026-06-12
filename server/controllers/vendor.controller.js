@@ -6,8 +6,13 @@ import {
 } from "../utils/generateToken.js";
 import {
   applyVendorService,
+  updateVendorImagesService,
   vendorLoginService,
   vendorLogoutService,
+  addVendorPortfolioService,
+  removeVendorImageService,
+  removeVendorPortfolioService,
+  updateVendorProfileService,
 } from "../services/vendor.service.js";
 
 
@@ -46,22 +51,43 @@ export const applyVendor = async (req, res) => {
     },
   });
 
+  const accessToken = generateAccessToken(vendor);
+  const refreshToken = generateRefreshToken(vendor);
+
+  await vendorLoginService(vendor, refreshToken);
+
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: "/",
+  });
+
+  res.cookie("accessToken", accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 15 * 60 * 1000,
+    path: "/",
+  });
+
   res.status(201).json({
     message: "vendor application submited successfully",
     data: {
-      _id: vendor._id,
-      name: vendor.organizerName,
-      email: vendor.businessEmail,
-      status: vendor.applicationStatus,
+      id: vendor._id,
+      organizerName: vendor.organizerName,
+      businessEmail: vendor.businessEmail,
+      businessName: vendor.businessName,
+      role: vendor.role,
+      applicationStatus: vendor.applicationStatus,
     },
   });
 };
 
-/**
- * VENDOR LOGIN
- */
+
 export const vendorLogin = async (req, res) => {
-  const vendor = req.vendor; 
+  const vendor = req.vendor;
 
   const accessToken = generateAccessToken(vendor);
   const refreshToken = generateRefreshToken(vendor);
@@ -96,12 +122,66 @@ export const vendorLogin = async (req, res) => {
   });
 };
 
-/**
- * VENDOR LOGOUT
- */
+export const updateVendorImages = async(req,res) =>{
+  const vendorId = req.user._id
+  if(!vendorId){
+    throw new AppError("vendor id required")
+  }
+  const updateData =  {}
+
+  if(req.files?.profilePicture?.[0]){
+    const profileUpload = await uploadToCloudinary(
+      req.files.profilePicture[0].buffer,
+      "vendor/profilePictures"
+    )
+
+    updateData.profilePicture = {
+      fileUrl :profileUpload.secure_url,
+      publicId : profileUpload.public_id,
+      fileType : profileUpload.resource_type
+    }
+  }
+
+  if(req.files?.coverImage?.[0]){
+    const coverImageUpload = await uploadToCloudinary(
+      req.files.coverImage[0].buffer,
+      "vendor/coverImage"
+    )
+
+    updateData.coverImage = {
+      fileUrl : coverImageUpload.secure_url,
+      publicId : coverImageUpload.public_id,
+      fileType : coverImageUpload.resource_type
+    }
+  }
+  const vendor = await updateVendorImagesService(vendorId,updateData)
+
+
+  return res.status(200).json({
+    success : true,
+    vendor,
+    message : "Images updated Successfully "
+  })
+
+}
+
+export const vendorProfile = (req,res) =>{
+  const vendor = req.user
+
+  if(!vendor){
+    return res.status(404).json("Vendor Not Found!")
+  }
+  
+  return res.status(200).json({
+    success : true,
+    vendor,
+    message :"Vendor Profile get successfully"
+  })
+}
+
 export const vendorLogout = async (req, res) => {
   const token = req.cookies.refreshToken;
- 
+
 
   await vendorLogoutService(token);
 
@@ -121,5 +201,104 @@ export const vendorLogout = async (req, res) => {
 
   return res.status(200).json({
     message: "Logged out Successfully",
+  });
+};
+
+export const addVendorPortfolio = async (req, res) => {
+  const vendorId = req.user._id;
+
+  if (!vendorId) {
+    throw new AppError("Vendor ID is required", 400);
+  }
+
+  if (!req.file) {
+    throw new AppError("Portfolio picture is required", 400);
+  }
+
+  const uploadResult = await uploadToCloudinary(
+    req.file.buffer,
+    "vendor/portfolios"
+  );
+
+  const fileData = {
+    fileUrl: uploadResult.secure_url,
+    publicId: uploadResult.public_id,
+    fileType: uploadResult.resource_type,
+  };
+
+  const vendor = await addVendorPortfolioService(vendorId, fileData);
+
+  return res.status(200).json({
+    success: true,
+    message: "Portfolio picture added successfully",
+    vendor,
+  });
+};
+
+export const deleteVendorImage = async (req, res) => {
+  const vendorId = req.user._id;
+  const { imageType } = req.params;
+
+  if (!vendorId) {
+    throw new AppError("Vendor ID is required", 400);
+  }
+
+  if (imageType !== "profilePicture" && imageType !== "coverImage") {
+    throw new AppError("Invalid image type", 400);
+  }
+
+  const updatedVendor = await removeVendorImageService(vendorId, imageType);
+
+  return res.status(200).json({
+    success: true,
+    message: `${imageType === "profilePicture" ? "Profile picture" : "Cover image"} removed successfully`,
+    vendor: updatedVendor,
+  });
+};
+
+export const deleteVendorPortfolio = async (req, res) => {
+  const vendorId = req.user._id;
+  const { portfolioId } = req.params;
+
+  if (!vendorId) {
+    throw new AppError("Vendor ID is required", 400);
+  }
+
+  if (!portfolioId) {
+    throw new AppError("Portfolio ID is required", 400);
+  }
+
+  const updatedVendor = await removeVendorPortfolioService(vendorId, portfolioId);
+
+  return res.status(200).json({
+    success: true,
+    message: "Portfolio picture removed successfully",
+    vendor: updatedVendor,
+  });
+};
+
+export const updateVendorProfile = async (req, res) => {
+  const vendorId = req.user._id;
+
+  if (!vendorId) {
+    throw new AppError("Vendor ID is required", 400);
+  }
+
+  const { organizerName, eventCategory, experience, description, websiteOrInstagram } = req.body;
+
+  const updateData = {
+    organizerName,
+    eventCategory,
+    experience,
+    description,
+    websiteOrInstagram,
+  };
+
+  const updatedVendor = await updateVendorProfileService(vendorId, updateData);
+
+  return res.status(200).json({
+    success: true,
+    message: "Profile updated successfully",
+    vendor: updatedVendor,
   });
 };

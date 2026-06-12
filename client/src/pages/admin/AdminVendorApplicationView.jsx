@@ -18,6 +18,7 @@ import {
   Sidebar,
 } from "lucide-react";
 import AdminSidebar from "../../components/admin/AdminSidebar";
+import ViewImages from "../../components/common/ViewImages";
 import { useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { getVendorByIdThunk } from "../../features/admin.slice";
@@ -37,6 +38,7 @@ const AdminVendorApplicationView = () => {
 
   const { vendorDetails, vendorDetailsLoading: loading } = useSelector((state) => state.admin);
   const [message, setMessage] = useState("");
+  const [viewingImageUrl, setViewingImageUrl] = useState(null);
 
   useEffect(() => {
     dispatch(getVendorByIdThunk(id));
@@ -106,7 +108,7 @@ const AdminVendorApplicationView = () => {
       setMessage("");
       dispatch(getVendorByIdThunk(id))
     } catch (error) {
-      console.log("Error",error)
+      console.log("Error from sendMail Frontend : ",error)
       toast.error("Something Went Wrong")
     }
   }
@@ -335,11 +337,9 @@ const AdminVendorApplicationView = () => {
                     </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {vendorDetails?.businessDocument?.fileUrl && (
-                        <a
-                          href={vendorDetails.businessDocument.fileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center space-x-4 p-4 border border-gray-800 bg-[#0B0914] rounded-xl cursor-pointer hover:bg-[#2A204C]/50 hover:border-purple-500/30 transition-all duration-200 group"
+                        <button
+                          onClick={() => setViewingImageUrl(vendorDetails.businessDocument.fileUrl)}
+                          className="flex items-center space-x-4 p-4 border border-gray-800 bg-[#0B0914] rounded-xl cursor-pointer hover:bg-[#2A204C]/50 hover:border-purple-500/30 transition-all duration-200 group text-left font-sans w-full"
                         >
                           <div className="p-3 bg-red-500/10 text-red-400 rounded-lg group-hover:bg-red-500/20 transition-colors">
                             <FileText size={20} />
@@ -352,15 +352,13 @@ const AdminVendorApplicationView = () => {
                               Click to view
                             </p>
                           </div>
-                        </a>
+                        </button>
                       )}
 
                       {vendorDetails?.idProof?.fileUrl && (
-                        <a
-                          href={vendorDetails.idProof.fileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center space-x-4 p-4 border border-gray-800 bg-[#0B0914] rounded-xl cursor-pointer hover:bg-[#2A204C]/50 hover:border-purple-500/30 transition-all duration-200 group"
+                        <button
+                          onClick={() => setViewingImageUrl(vendorDetails.idProof.fileUrl)}
+                          className="flex items-center space-x-4 p-4 border border-gray-800 bg-[#0B0914] rounded-xl cursor-pointer hover:bg-[#2A204C]/50 hover:border-purple-500/30 transition-all duration-200 group text-left font-sans w-full"
                         >
                           <div className="p-3 bg-blue-500/10 text-blue-400 rounded-lg group-hover:bg-blue-500/20 transition-colors">
                             <ImageIcon size={20} />
@@ -373,7 +371,7 @@ const AdminVendorApplicationView = () => {
                               Click to view
                             </p>
                           </div>
-                        </a>
+                        </button>
                       )}
                     </div>
                   </div>
@@ -536,6 +534,14 @@ const AdminVendorApplicationView = () => {
           </div>
         </div>
       </main>
+
+      {/* Lightbox Modal */}
+      <ViewImages 
+        isOpen={!!viewingImageUrl} 
+        onClose={() => setViewingImageUrl(null)} 
+        imageUrl={viewingImageUrl} 
+        title="Vendor Document" 
+      />
     </div>
   );
 };
