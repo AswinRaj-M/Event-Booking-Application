@@ -19,14 +19,14 @@ import Loader from "../../components/common/Loader";
     const [isLogin, setIsLogin] = useState(true);
 
     const dispatch = useDispatch();
-    const {loading} = useSelector((state) => state.user)
     const userState = useSelector((state) => state.user);
     const vendorState = useSelector((state) => state.vendor);
+    const loading = userState.loading || vendorState.loading;
     const togglePasswordVisibility = () => {
       setShowPassword(!showPassword);
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
       e.preventDefault();
 
       if (isLogin) {
@@ -37,12 +37,28 @@ import Loader from "../../components/common/Loader";
           }),
         );
       } else {
-        dispatch(
-          vendorLoginThunk({
-            businessEmail: email,
-            password,
-          }),
-        );
+        try {
+          const data = await dispatch(
+            vendorLoginThunk({
+              businessEmail: email,
+              password,
+            }),
+          ).unwrap();
+
+          if (data.unverified) {
+            navigate("/verify-otp", {
+              state: {
+                userId: data.vendorId,
+                email: data.email,
+                isVendor: true
+              }
+            });
+            toast.warning("Account is not verified. Verify to login");
+            dispatch(vendorClearMessages());
+          }
+        } catch (err) {
+          console.error(err);
+        }
       }
     };
 
@@ -68,20 +84,22 @@ import Loader from "../../components/common/Loader";
       }
 
       if (!isLogin && vendorState.success) {
-        dispatch(vendorClearMessages());
+        if (!vendorState.unverified) {
+          dispatch(vendorClearMessages());
 
-        if (
-          vendorState.vendor?.applicationStatus === "pending" ||
-          vendorState.vendor?.applicationStatus === "rejected"
-        ) {
-          navigate("/vendor/status", {
-            replace: true,
-            state: {
-              businessName: vendorState.vendor?.businessName,
-            },
-          });
-        } else {
-          navigate("/vendor/dashboard", { replace: true });
+          if (
+            vendorState.vendor?.applicationStatus === "pending" ||
+            vendorState.vendor?.applicationStatus === "rejected"
+          ) {
+            navigate("/vendor/status", {
+              replace: true,
+              state: {
+                businessName: vendorState.vendor?.businessName,
+              },
+            });
+          } else {
+            navigate("/vendor/dashboard", { replace: true });
+          }
         }
       }
 

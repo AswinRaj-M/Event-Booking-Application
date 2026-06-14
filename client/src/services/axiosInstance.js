@@ -65,7 +65,9 @@ axiosInstance.interceptors.response.use(
                         originalRequest.url?.includes('/verify-otp') ||
                         originalRequest.url?.includes('/refresh-token') ||
                         originalRequest.url?.includes('/forgot-password') ||
-                        originalRequest.url?.includes('/reset-password');
+                        originalRequest.url?.includes('/reset-password') ||
+                        originalRequest.url?.includes('/application') ||
+                        originalRequest.url?.includes('/resend-otp');
 
     if (error.response?.status === 401 && !originalRequest._retry && !isAuthRoute) {
       originalRequest._retry = true;

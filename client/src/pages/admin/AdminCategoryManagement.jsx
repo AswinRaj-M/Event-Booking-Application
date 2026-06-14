@@ -60,6 +60,14 @@ function AdminCategoryManagement() {
   }, []);
 
 const handleCreateCategorySubmit = async (categoryData) => {
+  const nameExists = categories.some(
+    (cat) => cat.name.trim().toLowerCase() === categoryData.name.trim().toLowerCase()
+  );
+  if (nameExists) {
+    toast.error("Category name must be unique!");
+    throw new Error("Category name must be unique!");
+  }
+
   try {
     const formData = new FormData();
 
@@ -87,6 +95,18 @@ const handleCreateCategorySubmit = async (categoryData) => {
 
 const handleEditCategory = async (categoryData) => {
   if (!selectedCategory) return;
+
+  // Check if name is unique (excluding the category currently being edited, case-insensitive)
+  const nameExists = categories.some(
+    (cat) =>
+      cat._id !== selectedCategory._id &&
+      cat.name.trim().toLowerCase() === categoryData.name.trim().toLowerCase()
+  );
+  if (nameExists) {
+    toast.error("Category name must be unique!");
+    throw new Error("Category name must be unique!");
+  }
+
   try {
     const formData = new FormData();
     formData.append("name", categoryData.name);

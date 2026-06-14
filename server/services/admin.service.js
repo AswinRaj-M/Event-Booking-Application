@@ -210,8 +210,15 @@ export const updateCategoryService = async(id,name,description,icon) =>{
     )
   }
 
-  if(name){
-    category.name = name
+  if(name && name.trim().toLowerCase() !== category.name.trim().toLowerCase()){
+    const existingCategory = await findCategoryByName(name.trim())
+    if(existingCategory){
+      throw new AppError(
+        "Category Already Exists",
+        400
+      )
+    }
+    category.name = name.trim()
   }
 
   if(description){

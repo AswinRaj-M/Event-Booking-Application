@@ -51,3 +51,11 @@ export const updateVendorProfile = (data) => {
 export const fetchCategories = () => {
   return axiosInstance.get("/common/categories");
 };
+
+export const verifyVendorOTP = (data) => {
+  return axiosInstance.post("/vendor/verify-otp", data);
+};
+
+export const resendVendorOtp = (data) => {
+  return axiosInstance.post("/vendor/resend-otp", data);
+};

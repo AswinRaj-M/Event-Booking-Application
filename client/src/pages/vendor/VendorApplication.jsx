@@ -4,7 +4,8 @@ import logo from '../../assets/logo.jpeg';
 import { Building2, Info, MapPin, Upload } from 'lucide-react';
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { vendorApplicationThunk, vendorClearMessages } from '../../features/vendorSlice';
+import { vendorApplicationThunk, vendorClearMessages, vendorLogoutState } from '../../features/vendorSlice';
+import { logoutUserState } from '../../features/user.slice';
 import { useEffect } from 'react';
 import Loader from '../../components/common/Loader';
 import { toast } from 'sonner';
@@ -14,7 +15,7 @@ const VendorApplication = () => {
 
     const navigate = useNavigate()
     const dispatch = useDispatch()
-    const { loading, success, error } = useSelector((state) => state.vendor)
+    const { loading, success, error, vendor } = useSelector((state) => state.vendor)
     const [form, setForm] = useState({
         organizerName: "",
         businessName: "",
@@ -62,7 +63,7 @@ const VendorApplication = () => {
    
 
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault()
         const formData = new FormData()
 
@@ -87,27 +88,24 @@ const VendorApplication = () => {
         formData.append("businessDocument", businessDocument)
         formData.append("idProof", idProof)
 
-        dispatch(vendorApplicationThunk(formData))
-    }
-
-    useEffect(() => {
-        if (success) {
-            navigate("/vendor/status", {
+        try {
+            const data = await dispatch(vendorApplicationThunk(formData)).unwrap();
+            dispatch(vendorLogoutState());
+            dispatch(logoutUserState());
+            navigate("/verify-otp", {
                 state: {
-                    businessName: form.businessName
+                    userId: data.vendorId,
+                    email: data.email,
+                    isVendor: true
                 },
-                replace : true
-            },)
-            dispatch(vendorClearMessages())
+                replace: true
+            });
+            dispatch(vendorClearMessages());
+        } catch (err) {
+            toast.error(err || "Failed to submit application");
+            dispatch(vendorClearMessages());
         }
-    }, [success, form.businessName, navigate, dispatch])
-
-    useEffect(() => {
-        if (error) {
-            toast.error(error)
-            dispatch(vendorClearMessages())
-        }
-    }, [error, dispatch])
+    }
 
 
     if (loading) {

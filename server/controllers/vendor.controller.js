@@ -13,11 +13,12 @@ import {
   removeVendorImageService,
   removeVendorPortfolioService,
   updateVendorProfileService,
+  createVendorOtpService,
+  verifyVendorOtpService,
 } from "../services/vendor.service.js";
-
-
-
-
+import { generateOTP } from "../utils/generateOtp.js";
+import { sendOTP } from "../utils/sendMail.js";
+import Vendor from "../models/vendor.model.js";
 
 export const applyVendor = async (req, res) => {
   if (!req.files?.businessDocument || !req.files?.idProof) {
@@ -51,6 +52,34 @@ export const applyVendor = async (req, res) => {
     },
   });
 
+  const otp = generateOTP();
+  await createVendorOtpService(vendor._id, otp);
+
+  try {
+    await sendOTP(vendor.businessEmail, otp);
+  } catch (mailError) {
+    console.error("Failed to send OTP to vendor:", mailError);
+    throw new AppError(
+      "Vendor application submitted but failed to send verification email. Please try to verify or resend OTP.",
+      500
+    );
+  }
+
+  console.log("Vendor registered. OTP is: ", otp);
+  console.log("OTP sent to vendor:", vendor.businessEmail);
+
+  res.status(201).json({
+    message: "Otp Send To Email",
+    vendorId: vendor._id,
+    email: vendor.businessEmail,
+  });
+};
+
+export const verifyVendorOTP = async (req, res) => {
+  const { vendorId, otp } = req.body;
+
+  const vendor = await verifyVendorOtpService(vendorId, otp);
+
   const accessToken = generateAccessToken(vendor);
   const refreshToken = generateRefreshToken(vendor);
 
@@ -72,9 +101,9 @@ export const applyVendor = async (req, res) => {
     path: "/",
   });
 
-  res.status(201).json({
-    message: "vendor application submited successfully",
-    data: {
+  res.status(200).json({
+    message: "Vendor email verified successfully",
+    vendor: {
       id: vendor._id,
       organizerName: vendor.organizerName,
       businessEmail: vendor.businessEmail,
@@ -85,9 +114,55 @@ export const applyVendor = async (req, res) => {
   });
 };
 
+export const resendVendorOtp = async (req, res) => {
+  const { vendorId } = req.body;
+
+  if (!vendorId) throw new AppError("Vendor ID is required", 400);
+
+  const vendor = await Vendor.findById(vendorId);
+  if (!vendor) throw new AppError("Vendor not found", 404);
+
+  if (vendor.emailVerify) throw new AppError("Vendor already verified", 400);
+
+  const otp = generateOTP();
+  await createVendorOtpService(vendor._id, otp);
+
+  try {
+    await sendOTP(vendor.businessEmail, otp);
+  } catch (error) {
+    console.error("Error resending vendor OTP: ", error);
+    throw new AppError("Failed to resend OTP, please try again later", 500);
+  }
+
+  console.log("Resend vendor OTP: ", otp);
+
+  res.status(200).json({
+    success: true,
+    message: "Otp resend Successfully",
+  });
+};
+
 
 export const vendorLogin = async (req, res) => {
   const vendor = req.vendor;
+
+  if (!vendor.emailVerify) {
+    const otp = generateOTP();
+    await createVendorOtpService(vendor._id, otp);
+    try {
+      await sendOTP(vendor.businessEmail, otp);
+    } catch (error) {
+      console.error("Error from login otp send: ", error);
+      throw new AppError("Failed to send OTP, please try again later", 500);
+    }
+    console.log("Login OTP is: ", otp);
+    return res.status(200).json({
+      unverified: true,
+      message: "Email not verified. OTP sent to your email.",
+      vendorId: vendor._id,
+      email: vendor.businessEmail,
+    });
+  }
 
   const accessToken = generateAccessToken(vendor);
   const refreshToken = generateRefreshToken(vendor);

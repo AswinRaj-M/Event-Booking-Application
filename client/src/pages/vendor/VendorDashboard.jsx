@@ -1,18 +1,9 @@
 import React from 'react';
-import { useDispatch } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Bell, PlusCircle, Calendar, CalendarDays, Users } from 'lucide-react';
-import { vendorLogoutState } from '../../features/vendorSlice';
 import VendorSidebar from '../../components/vendor/VendorSidebar';
 
 const VendorHome = () => {
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    dispatch(vendorLogoutState());
-    navigate("/login");
-  };
 
   return (
     <div className="flex min-h-screen bg-[#070514] text-white font-sans selection:bg-purple-500/30">
@@ -34,13 +25,12 @@ const VendorHome = () => {
               <Bell className="w-5 h-5" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-[#070514]" />
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 bg-[#8B5CF6] hover:bg-[#7C3AED] text-white text-sm font-semibold rounded-lg transition-all shadow-[0_0_15px_rgba(139,92,246,0.3)]">
-              <PlusCircle className="w-4 h-4" />
-              Create Event
-            </button>
-            <button onClick={handleLogout} className="px-4 py-2 text-sm text-gray-400 hover:text-white border border-white/10 rounded-lg hover:bg-white/5 transition-colors">
-              Logout
-            </button>
+            <Link to="/vendor/create-event">
+              <button className="flex items-center gap-2 px-4 py-2 bg-[#8B5CF6] hover:bg-[#7C3AED] text-white text-sm font-semibold rounded-lg transition-all shadow-[0_0_15px_rgba(139,92,246,0.3)]">
+                <PlusCircle className="w-4 h-4" />
+                Create Event
+              </button>
+            </Link>
           </div>
         </div>
 
@@ -169,12 +159,14 @@ const VendorHome = () => {
               <p className="text-xs text-gray-400 mb-6">Manage your events efficiently</p>
 
               <div className="space-y-4">
-                <button className="w-full flex items-center justify-center gap-2 py-3 bg-[#8B5CF6] hover:bg-[#7C3AED] text-white text-sm font-semibold rounded-xl transition-all shadow-[0_4px_15px_rgba(139,92,246,0.2)]">
-                  <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center">
-                    <PlusCircle className="w-3 h-3 text-white" />
-                  </div>
-                  Create New Event
-                </button>
+                <Link to="/vendor/create-event" className="block w-full">
+                  <button className="w-full flex items-center justify-center gap-2 py-3 bg-[#8B5CF6] hover:bg-[#7C3AED] text-white text-sm font-semibold rounded-xl transition-all shadow-[0_4px_15px_rgba(139,92,246,0.2)]">
+                    <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center">
+                      <PlusCircle className="w-3 h-3 text-white" />
+                    </div>
+                    Create New Event
+                  </button>
+                </Link>
 
                 <button className="w-full flex items-center gap-3 py-3 px-4 bg-transparent hover:bg-white/5 text-white/90 text-sm font-medium rounded-xl transition-colors">
                   <Calendar className="w-4 h-4 text-[#8B5CF6]" />

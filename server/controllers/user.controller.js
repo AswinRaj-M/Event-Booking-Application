@@ -307,6 +307,8 @@ export const resetPassword = async(req,res) =>{
 }
 
 
+
+
 export const logoutUser = async (req, res) => {
   const token = req.cookies.refreshToken;
   

@@ -3,6 +3,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { verifyOTPThunk } from '../../features/user.slice';
 import { resendOtp } from '../../services/user.api';
+import { verifyVendorOTP, resendVendorOtp } from '../../services/vendor.api';
+import { setVendorData } from '../../features/vendorSlice';
 import { toast } from 'sonner';
 import Loader from '../../components/common/Loader';
 
@@ -13,20 +15,21 @@ const VerifyOtp = () => {
 
   const { loading, success, error, userId: reduxUserId, tempEmail } = useSelector((state) => state.user);
 
-  const { email: stateEmail, userId: stateUserId } = location.state || {};
+  const { email: stateEmail, userId: stateUserId, isVendor } = location.state || {};
   const email = stateEmail || tempEmail;
   const userId = stateUserId || reduxUserId;
+
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [timer, setTimer] = useState(60);
+  const [localLoading, setLocalLoading] = useState(false);
+  const [localError, setLocalError] = useState("");
+  const inputsRef = useRef([]);
 
   useEffect(() => {
     if (!userId) {
       navigate('/login', { replace: true });
     }
   }, [userId, navigate]);
-
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
-  const [timer, setTimer] = useState(60);
-  const inputsRef = useRef([]);
-
 
   useEffect(() => {
     if (timer <= 0) return;
@@ -37,10 +40,10 @@ const VerifyOtp = () => {
   }, [timer]);
 
   useEffect(() => {
-    if (success) {
+    if (!isVendor && success) {
       navigate('/user/home', { replace: true });
     }
-  }, [success, navigate]);
+  }, [success, isVendor, navigate]);
 
   const handleChange = (value, index) => {
     if (!/^\d?$/.test(value)) return;
@@ -48,7 +51,6 @@ const VerifyOtp = () => {
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
-
 
     if (value && index < 5) {
       inputsRef.current[index + 1]?.focus();
@@ -80,43 +82,71 @@ const VerifyOtp = () => {
     const otpArray = pastedData.split('');
     setOtp(otpArray);
 
-
     otpArray.forEach((digit, index) => {
       if (inputsRef.current[index]) {
         inputsRef.current[index].value = digit;
       }
     });
-
-
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const finalOtp = otp.join('');
     if (finalOtp.length !== 6) return;
 
-    dispatch(
-      verifyOTPThunk({
-        userId,
-        otp: finalOtp,
-      })
-    );
-
+    if (isVendor) {
+      setLocalLoading(true);
+      setLocalError("");
+      try {
+        const response = await verifyVendorOTP({ vendorId: userId, otp: finalOtp });
+        if (response.data?.vendor) {
+          toast.success("Email verified successfully!");
+          const vendor = response.data.vendor;
+          dispatch(setVendorData(vendor));
+          if (vendor.applicationStatus === "pending" || vendor.applicationStatus === "rejected") {
+            navigate("/vendor/status", {
+              replace: true,
+              state: { businessName: vendor.businessName }
+            });
+          } else {
+            navigate("/vendor/dashboard", { replace: true });
+          }
+        }
+      } catch (err) {
+        console.error("Vendor OTP verify error:", err);
+        setLocalError(err.response?.data?.message || "Verification failed");
+      } finally {
+        setLocalLoading(false);
+      }
+    } else {
+      dispatch(
+        verifyOTPThunk({
+          userId,
+          otp: finalOtp,
+        })
+      );
+    }
   };
 
-  const handleResend = async()=>{
+  const handleResend = async () => {
     try {
-      await resendOtp(userId)
-      toast.success("Resend otp Successfully")
+      if (isVendor) {
+        await resendVendorOtp({ vendorId: userId });
+      } else {
+        await resendOtp(userId);
+      }
+      toast.success("Resend otp Successfully");
     } catch (error) {
-      console.log("Error from hadleResend : ",error)
-      toast.error("Something went Wrong ")
+      console.log("Error from handleResend : ", error);
+      toast.error(error.response?.data?.message || "Something went Wrong");
     }
-  }
+  };
 
   const isOtpComplete = otp.join('').length === 6;
+  const errorToShow = isVendor ? localError : (error || localError);
+  const loadingToShow = isVendor ? localLoading : (loading || localLoading);
 
-  if(loading){
-    return <Loader/>
+  if (loadingToShow) {
+    return <Loader />;
   }
 
   return (
@@ -158,8 +188,7 @@ const VerifyOtp = () => {
         </div>
 
         {/* Messages */}
-        {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-        {loading && <p className="text-purple-400 text-sm mb-4">Verifying...</p>}
+        {errorToShow && <p className="text-red-500 text-sm mb-4">{errorToShow}</p>}
 
         {/* Resend Logic */}
         <div className="text-center mb-8 text-sm">
@@ -168,7 +197,7 @@ const VerifyOtp = () => {
             disabled={timer > 0}
             className="font-medium text-purple-400 hover:text-purple-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => {
-              handleResend()
+              handleResend();
               setTimer(60);
             }}
           >
@@ -185,21 +214,21 @@ const VerifyOtp = () => {
         {/* Verify Button */}
         <button
           onClick={handleSubmit}
-          disabled={loading || !isOtpComplete}
+          disabled={loadingToShow || !isOtpComplete}
           className={`w-full py-3.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold rounded-xl shadow-lg shadow-purple-900/30 transition-all transform
-            ${loading || !isOtpComplete
+            ${loadingToShow || !isOtpComplete
               ? 'opacity-50 cursor-not-allowed'
               : 'hover:from-purple-500 hover:to-indigo-500 hover:-translate-y-0.5 active:translate-y-0'
             }`}
         >
-          {loading ? 'Verifying...' : 'Verify & Continue'}
+          {loadingToShow ? 'Verifying...' : 'Verify & Continue'}
         </button>
 
         {/* Footer */}
         <div className="mt-6 text-center">
           <p className="text-xs text-gray-500">
             Entered the wrong email?{' '}
-            <Link to="/signup" className="text-purple-400 hover:text-purple-300 transition-colors">
+            <Link to={isVendor ? "/vendor/application" : "/signup"} className="text-purple-400 hover:text-purple-300 transition-colors">
               Change details
             </Link>
           </p>

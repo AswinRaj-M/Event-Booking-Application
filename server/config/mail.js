@@ -4,10 +4,6 @@ let transporter = null;
 
 export const getTransporter = () => {
   if (!transporter) {
-    console.log("[MAIL] Creating transporter now...");
-    console.log("[MAIL] EMAIL_USER:", process.env.EMAIL_USER);
-    console.log("[MAIL] EMAIL_PASS length:", process.env.EMAIL_PASS?.length || "missing");
-
     transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {

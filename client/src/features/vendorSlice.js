@@ -62,17 +62,23 @@ const vendorSlice = createSlice({
     vendor: null,
     success: false,
     loading: false,
-    error: false
+    error: false,
+    unverified: false
   },
   reducers: {
     vendorLogoutState: (state) => {
       state.vendor = null
       state.error = null
       state.success = false
+      state.unverified = false
     },
     vendorClearMessages: (state) => {
       state.error = null
       state.success = false
+      state.unverified = false
+    },
+    setVendorData: (state, action) => {
+      state.vendor = action.payload
     }
   },
   extraReducers: (builder) => {
@@ -85,8 +91,8 @@ const vendorSlice = createSlice({
       .addCase(vendorApplicationThunk.fulfilled, (state, action) => {
         state.success = true
         state.loading = false
-        state.vendor = action.payload.data
         state.error = null
+        state.vendor = null
       })
       .addCase(vendorApplicationThunk.rejected, (state, action) => {
         state.success = false
@@ -104,10 +110,15 @@ const vendorSlice = createSlice({
       .addCase(vendorLoginThunk.fulfilled, (state, action) => {
         state.loading = false
         state.success = true
-        state.vendor = action.payload.vendor
+        if (action.payload.unverified) {
+          state.unverified = true
+          state.vendor = null
+        } else {
+          state.vendor = action.payload.vendor
+          state.unverified = false
+        }
         state.error = null
       })
-
       .addCase(vendorLoginThunk.rejected, (state, action) => {
         state.loading = false
         state.success = false
@@ -122,5 +133,5 @@ const vendorSlice = createSlice({
   }
 })
 
-export const { vendorClearMessages, vendorLogoutState } = vendorSlice.actions
+export const { vendorClearMessages, vendorLogoutState, setVendorData } = vendorSlice.actions
 export default vendorSlice.reducer

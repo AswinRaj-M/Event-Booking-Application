@@ -20,6 +20,8 @@ const Signup = () => {
     agreeTermsAndConditions: false,
   });
 
+  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
   const [localError, setLocalError] = useState("");
 
   const {
@@ -31,23 +33,133 @@ const Signup = () => {
     agreeTermsAndConditions,
   } = formData;
 
+  const validateField = (name, value, currentFormData = formData) => {
+    let errorMsg = "";
+
+    switch (name) {
+      case "fullName":
+        if (!value.trim()) {
+          errorMsg = "Full name is required";
+        } else if (value.trim().length < 3) {
+          errorMsg = "Full name must be at least 3 characters";
+        }
+        break;
+      case "email":
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!value.trim()) {
+          errorMsg = "Email is required";
+        } else if (!emailRegex.test(value.trim())) {
+          errorMsg = "Invalid email format";
+        }
+        break;
+      case "phoneNumber":
+        const cleanPhone = value.replace(/[\s-]/g, "");
+        const phoneRegex = /^\+?[1-9]\d{9,14}$/;
+        if (!value.trim()) {
+          errorMsg = "Phone number is required";
+        } else if (!phoneRegex.test(cleanPhone)) {
+          errorMsg = "Invalid phone number";
+        }
+        break;
+      case "password":
+        const hasUpperCase = /[A-Z]/.test(value);
+        const hasLowerCase = /[a-z]/.test(value);
+        const hasNumber = /[0-9]/.test(value);
+        const hasSpecial = /[!@#$%^&*]/.test(value);
+        
+        if (!value) {
+          errorMsg = "Password is required";
+        } else if (value.length < 6) {
+          errorMsg = "Password must be at least 6 characters";
+        } else if (!hasUpperCase) {
+          errorMsg = "Must contain at least one uppercase letter";
+        } else if (!hasLowerCase) {
+          errorMsg = "Must contain at least one lowercase letter";
+        } else if (!hasNumber) {
+          errorMsg = "Must contain at least one number";
+        } else if (!hasSpecial) {
+          errorMsg = "Must contain at least one special character (!@#$%^&*)";
+        }
+        break;
+      case "confirmPassword":
+        if (!value) {
+          errorMsg = "Confirm password is required";
+        } else if (value !== currentFormData.password) {
+          errorMsg = "Passwords do not match";
+        }
+        break;
+      default:
+        break;
+    }
+
+    return errorMsg;
+  };
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    const finalValue = type === "checkbox" ? checked : value;
 
-    setFormData({
+    const updatedFormData = {
       ...formData,
-      [name]: type === "checkbox" ? checked : value,
-    });
+      [name]: finalValue,
+    };
+
+    setFormData(updatedFormData);
+
+    if (type !== "checkbox") {
+      setTouched((prev) => ({
+        ...prev,
+        [name]: true,
+      }));
+
+      const errorMsg = validateField(name, finalValue, updatedFormData);
+      setErrors((prev) => {
+        const nextErrors = { ...prev, [name]: errorMsg };
+        if (name === "password" && updatedFormData.confirmPassword) {
+          nextErrors.confirmPassword = validateField("confirmPassword", updatedFormData.confirmPassword, updatedFormData);
+        }
+        return nextErrors;
+      });
+    }
+  };
+
+  const handleBlur = (e) => {
+    const { name, value } = e.target;
+    setTouched((prev) => ({
+      ...prev,
+      [name]: true,
+    }));
+    const errorMsg = validateField(name, value);
+    setErrors((prev) => ({
+      ...prev,
+      [name]: errorMsg,
+    }));
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    const fields = ["fullName", "email", "phoneNumber", "password", "confirmPassword"];
+    const allTouched = {};
+    const formErrors = {};
+
+    fields.forEach((field) => {
+      allTouched[field] = true;
+      const errorMsg = validateField(field, formData[field], formData);
+      if (errorMsg) {
+        formErrors[field] = errorMsg;
+      }
+    });
+
+    setTouched(allTouched);
+    setErrors(formErrors);
+
     if (!agreeTermsAndConditions) {
       return toast.error("You must agree to the terms and conditions");
     }
 
-    if (password !== confirmPassword) {
-      return toast.error("Passwords do not match");
+    if (Object.keys(formErrors).length > 0) {
+      return toast.error("Please fix the validation errors before submitting");
     }
 
     dispatch(
@@ -61,7 +173,6 @@ const Signup = () => {
       }),
     );
   };
-
 
   useEffect(() => {
     dispatch(clearMessages());
@@ -86,7 +197,95 @@ const Signup = () => {
     }
   }, [error, dispatch]);
 
+  const getInputClassName = (fieldName) => {
+    const isTouched = touched[fieldName];
+    const hasError = errors[fieldName];
+    const value = formData[fieldName];
 
+    let borderClasses = "border-gray-800 focus:ring-purple-500/50 focus:border-purple-500";
+    if (isTouched) {
+      if (hasError) {
+        borderClasses = "border-rose-500/80 focus:ring-rose-500/30 focus:border-rose-500";
+      } else if (value) {
+        borderClasses = "border-emerald-500/80 focus:ring-emerald-500/30 focus:border-emerald-500";
+      }
+    }
+
+    return `w-full px-4 py-2.5 pl-10 pr-10 bg-black/50 border rounded-xl focus:outline-none focus:ring-2 transition-all placeholder:text-gray-600 text-white group-hover:border-gray-700 text-sm ${borderClasses}`;
+  };
+
+  const renderStatusIcon = (fieldName) => {
+    const isTouched = touched[fieldName];
+    const hasError = errors[fieldName];
+    const value = formData[fieldName];
+
+    if (!isTouched) return null;
+
+    if (hasError) {
+      return (
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-rose-500 flex items-center justify-center transition-all duration-200">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-4 w-4"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fillRule="evenodd"
+              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+              clipRule="evenodd"
+            />
+          </svg>
+        </div>
+      );
+    }
+
+    if (value) {
+      return (
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-500 flex items-center justify-center transition-all duration-200">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-4 w-4"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fillRule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+              clipRule="evenodd"
+            />
+          </svg>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
+  const renderError = (fieldName) => {
+    const isTouched = touched[fieldName];
+    const hasError = errors[fieldName];
+
+    if (!isTouched || !hasError) return null;
+
+    return (
+      <p className="text-[11px] text-rose-500 mt-1 flex items-center gap-1.5 ml-1 transition-all duration-200">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="h-3.5 w-3.5 flex-shrink-0"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+        >
+          <path
+            fillRule="evenodd"
+            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+            clipRule="evenodd"
+          />
+        </svg>
+        <span>{hasError}</span>
+      </p>
+    );
+  };
 
   if(loading){
     return <Loader/>
@@ -144,7 +343,7 @@ const Signup = () => {
                     src={`https://i.pravatar.cc/150?img=${i + 20}`}
                     alt="User"
                     className="w-full h-full object-cover"
-                  />
+                  ></img>
                 </div>
               ))}
               <div className="w-10 h-10 rounded-full border-2 border-black bg-gray-800 flex items-center justify-center text-xs font-bold text-white">
@@ -182,7 +381,6 @@ const Signup = () => {
             </h2>
           </div>
 
-
           {/* Signup Form */}
           <div className="space-y-5">
             <div className="space-y-1 text-center">
@@ -209,10 +407,11 @@ const Signup = () => {
                     type="text"
                     name="fullName"
                     placeholder="John Doe"
-                    className="w-full px-4 py-2.5 pl-10 bg-black/50 border border-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all placeholder:text-gray-600 text-white group-hover:border-gray-700 text-sm"
+                    className={getInputClassName("fullName")}
                     value={fullName}
                     autoComplete="name"
                     onChange={handleChange}
+                    onBlur={handleBlur}
                   />
                   <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-hover:text-gray-400 transition-colors">
                     <svg
@@ -230,7 +429,9 @@ const Signup = () => {
                       />
                     </svg>
                   </div>
+                  {renderStatusIcon("fullName")}
                 </div>
+                {renderError("fullName")}
               </div>
 
               {/* Email */}
@@ -247,10 +448,11 @@ const Signup = () => {
                     type="email"
                     name="email"
                     placeholder="john@example.com"
-                    className="w-full px-4 py-2.5 pl-10 bg-black/50 border border-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all placeholder:text-gray-600 text-white group-hover:border-gray-700 text-sm"
+                    className={getInputClassName("email")}
                     value={email}
                     autoComplete="username"
                     onChange={handleChange}
+                    onBlur={handleBlur}
                   />
                   <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-hover:text-gray-400 transition-colors">
                     <svg
@@ -268,7 +470,9 @@ const Signup = () => {
                       />
                     </svg>
                   </div>
+                  {renderStatusIcon("email")}
                 </div>
+                {renderError("email")}
               </div>
 
               {/* Phone Number */}
@@ -285,10 +489,11 @@ const Signup = () => {
                     type="tel"
                     name="phoneNumber"
                     placeholder="+91 9876543210"
-                    className="w-full px-4 py-2.5 pl-10 bg-black/50 border border-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all placeholder:text-gray-600 text-white group-hover:border-gray-700 text-sm"
+                    className={getInputClassName("phoneNumber")}
                     value={phoneNumber}
                     autoComplete="tel"
                     onChange={handleChange}
+                    onBlur={handleBlur}
                   />
                   <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-hover:text-gray-400 transition-colors">
                     <svg
@@ -306,7 +511,9 @@ const Signup = () => {
                       />
                     </svg>
                   </div>
+                  {renderStatusIcon("phoneNumber")}
                 </div>
+                {renderError("phoneNumber")}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -323,11 +530,12 @@ const Signup = () => {
                       id="password"
                       type="password"
                       placeholder="••••••••"
-                      className="w-full px-4 py-2.5 pl-10 bg-black/50 border border-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all placeholder:text-gray-600 text-white group-hover:border-gray-700 text-sm"
+                      className={getInputClassName("password")}
                       value={password}
                       name="password"
                       autoComplete="new-password"
                       onChange={handleChange}
+                      onBlur={handleBlur}
                     />
                     <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-hover:text-gray-400 transition-colors">
                       <svg
@@ -345,7 +553,9 @@ const Signup = () => {
                         />
                       </svg>
                     </div>
+                    {renderStatusIcon("password")}
                   </div>
+                  {renderError("password")}
                 </div>
 
                 {/* Confirm Password */}
@@ -362,9 +572,10 @@ const Signup = () => {
                       type="password"
                       name="confirmPassword"
                       placeholder="••••••••"
-                      className="w-full px-4 py-2.5 pl-10 bg-black/50 border border-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all placeholder:text-gray-600 text-white group-hover:border-gray-700 text-sm"
+                      className={getInputClassName("confirmPassword")}
                       value={confirmPassword}
                       onChange={handleChange}
+                      onBlur={handleBlur}
                       autoComplete="new-password"
                     />
                     <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-hover:text-gray-400 transition-colors">
@@ -383,7 +594,9 @@ const Signup = () => {
                         />
                       </svg>
                     </div>
+                    {renderStatusIcon("confirmPassword")}
                   </div>
+                  {renderError("confirmPassword")}
                 </div>
               </div>
 
@@ -398,7 +611,7 @@ const Signup = () => {
                   onChange={handleChange}
                 />
                 <label
-                  htmlFor="agreeToTerms"
+                  htmlFor="agreeTermsAndConditions"
                   className="text-xs text-gray-400 cursor-pointer select-none"
                 >
                   I agree to the{" "}

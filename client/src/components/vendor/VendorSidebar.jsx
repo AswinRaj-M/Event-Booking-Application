@@ -20,7 +20,7 @@ const VendorSidebar = () => {
         { path: "/vendor/dashboard", icon: LayoutDashboard, label: "Dashboard" },
         { path: "/vendor/events", icon: CalendarDays, label: "My Events" },
         { path: "/vendor/events/drafts", icon: FileEdit, label: "Draft Events" },
-        { path: "/vendor/events/create", icon: PlusCircle, label: "Create Event" },
+        { path: "/vendor/create-event", icon: PlusCircle, label: "Create Event" },
         { path: "/vendor/bookings", icon: Ticket, label: "Bookings" },
         { path: "/vendor/earnings", icon: Wallet, label: "Earnings" },
     ];

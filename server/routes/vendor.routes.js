@@ -8,6 +8,8 @@ import { applyVendor,
    deleteVendorImage,
    deleteVendorPortfolio,
    updateVendorProfile,
+   verifyVendorOTP,
+   resendVendorOtp,
    } from "../controllers/vendor.controller.js"
 import upload from '../middleware/upload.js'
 import { asyncHandler } from '../middleware/error.middleware.js'
@@ -31,6 +33,9 @@ router.post(
   validate,
   asyncHandler(applyVendor)
 )
+
+router.post("/verify-otp", asyncHandler(verifyVendorOTP))
+router.post("/resend-otp", asyncHandler(resendVendorOtp))
 
 router.post("/login", vendorLoginValidation, validate, asyncHandler(vendorLogin))
 router.get('/profile',protect,asyncHandler(vendorProfile),requireRole("vendor"))

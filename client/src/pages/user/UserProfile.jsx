@@ -91,6 +91,14 @@ const UserProfile = () => {
     }
   };
 
+  const handleChangePassword = async() =>{
+    try {
+      
+    } catch (error) {
+      
+    }
+  }
+
   // Format user ID to look like: usr-XXXXXX-x
   const formattedUserId = user?.id 
     ? `usr-${user.id.substring(user.id.length - 8)}-x` 
@@ -192,7 +200,7 @@ const UserProfile = () => {
                 <Pencil className="w-4 h-4" />
                 Edit Profile
               </button>
-              <button className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-white/[0.03] hover:bg-white/[0.07] text-white rounded-xl border border-white/10 hover:border-purple-500/30 transition-all duration-300 font-bold text-sm cursor-pointer">
+              <button onClick={handleChangePassword} className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-white/[0.03] hover:bg-white/[0.07] text-white rounded-xl border border-white/10 hover:border-purple-500/30 transition-all duration-300 font-bold text-sm cursor-pointer">
                 <KeyRound className="w-4 h-4 text-purple-400" />
                 Change Password
               </button>

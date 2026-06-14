@@ -1,6 +1,8 @@
 import bcrypt from "bcryptjs";
 import { hashToken } from "../utils/hashToken.js";
 import { AppError } from "../utils/AppError.js";
+import Otp from "../models/user.otp.model.js";
+import Vendor from "../models/vendor.model.js";
 
 import {
   createVendor,
@@ -29,7 +31,43 @@ export const applyVendorService = async (data) => {
     location: JSON.parse(data.location),
     businessDocument: data.businessDocument,
     idProof: data.idProof,
+    emailVerify: false,
   });
+
+  return vendor;
+};
+
+export const createVendorOtpService = async (vendorId, otp) => {
+  return await Otp.findOneAndUpdate(
+    { userId: vendorId },
+    { otp, createdAt: new Date() },
+    { upsert: true, new: true }
+  );
+};
+
+export const verifyVendorOtpService = async (vendorId, otp) => {
+  if (!vendorId || !otp) {
+    throw new AppError("OTP Required", 400);
+  }
+
+  const vendor = await Vendor.findById(vendorId);
+  if (!vendor) {
+    throw new AppError("Vendor not found", 404);
+  }
+
+  const otpDoc = await Otp.findOne({ userId: vendorId });
+  if (!otpDoc) {
+    throw new AppError("Invalid or Expired OTP", 400);
+  }
+
+  if (otpDoc.otp !== otp) {
+    throw new AppError("Invalid OTP", 400);
+  }
+
+  vendor.emailVerify = true;
+  await vendor.save();
+
+  await Otp.deleteOne({ userId: vendorId });
 
   return vendor;
 };
