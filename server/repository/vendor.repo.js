@@ -1,3 +1,4 @@
+import Event from "../models/event.model.js";
 import Vendor from "../models/vendor.model.js";
 
 export const createVendor = async (data) => {
@@ -50,3 +51,7 @@ export const removeVendorPortfolioPicture = async (vendorId, pictureId) => {
     { new: true }
   );
 };
+
+export const createEventRepo = async(data) =>{
+  return await Event.create(data)
+}

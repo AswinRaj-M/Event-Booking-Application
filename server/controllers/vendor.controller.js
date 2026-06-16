@@ -15,6 +15,7 @@ import {
   updateVendorProfileService,
   createVendorOtpService,
   verifyVendorOtpService,
+  createEventService,
 } from "../services/vendor.service.js";
 import { generateOTP } from "../utils/generateOtp.js";
 import { sendOTP } from "../utils/sendMail.js";
@@ -377,3 +378,57 @@ export const updateVendorProfile = async (req, res) => {
     vendor: updatedVendor,
   });
 };
+
+export const createEvent = async(req,res) =>{
+  const vendorId = req.user._id
+
+  if(!vendorId){
+    throw new AppError("vendor ID is required",400)
+  }
+
+  if(!req.files?.thumbnail?.[0]){
+    throw new AppError("Thumbnail is required",400)
+  }
+  const thumbnailUpload = await uploadToCloudinary(
+    req.files.thumbnail[0].buffer,
+    "events/thumbnails"
+  )
+
+  const thumbnail = {
+    fileUrl : thumbnailUpload.secure_url,
+    publicId : thumbnailUpload.public_id,
+    fileType : thumbnailUpload.resource_type
+  }
+
+  let images = []
+
+  if(req.files?.images?.length){
+    for(const image of req.files.images){
+      const uploadResult = await uploadToCloudinary(
+        image.buffer,
+        "events/gallery"
+      )
+
+      images.push({
+        fileUrl : uploadResult.secure_url,
+        publicId : uploadResult.public_id,
+        fileType : uploadResult.resource_type
+      })
+    }
+  }
+
+  const event = await createEventService({
+    ...req.body,
+    vendorId,
+    thumbnail,
+    images
+  })
+
+
+  return res.status(201).json({
+    success : true,
+    message : "Event Created Successfully",
+    event
+  })
+
+}

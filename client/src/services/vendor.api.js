@@ -59,3 +59,11 @@ export const verifyVendorOTP = (data) => {
 export const resendVendorOtp = (data) => {
   return axiosInstance.post("/vendor/resend-otp", data);
 };
+
+export const createEventApi = (formData) => {
+  return axiosInstance.post("/vendor/create-event", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+};

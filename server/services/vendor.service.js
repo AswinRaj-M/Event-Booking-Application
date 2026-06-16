@@ -12,6 +12,7 @@ import {
   addVendorPortfolioPicture,
   removeVendorImage,
   removeVendorPortfolioPicture,
+  createEventRepo,
 } from "../repository/vendor.repo.js";
 
 export const applyVendorService = async (data) => {
@@ -97,6 +98,57 @@ export const vendorLogoutService = async (token) => {
     await clearVendorRefreshToken(hashed);
   }
 };
+
+export const createEventService = async(data)=>{
+  const event = await createEventRepo({
+    title : data.title,
+    description : data.description,
+    category : data.category,
+    
+    vendorId : data.vendorId,
+
+    eventType : data.eventType,
+    thumbnail : data.thumbnail,
+    images : data.images,
+
+    schedule : {
+      date : data.date,
+      startTime : data.startTime,
+      endTime : data.endTime
+    },
+
+    venue : data.venue,
+    address : data.address,
+    city : data.city,
+    state : data.state,
+
+    location : {
+      latitude : Number(data.latitude) || undefined,
+      longitude : Number(data.longitude) || undefined
+    },
+
+    ageRestriction :{
+      enabled : data.ageRestriction === "true" || data.ageRestriction === true,
+      minAge : 18,
+    },
+
+    ticketType : data.ticketType,
+    ticketPrice : data.ticketType === "Paid" || data.ticketType === "paid" ? (Number(data.ticketPrice) || 0) : 0,
+    totalTickets : Number(data.totalTickets) || 0,
+    maxTicketPerPerson : Number(data.maxTicketPerPerson) || undefined,
+
+
+    offer : {
+      enabled  : data.offerEnabled === "true" || data.offerEnabled === true,
+      discountValue : Number(data.discountValue) || 0 ,
+      minTicketsRequired : Number(data.minTicketsRequired) || 0,
+      validFrom : data.validFrom || null,
+      validUntil : data.validUntil || null
+    }
+  })
+
+  return event
+}
 
 export const addVendorPortfolioService = async (vendorId, fileData) => {
   const vendor = await addVendorPortfolioPicture(vendorId, fileData);

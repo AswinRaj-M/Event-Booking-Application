@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Calendar, 
   Clock, 
@@ -11,15 +11,23 @@ import {
   ChevronDown,
   X
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import { toast } from 'sonner';
 import VendorSidebar from '../../components/vendor/VendorSidebar';
 
 // Asset imports for high-quality pre-existing images
-import portfolio1 from '../../assets/vendor/portfolio_1.png';
-import portfolio2 from '../../assets/vendor/portfolio_2.png';
 import avatarImg from '../../assets/vendor/common_avatar.png';
+import { fetchCategories, createEventApi } from '../../services/vendor.api';
 
 const VendorCreateEvent = () => {
-  // State for form inputs (for interactivity only, no onSubmit logic needed)
+  const navigate = useNavigate();
+  const vendor = useSelector((state) => state.vendor?.vendor);
+  
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(false);
+  
+  // State for form inputs
   const [eventTitle, setEventTitle] = useState('');
   const [eventCategory, setEventCategory] = useState('');
   const [eventType, setEventType] = useState('in-person');
@@ -45,7 +53,163 @@ const VendorCreateEvent = () => {
   const [ticketType, setTicketType] = useState('paid');
   const [price, setPrice] = useState('0.00');
   const [totalSeats, setTotalSeats] = useState('');
+  const [maxTicketsPerPerson, setMaxTicketsPerPerson] = useState('');
   const [agreedTerms, setAgreedTerms] = useState(false);
+
+  // File states & previews
+  const [thumbnail, setThumbnail] = useState(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState(null);
+  const [galleryImages, setGalleryImages] = useState([]);
+  const [galleryPreviews, setGalleryPreviews] = useState([]);
+
+  // File input refs
+  const thumbnailInputRef = useRef(null);
+  const galleryInputRef = useRef(null);
+
+  useEffect(() => {
+    const getCategories = async () => {
+      try {
+        const response = await fetchCategories();
+        if (response.data && response.data.success) {
+          setCategories(response.data.data || []);
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      }
+    };
+    getCategories();
+  }, []);
+
+  const handleThumbnailChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setThumbnail(file);
+      setThumbnailPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleGalleryChange = (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length) {
+      setGalleryImages(prev => [...prev, ...files]);
+      const newPreviews = files.map(file => URL.createObjectURL(file));
+      setGalleryPreviews(prev => [...prev, ...newPreviews]);
+    }
+  };
+
+  const removeGalleryImage = (index) => {
+    setGalleryImages(prev => prev.filter((_, i) => i !== index));
+    setGalleryPreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handlePublish = async () => {
+    if (!eventTitle.trim()) {
+      toast.error('Event title is required');
+      return;
+    }
+    if (!eventCategory) {
+      toast.error('Event category is required');
+      return;
+    }
+    if (!shortDescription.trim()) {
+      toast.error('Event description is required');
+      return;
+    }
+    if (!thumbnail) {
+      toast.error('Cover image (thumbnail) is required');
+      return;
+    }
+    if (!date) {
+      toast.error('Event date is required');
+      return;
+    }
+    if (!venueName.trim()) {
+      toast.error('Venue name is required');
+      return;
+    }
+    if (!address.trim()) {
+      toast.error('Address is required');
+      return;
+    }
+    if (!city.trim()) {
+      toast.error('City is required');
+      return;
+    }
+    if (!state.trim()) {
+      toast.error('State is required');
+      return;
+    }
+    if (!totalSeats) {
+      toast.error('Total seats limit is required');
+      return;
+    }
+    if (ticketType === 'paid' && (!price || parseFloat(price) <= 0)) {
+      toast.error('Ticket price must be greater than 0 for paid events');
+      return;
+    }
+    if (!agreedTerms) {
+      toast.error('You must agree to the Vendor Terms to publish the event');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('title', eventTitle);
+    formData.append('description', shortDescription);
+    formData.append('category', eventCategory);
+    
+    const formattedEventType = eventType === 'in-person' ? 'In-person' : 'Online';
+    formData.append('eventType', formattedEventType);
+    
+    formData.append('date', date);
+    formData.append('startTime', startTime);
+    formData.append('endTime', endTime);
+    
+    formData.append('venue', venueName);
+    formData.append('address', address);
+    formData.append('city', city);
+    formData.append('state', state);
+    
+    formData.append('latitude', '0');
+    formData.append('longitude', '0');
+    
+    formData.append('ageRestriction', ageRestriction ? 'true' : 'false');
+    
+    const formattedTicketType = ticketType === 'paid' ? 'Paid' : 'Free';
+    formData.append('ticketType', formattedTicketType);
+    formData.append('ticketPrice', ticketType === 'paid' ? price : '0');
+    formData.append('totalTickets', totalSeats);
+    formData.append('maxTicketPerPerson', maxTicketsPerPerson || '5');
+    
+    formData.append('offerEnabled', enableOffer ? 'true' : 'false');
+    if (enableOffer) {
+      formData.append('discountValue', discountValue || '0');
+      formData.append('minTicketsRequired', minTickets || '0');
+      formData.append('validFrom', validFrom || '');
+      formData.append('validUntil', validUntil || '');
+    }
+    
+    formData.append('thumbnail', thumbnail);
+    
+    galleryImages.forEach((img) => {
+      formData.append('images', img);
+    });
+
+    setLoading(true);
+    try {
+      const response = await createEventApi(formData);
+      if (response.data && response.data.success) {
+        toast.success('Event created successfully!');
+        navigate('/vendor/events');
+      } else {
+        toast.error(response.data?.message || 'Failed to create event');
+      }
+    } catch (error) {
+      console.error('Error creating event:', error);
+      toast.error(error.response?.data?.message || 'Failed to create event. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="flex min-h-screen bg-[#070514] text-white font-sans selection:bg-purple-500/30">
@@ -109,11 +273,11 @@ const VendorCreateEvent = () => {
                       className="w-full bg-[#12101F] text-white px-4 py-3.5 rounded-xl border border-zinc-800/80 focus:outline-none focus:border-purple-500 transition-colors appearance-none cursor-pointer"
                     >
                       <option value="">Select category</option>
-                      <option value="music">Music</option>
-                      <option value="arts">Arts & Theatre</option>
-                      <option value="comedy">Comedy</option>
-                      <option value="sports">Sports</option>
-                      <option value="workshops">Workshops</option>
+                      {categories.map((cat) => (
+                        <option key={cat._id} value={cat._id}>
+                          {cat.name}
+                        </option>
+                      ))}
                     </select>
                     <ChevronDown className="absolute right-4 top-4 w-4 h-4 text-zinc-500 pointer-events-none" />
                   </div>
@@ -179,43 +343,75 @@ const VendorCreateEvent = () => {
               </div>
 
               {/* Cover Image Box */}
-              <div className="border border-dashed border-zinc-800 hover:border-purple-500/40 bg-[#12101F]/50 rounded-2xl p-8 flex flex-col items-center justify-center gap-4 transition-all duration-300 cursor-pointer">
-                <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
-                  <Upload className="w-5 h-5" />
-                </div>
-                <div className="text-center space-y-1">
-                  <h3 className="text-sm font-bold text-white">Upload Cover Image</h3>
-                  <p className="text-xs text-zinc-500 max-w-[280px] mx-auto">
-                    Drag and drop or click to upload. Recommended size: 1920x1080px (Max 5MB)
-                  </p>
-                </div>
-                <button type="button" className="px-5 py-2.5 bg-[#1C1A30] hover:bg-[#252245] border border-purple-500/30 text-purple-300 text-xs font-semibold rounded-xl transition-all">
-                  Choose File
-                </button>
+              <div 
+                onClick={() => thumbnailInputRef.current.click()}
+                className="border border-dashed border-zinc-800 hover:border-purple-500/40 bg-[#12101F]/50 rounded-2xl p-8 flex flex-col items-center justify-center gap-4 transition-all duration-300 cursor-pointer overflow-hidden relative min-h-[200px]"
+              >
+                <input 
+                  type="file" 
+                  ref={thumbnailInputRef} 
+                  onChange={handleThumbnailChange} 
+                  className="hidden" 
+                  accept="image/*" 
+                />
+                {thumbnailPreview ? (
+                  <div className="absolute inset-0 w-full h-full">
+                    <img src={thumbnailPreview} alt="Cover Preview" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-300">
+                      <p className="text-white text-xs font-bold bg-[#1C1A30]/85 px-3 py-1.5 rounded-lg border border-purple-500/35">Change Cover Image</p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+                      <Upload className="w-5 h-5" />
+                    </div>
+                    <div className="text-center space-y-1">
+                      <h3 className="text-sm font-bold text-white">Upload Cover Image</h3>
+                      <p className="text-xs text-zinc-500 max-w-[280px] mx-auto">
+                        Drag and drop or click to upload. Recommended size: 1920x1080px (Max 5MB)
+                      </p>
+                    </div>
+                    <button type="button" className="px-5 py-2.5 bg-[#1C1A30] hover:bg-[#252245] border border-purple-500/30 text-purple-300 text-xs font-semibold rounded-xl transition-all">
+                      Choose File
+                    </button>
+                  </>
+                )}
               </div>
 
               {/* Gallery Images */}
               <div className="space-y-3">
                 <label className="text-xs font-semibold text-zinc-400">Gallery Images</label>
                 <div className="grid grid-cols-3 md:grid-cols-4 gap-4">
-                  {/* Gallery Concert crowd */}
-                  <div className="relative aspect-square rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900 group">
-                    <img src={portfolio1} alt="Gallery 1" className="w-full h-full object-cover" />
-                    <button type="button" className="absolute top-2 right-2 p-1.5 bg-black/60 rounded-lg border border-white/10 hover:bg-rose-600 transition-colors text-white">
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-
-                  {/* Gallery DJ stage */}
-                  <div className="relative aspect-square rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900 group">
-                    <img src={portfolio2} alt="Gallery 2" className="w-full h-full object-cover" />
-                    <button type="button" className="absolute top-2 right-2 p-1.5 bg-black/60 rounded-lg border border-white/10 hover:bg-rose-600 transition-colors text-white">
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
+                  <input 
+                    type="file" 
+                    ref={galleryInputRef} 
+                    onChange={handleGalleryChange} 
+                    className="hidden" 
+                    multiple 
+                    accept="image/*" 
+                  />
+                  {galleryPreviews.map((preview, index) => (
+                    <div key={index} className="relative aspect-square rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900 group">
+                      <img src={preview} alt={`Gallery ${index + 1}`} className="w-full h-full object-cover" />
+                      <button 
+                        type="button" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeGalleryImage(index);
+                        }}
+                        className="absolute top-2 right-2 p-1.5 bg-black/60 rounded-lg border border-white/10 hover:bg-rose-600 transition-colors text-white cursor-pointer"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
 
                   {/* Add Gallery Slot */}
-                  <div className="border-2 border-dashed border-zinc-800 hover:border-purple-500/40 hover:bg-purple-950/5 rounded-2xl aspect-square flex flex-col items-center justify-center gap-2 cursor-pointer transition-all duration-300">
+                  <div 
+                    onClick={() => galleryInputRef.current.click()}
+                    className="border-2 border-dashed border-zinc-800 hover:border-purple-500/40 hover:bg-purple-950/5 rounded-2xl aspect-square flex flex-col items-center justify-center gap-2 cursor-pointer transition-all duration-300"
+                  >
                     <Plus className="w-5 h-5 text-zinc-400" />
                   </div>
                 </div>
@@ -537,6 +733,18 @@ const VendorCreateEvent = () => {
                   />
                   <p className="text-[10px] text-zinc-500 leading-relaxed">We'll stop sales once this limit is reached.</p>
                 </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-zinc-400">Maximum Tickets per Person</label>
+                  <input 
+                    type="number" 
+                    placeholder="e.g. 10"
+                    value={maxTicketsPerPerson}
+                    onChange={(e) => setMaxTicketsPerPerson(e.target.value)}
+                    className="w-full bg-[#12101F] text-white px-4 py-3.5 rounded-xl border border-zinc-800/80 focus:outline-none focus:border-purple-500 transition-colors text-sm"
+                  />
+                  <p className="text-[10px] text-zinc-500 leading-relaxed">Limit the number of tickets a single customer can purchase.</p>
+                </div>
               </div>
             </div>
 
@@ -556,10 +764,10 @@ const VendorCreateEvent = () => {
             {/* Poster identification footer card */}
             <div className="bg-[#12101F]/60 border border-zinc-800/50 p-4 rounded-2xl flex items-center gap-3.5">
               <div className="w-10 h-10 rounded-full border border-purple-500/20 overflow-hidden bg-zinc-900">
-                <img src={avatarImg} alt="User Avatar" className="w-full h-full object-cover" />
+                <img src={vendor?.profilePicture?.fileUrl || avatarImg} alt="User Avatar" className="w-full h-full object-cover" />
               </div>
               <div className="space-y-0.5">
-                <p className="text-xs font-bold text-zinc-400">Posting as <span className="text-purple-400">John Doe</span></p>
+                <p className="text-xs font-bold text-zinc-400">Posting as <span className="text-purple-400">{vendor?.organizerName || 'Vendor'}</span></p>
                 <p className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider">Pro Vendor Account</p>
               </div>
             </div>
@@ -567,9 +775,18 @@ const VendorCreateEvent = () => {
             {/* Main Submit Button */}
             <button 
               type="button" 
-              className="w-full py-4 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(139,92,246,0.3)] hover:shadow-[0_0_25px_rgba(139,92,246,0.5)] active:scale-[0.99] duration-200 cursor-pointer"
+              onClick={handlePublish}
+              disabled={loading}
+              className={`w-full py-4 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(139,92,246,0.3)] hover:shadow-[0_0_25px_rgba(139,92,246,0.5)] active:scale-[0.99] duration-200 cursor-pointer flex justify-center items-center gap-2 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
-              Publish Event Now
+              {loading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Publishing Event...
+                </>
+              ) : (
+                'Publish Event Now'
+              )}
             </button>
           </div>
         </div>

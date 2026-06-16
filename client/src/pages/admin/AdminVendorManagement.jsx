@@ -116,7 +116,7 @@ function AdminVendorManagement() {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-6 mb-8 shrink-0">
+          <div className="grid grid-cols-5 gap-4 mb-8 shrink-0">
             <div className="bg-[#151221] border border-gray-800/80 rounded-xl p-6 relative overflow-hidden flex flex-col justify-between h-[140px]">
               <div className="flex justify-between items-start">
                 <p className="text-sm font-medium text-gray-300">

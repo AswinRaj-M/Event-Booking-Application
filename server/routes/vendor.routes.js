@@ -10,6 +10,7 @@ import { applyVendor,
    updateVendorProfile,
    verifyVendorOTP,
    resendVendorOtp,
+   createEvent,
    } from "../controllers/vendor.controller.js"
 import upload from '../middleware/upload.js'
 import { asyncHandler } from '../middleware/error.middleware.js'
@@ -52,6 +53,16 @@ router.put('/update-profile', protect, requireRole("vendor"), asyncHandler(updat
 router.post('/profile/portfolios', protect, requireRole("vendor"), upload.single('portfolio'), asyncHandler(addVendorPortfolio))
 router.delete('/profile/remove-portfolios/:portfolioId', protect, requireRole("vendor"), asyncHandler(deleteVendorPortfolio))
 router.delete('/profile/remove-images/:imageType', protect, requireRole("vendor"), asyncHandler(deleteVendorImage))
+router.post(
+  "/create-event",
+  protect,
+  upload.fields([
+    {name : "thumbnail",maxCount : 1},
+    {name : "images" , maxCount : 10}
+  ]),
+  asyncHandler(createEvent)
+)
+
 router.post("/logout", protect, requireRole("vendor"), asyncHandler(vendorLogout))
 router.get("/status", protect, requireRole("vendor"), (req, res) => {
   res.status(200).json({

@@ -1,16 +1,5 @@
 import mongoose from "mongoose";
-
-const fileSchema = new mongoose.Schema({
-  fileUrl: {
-    type: String,
-    required: true
-  },
-  publicId: {
-    type: String,
-    required: true
-  },
-  fileType: String
-})
+import fileSchema from "./file.schema.js";
 
 const userSchema = new mongoose.Schema({
     fullName : {
