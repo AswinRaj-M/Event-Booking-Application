@@ -127,7 +127,7 @@ const UserExploreEvent = () => {
           <div className="bg-[#0b0914]/80 border border-purple-500/15 backdrop-blur-md rounded-2xl p-4 md:p-5 shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5 items-center">
               {/* Search */}
-              <div className="lg:col-span-5 relative">
+              <div className="lg:col-span-6 relative">
                 <Search className="w-4 h-4 text-zinc-500 absolute left-4 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
@@ -164,16 +164,6 @@ const UserExploreEvent = () => {
                   style={{ colorScheme: 'dark' }}
                   className="w-full bg-[#110d21]/80 border border-purple-900/30 rounded-xl py-3 pl-11 pr-4 text-white text-sm focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20 transition-colors cursor-pointer select-none"
                 />
-              </div>
-
-              {/* Submit Button */}
-              <div className="lg:col-span-1 flex justify-end sm:justify-start lg:justify-center">
-                <button 
-                  className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 flex items-center justify-center text-white transition-all shadow-[0_0_15px_rgba(139,92,246,0.35)] cursor-pointer"
-                  title="Search"
-                >
-                  <ArrowRight className="w-5 h-5" />
-                </button>
               </div>
             </div>
 
