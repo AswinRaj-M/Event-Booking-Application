@@ -9,6 +9,7 @@ const Navbar = () => {
         const hash = window.location.hash;
         if (path.includes("/profile")) return "Profile";
         if (path.includes("/home")) return "Home";
+        if (path.includes("/explore")) return "Browse Events";
         if (hash.includes("bookings")) return "My Bookings";
         if (hash.includes("browse")) return "Browse Events";
         if (hash.includes("about")) return "About Us";
@@ -16,7 +17,7 @@ const Navbar = () => {
     });
 
     const menuItems = [
-        { name: "Browse Events", path: "#browse" },
+        { name: "Browse Events", path: "/user/explore" },
         { name: "My Bookings", path: "#My Bookings" },
         { name: "Home", path: "/user/home" },
         { name: "Profile", path: "/user/profile" },

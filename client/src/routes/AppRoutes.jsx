@@ -10,6 +10,7 @@ import Loader from '../components/common/Loader.jsx';
 import ForgotPassword from '../pages/auth/ForgotPassword.jsx';
 import ResetPassword from '../pages/auth/ResetPassword.jsx';
 import GoogleAuthSuccess from '../pages/auth/GoogleAuthSuccess.jsx';
+import UserExploreEvent from '../pages/user/UserExploreEvent.jsx';
 
 const AppRoutes = () => {
     return (
@@ -23,6 +24,11 @@ const AppRoutes = () => {
             <Route path='/user/profile' element={
                 <ProtectedRoute role="user">
                     <UserProfile />
+                </ProtectedRoute>
+            } />
+            <Route path='/user/explore' element={
+                <ProtectedRoute role="user">
+                    <UserExploreEvent />
                 </ProtectedRoute>
             } />
             <Route path="/" element={
