@@ -48,3 +48,7 @@ export const updateUserProfilePicture = (formData) => {
     }
   })
 }
+
+export const getExploreEvents = () => {
+  return axiosInstance.get("/users/explore-events");
+}

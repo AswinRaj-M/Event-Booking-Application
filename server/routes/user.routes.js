@@ -11,7 +11,8 @@ import {
   googleCallback,
   getUserProfile,
   updateUserProfile,
-  updateUserProfilePicture
+  updateUserProfilePicture,
+  getExploreEvents
 } from "../controllers/user.controller.js"
 import passport from "passport"
 import upload from "../middleware/upload.js"
@@ -49,6 +50,8 @@ router.post("/forgot-password",validate,asyncHandler(forgotPassword))
 router.patch("/reset-password/",validate,asyncHandler(resetPassword))
 router.get('/refresh-token', asyncHandler(refreshAccessToken))
 router.post('/logout', protect, requireRole("user"), asyncHandler(logoutUser))
+
+router.get('/explore-events', protect, requireRole("user"), asyncHandler(getExploreEvents))
 
 router.get('/profile', protect, requireRole("user"), asyncHandler(getUserProfile))
 router.put('/update-profile', protect, requireRole("user"), asyncHandler(updateUserProfile))

@@ -19,6 +19,7 @@ import {
   resetPasswordService,
   getUserProfileService,
   updateUserProfileService,
+  getExploreEventsService,
 } from "../services/user.service.js";
 import { AppError } from "../utils/AppError.js";
 
@@ -405,5 +406,13 @@ export const updateUserProfilePicture = async (req, res) => {
       profilePicture: updatedUser.profilePicture,
       createdAt: updatedUser.createdAt,
     },
+  });
+};
+
+export const getExploreEvents = async (req, res) => {
+  const events = await getExploreEventsService();
+  return res.status(200).json({
+    success: true,
+    events,
   });
 };

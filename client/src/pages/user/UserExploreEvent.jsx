@@ -1,174 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import { Search, MapPin, Calendar, Music, RotateCcw, ArrowRight } from 'lucide-react';
-
-const initialEvents = [
-  {
-    id: 1,
-    title: "Neon Nights Festival",
-    category: "Music",
-    date: "SAT, AUG 12 • 8:00 PM",
-    month: "August",
-    location: "Brooklyn Mirage, New York",
-    city: "New York",
-    image: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=600&auto=format&fit=crop",
-    attendees: [
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=60",
-      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=60",
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=60"
-    ],
-    attendingCount: "+2.4k attending",
-    priceLabel: "Starting from",
-    price: "$120",
-    buttonText: "View Details"
-  },
-  {
-    id: 2,
-    title: "Future AI Summit 2024",
-    category: "Technology",
-    date: "WED, SEP 24 • 9:00 AM",
-    month: "September",
-    location: "Moscone Center, SF",
-    city: "San Francisco",
-    image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?q=80&w=600&auto=format&fit=crop",
-    attendees: [
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=60",
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=60"
-    ],
-    attendingCount: "+850 attending",
-    priceLabel: "Registration",
-    price: "$499",
-    buttonText: "View Details"
-  },
-  {
-    id: 3,
-    title: "Founders & Funders",
-    category: "Networking",
-    date: "THU, OCT 05 • 8:30 PM",
-    month: "October",
-    location: "SoHo House, London",
-    city: "London",
-    image: "https://images.unsplash.com/photo-1515187029135-18ee286d815b?q=80&w=600&auto=format&fit=crop",
-    attendees: [
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=60",
-      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=60",
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=60"
-    ],
-    attendingCount: "+120 attending",
-    priceLabel: "Entry",
-    price: "Free",
-    buttonText: "RSVP Now"
-  },
-  {
-    id: 4,
-    title: "Abstract Minds Exhibit",
-    category: "Art & Culture",
-    date: "SUN, NOV 12 • 11:00 AM",
-    month: "November",
-    location: "MOMA, New York",
-    city: "New York",
-    description: "Experience the latest in contemporary abstract art from emerging global artists.",
-    image: "https://images.unsplash.com/photo-1541701494587-cb58502866ab?q=80&w=600&auto=format&fit=crop",
-    attendees: [],
-    priceLabel: "General",
-    price: "$35",
-    buttonText: "View Details"
-  },
-  {
-    id: 5,
-    title: "City Charity Marathon",
-    category: "Sports",
-    date: "SUN, DEC 03 • 6:00 AM",
-    month: "December",
-    location: "Central Park, NY",
-    city: "New York",
-    image: "https://images.unsplash.com/photo-1502680390469-be75c86b636f?q=80&w=600&auto=format&fit=crop",
-    attendees: [
-      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=60",
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=60"
-    ],
-    attendingCount: "+1.2k attending",
-    priceLabel: "Registration",
-    price: "$45",
-    buttonText: "Register"
-  },
-  {
-    id: 6,
-    title: "Electric Dreams Party",
-    category: "Music",
-    date: "SAT, DEC 09 • 10:00 PM",
-    month: "December",
-    location: "Warehouse District, LA",
-    city: "Los Angeles",
-    image: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?q=80&w=600&auto=format&fit=crop",
-    attendees: [
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=60",
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=60",
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=60"
-    ],
-    attendingCount: "+1.8k attending",
-    priceLabel: "Early Bird",
-    price: "$85",
-    buttonText: "View Details"
-  },
-  {
-    id: 7,
-    title: "Street Food Festival",
-    category: "Food & Drink",
-    date: "SAT, NOV 18 • 12:00 PM",
-    month: "November",
-    location: "Pier 17, New York",
-    city: "New York",
-    image: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?q=80&w=600&auto=format&fit=crop",
-    attendees: [
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=60",
-      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=60",
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=60"
-    ],
-    attendingCount: "+3.1k attending",
-    priceLabel: "Entry",
-    price: "Free",
-    buttonText: "RSVP Now"
-  },
-  {
-    id: 8,
-    title: "Jazz Under the",
-    category: "Music",
-    date: "FRI, OCT 20 • 9:00 PM",
-    month: "October",
-    location: "Blue Note, New York",
-    city: "New York",
-    image: "https://images.unsplash.com/photo-1511192336575-5a79af67a629?q=80&w=600&auto=format&fit=crop",
-    attendees: [
-      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=60",
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=60"
-    ],
-    attendingCount: "+580 attending",
-    priceLabel: "Tickets from",
-    price: "$65",
-    buttonText: "View Details"
-  },
-  {
-    id: 9,
-    title: "Web3 Developer Workshop",
-    category: "Technology",
-    date: "FRI, SEP 15 • 2:00 PM",
-    month: "September",
-    location: "Tech Hub, Austin",
-    city: "Austin",
-    image: "https://images.unsplash.com/photo-1531482615713-2afd69097998?q=80&w=600&auto=format&fit=crop",
-    attendees: [
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=60",
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=60",
-      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=60"
-    ],
-    attendingCount: "+340 attending",
-    priceLabel: "Workshop Fee",
-    price: "$89",
-    buttonText: "View Details"
-  }
-];
+import { getExploreEvents } from '../../services/user.api.js';
 
 const categoryBadgeStyles = {
   "Music": "bg-purple-950/65 text-purple-300 border border-purple-500/20",
@@ -179,30 +13,113 @@ const categoryBadgeStyles = {
   "Food & Drink": "bg-orange-950/65 text-orange-300 border border-orange-500/20"
 };
 
+const mockAvatars = [
+  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=60",
+  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=60",
+  "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=60"
+];
+
+const formatEventDate = (dateString, startTime) => {
+  if (!dateString) return "Date TBA";
+  try {
+    const date = new Date(dateString);
+    const options = { weekday: 'short', month: 'short', day: '2-digit' };
+    const formattedDate = date.toLocaleDateString('en-US', options).toUpperCase();
+    return `${formattedDate} • ${startTime || 'TBA'}`;
+  } catch (e) {
+    return "Date TBA";
+  }
+};
+
 const UserExploreEvent = () => {
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedLocation, setSelectedLocation] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
 
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        setLoading(true);
+        const response = await getExploreEvents();
+        if (response.data?.success) {
+          setEvents(response.data.events || []);
+        } else {
+          setError("Failed to fetch events data.");
+        }
+      } catch (err) {
+        console.error("Explore events fetch error:", err);
+        setError("Something went wrong while fetching events.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchEvents();
+  }, []);
+
+  // Compute unique filter options from real data
+  const categories = useMemo(() => {
+    const set = new Set();
+    events.forEach(e => {
+      const name = e.category?.name || (typeof e.category === 'string' ? e.category : '');
+      if (name) set.add(name);
+    });
+    return Array.from(set);
+  }, [events]);
+
+  const locations = useMemo(() => {
+    const set = new Set();
+    events.forEach(e => {
+      if (e.city) set.add(e.city);
+    });
+    return Array.from(set);
+  }, [events]);
+
+  const dates = useMemo(() => {
+    const set = new Set();
+    events.forEach(e => {
+      if (e.schedule?.date) {
+        try {
+          const monthName = new Date(e.schedule.date).toLocaleDateString('en-US', { month: 'long' });
+          set.add(monthName);
+        } catch (_) {}
+      }
+    });
+    return Array.from(set);
+  }, [events]);
+
   const filteredEvents = useMemo(() => {
-    return initialEvents.filter(event => {
+    return events.filter(event => {
+      const title = event.title || "";
+      const venue = event.venue || "";
+      const city = event.city || "";
       const matchesSearch = searchQuery === "" || 
-        event.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        event.location.toLowerCase().includes(searchQuery.toLowerCase());
+        title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        venue.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        city.toLowerCase().includes(searchQuery.toLowerCase());
       
+      const catName = event.category?.name || (typeof event.category === 'string' ? event.category : "");
       const matchesCategory = selectedCategory === "" || 
-        event.category.toLowerCase() === selectedCategory.toLowerCase();
+        catName.toLowerCase() === selectedCategory.toLowerCase();
 
       const matchesLocation = selectedLocation === "" || 
-        event.city.toLowerCase() === selectedLocation.toLowerCase();
+        city.toLowerCase() === selectedLocation.toLowerCase();
 
-      const matchesDate = selectedDate === "" || 
-        event.month.toLowerCase() === selectedDate.toLowerCase();
+      let matchesDate = selectedDate === "";
+      if (!matchesDate && event.schedule?.date) {
+        try {
+          const m = new Date(event.schedule.date).toLocaleDateString('en-US', { month: 'long' });
+          matchesDate = m.toLowerCase() === selectedDate.toLowerCase();
+        } catch (_) {}
+      }
 
       return matchesSearch && matchesCategory && matchesLocation && matchesDate;
     });
-  }, [searchQuery, selectedCategory, selectedLocation, selectedDate]);
+  }, [events, searchQuery, selectedCategory, selectedLocation, selectedDate]);
 
   const handleResetFilters = () => {
     setSearchQuery("");
@@ -256,12 +173,9 @@ const UserExploreEvent = () => {
                   className="w-full bg-[#110d21]/80 border border-purple-900/30 rounded-xl py-3 pl-11 pr-4 text-white text-sm focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20 appearance-none cursor-pointer transition-colors"
                 >
                   <option value="">All Categories</option>
-                  <option value="Music">Music</option>
-                  <option value="Technology">Technology</option>
-                  <option value="Networking">Networking</option>
-                  <option value="Art & Culture">Art & Culture</option>
-                  <option value="Sports">Sports</option>
-                  <option value="Food & Drink">Food & Drink</option>
+                  {categories.map((cat) => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
                 </select>
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500 text-[10px]">▼</div>
               </div>
@@ -275,11 +189,9 @@ const UserExploreEvent = () => {
                   className="w-full bg-[#110d21]/80 border border-purple-900/30 rounded-xl py-3 pl-11 pr-4 text-white text-sm focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20 appearance-none cursor-pointer transition-colors"
                 >
                   <option value="">Location</option>
-                  <option value="New York">New York</option>
-                  <option value="San Francisco">San Francisco</option>
-                  <option value="London">London</option>
-                  <option value="Los Angeles">Los Angeles</option>
-                  <option value="Austin">Austin</option>
+                  {locations.map((loc) => (
+                    <option key={loc} value={loc}>{loc}</option>
+                  ))}
                 </select>
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500 text-[10px]">▼</div>
               </div>
@@ -293,11 +205,9 @@ const UserExploreEvent = () => {
                   className="w-full bg-[#110d21]/80 border border-purple-900/30 rounded-xl py-3 pl-11 pr-4 text-white text-sm focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20 appearance-none cursor-pointer transition-colors"
                 >
                   <option value="">Select Date</option>
-                  <option value="August">August 2026</option>
-                  <option value="September">September 2026</option>
-                  <option value="October">October 2026</option>
-                  <option value="November">November 2026</option>
-                  <option value="December">December 2026</option>
+                  {dates.map((m) => (
+                    <option key={m} value={m}>{m} 2026</option>
+                  ))}
                 </select>
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500 text-[10px]">▼</div>
               </div>
@@ -329,99 +239,171 @@ const UserExploreEvent = () => {
           </div>
         </div>
 
-        {/* Events Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
-          {filteredEvents.map((event) => (
-            <div
-              key={event.id}
-              className="group bg-[#0b0914]/60 hover:bg-[#0c0a1c]/90 border border-white/5 hover:border-purple-500/20 rounded-3xl overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.3)] hover:shadow-[0_20px_40px_rgba(139,92,246,0.12)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col h-full"
+        {/* Loading Spinner / Skeletons */}
+        {loading && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
+            {[1, 2, 3, 4, 5, 6].map((sk) => (
+              <div
+                key={sk}
+                className="bg-[#0b0914]/40 border border-white/5 rounded-3xl overflow-hidden h-[450px] animate-pulse flex flex-col justify-between p-6"
+              >
+                <div className="w-full h-44 bg-zinc-800/60 rounded-2xl mb-4" />
+                <div className="space-y-3 flex-grow">
+                  <div className="h-4 w-1/3 bg-zinc-800/60 rounded" />
+                  <div className="h-6 w-3/4 bg-zinc-800/60 rounded" />
+                  <div className="h-4 w-5/6 bg-zinc-800/60 rounded" />
+                </div>
+                <div className="pt-4 border-t border-purple-950/30 flex justify-between items-center">
+                  <div className="space-y-1.5 w-1/3">
+                    <div className="h-3 w-1/2 bg-zinc-800/60 rounded" />
+                    <div className="h-5 w-3/4 bg-zinc-800/60 rounded" />
+                  </div>
+                  <div className="h-10 w-24 bg-zinc-800/60 rounded-xl" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Error Message */}
+        {!loading && error && (
+          <div className="text-center py-20 relative z-10">
+            <p className="text-red-400 text-lg mb-4">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-purple-600 hover:bg-purple-500 text-white px-6 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-[0_0_15px_rgba(168,85,247,0.3)]"
             >
-              {/* Event Image */}
-              <div className="relative h-52 w-full overflow-hidden">
-                <img
-                  src={event.image}
-                  alt={event.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  loading="lazy"
-                />
-                {/* Badge Overlay */}
-                <div className="absolute top-4 right-4">
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold tracking-wide backdrop-blur-md ${categoryBadgeStyles[event.category] || 'bg-zinc-800 text-zinc-300'}`}>
-                    {event.category}
-                  </span>
-                </div>
-              </div>
+              Retry
+            </button>
+          </div>
+        )}
 
-              {/* Event Details Content */}
-              <div className="p-6 flex-grow flex flex-col justify-between">
-                <div>
-                  {/* Date & Time */}
-                  <span className="text-purple-400 text-xs font-bold uppercase tracking-wider block mb-2.5">
-                    {event.date}
-                  </span>
+        {/* No Events Found */}
+        {!loading && !error && filteredEvents.length === 0 && (
+          <div className="text-center py-24 relative z-10 bg-[#0b0914]/20 border border-white/5 rounded-3xl p-8 max-w-lg mx-auto">
+            <p className="text-zinc-500 text-base mb-6">No events match your selected filters.</p>
+            <button
+              onClick={handleResetFilters}
+              className="bg-[#110d21] border border-purple-500/20 text-purple-300 hover:text-white hover:border-purple-500/50 px-6 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer"
+            >
+              Clear Filters
+            </button>
+          </div>
+        )}
 
-                  {/* Title */}
-                  <h3 className="text-xl font-bold text-white mb-3 tracking-tight group-hover:text-purple-300 transition-colors line-clamp-1">
-                    {event.title}
-                  </h3>
+        {/* Events Grid */}
+        {!loading && !error && filteredEvents.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
+            {filteredEvents.map((event) => {
+              const categoryName = event.category?.name || (typeof event.category === 'string' ? event.category : 'General');
+              const imageSrc = event.thumbnail?.fileUrl || "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=600&auto=format&fit=crop";
+              const priceLabel = event.ticketType === "Free" ? "Entry" : "Starting from";
+              const priceVal = event.ticketType === "Free" ? "Free" : `$${event.ticketPrice || 0}`;
+              const buttonText = event.ticketType === "Free" ? "RSVP Now" : "View Details";
 
-                  {/* Optional Description */}
-                  {event.description && (
-                    <p className="text-zinc-400 text-sm mb-4 line-clamp-2 leading-relaxed font-light">
-                      {event.description}
-                    </p>
-                  )}
+              // Show description if it exists (like Abstract Minds Exhibit in screenshot)
+              // Otherwise render stack of avatars and attendee text
+              const hasDescription = !!event.description;
 
-                  {/* Location info */}
-                  <div className="flex items-center gap-2 text-zinc-400 text-xs mb-4">
-                    <MapPin className="w-3.5 h-3.5 text-purple-400/80" />
-                    <span className="line-clamp-1">{event.location}</span>
+              // Generate deterministic attendee count for beautiful mock-up display
+              const attendingCountNum = event.soldTickets || (Math.floor((new Date(event.createdAt || Date.now()).getTime() % 1500)) + 80);
+              const formattedAttending = attendingCountNum >= 1000 
+                ? `+${(attendingCountNum / 1000).toFixed(1)}k attending` 
+                : `+${attendingCountNum} attending`;
+
+              return (
+                <div
+                  key={event._id}
+                  className="group bg-[#0b0914]/60 hover:bg-[#0c0a1c]/90 border border-white/5 hover:border-purple-500/20 rounded-3xl overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.3)] hover:shadow-[0_20px_40px_rgba(139,92,246,0.12)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col h-full"
+                >
+                  {/* Event Image */}
+                  <div className="relative h-52 w-full overflow-hidden">
+                    <img
+                      src={imageSrc}
+                      alt={event.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      loading="lazy"
+                    />
+                    {/* Badge Overlay */}
+                    <div className="absolute top-4 right-4">
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold tracking-wide backdrop-blur-md ${categoryBadgeStyles[categoryName] || 'bg-zinc-800 text-zinc-300'}`}>
+                        {categoryName}
+                      </span>
+                    </div>
                   </div>
-                </div>
 
-                <div>
-                  {/* Attendee avatars list if present */}
-                  {event.attendees && event.attendees.length > 0 && (
-                    <div className="flex items-center gap-2 mb-6">
-                      <div className="flex -space-x-2.5 overflow-hidden">
-                        {event.attendees.map((avatar, idx) => (
-                          <img
-                            key={idx}
-                            src={avatar}
-                            alt="Attendee"
-                            className="inline-block h-6.5 w-6.5 rounded-full ring-2 ring-[#0b0914] object-cover"
-                          />
-                        ))}
+                  {/* Event Details Content */}
+                  <div className="p-6 flex-grow flex flex-col justify-between">
+                    <div>
+                      {/* Date & Time */}
+                      <span className="text-purple-400 text-xs font-bold uppercase tracking-wider block mb-2.5">
+                        {formatEventDate(event.schedule?.date, event.schedule?.startTime)}
+                      </span>
+
+                      {/* Title */}
+                      <h3 className="text-xl font-bold text-white mb-3 tracking-tight group-hover:text-purple-300 transition-colors line-clamp-1" title={event.title}>
+                        {event.title}
+                      </h3>
+
+                      {/* Description (if present) */}
+                      {hasDescription && (
+                        <p className="text-zinc-400 text-sm mb-4 line-clamp-2 leading-relaxed font-light">
+                          {event.description}
+                        </p>
+                      )}
+
+                      {/* Location info */}
+                      <div className="flex items-center gap-2 text-zinc-400 text-xs mb-4">
+                        <MapPin className="w-3.5 h-3.5 text-purple-400/80" />
+                        <span className="line-clamp-1">{event.venue}, {event.city}</span>
                       </div>
-                      <span className="text-zinc-500 text-xs font-medium">
-                        {event.attendingCount}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Card Separator */}
-                  <div className="border-t border-purple-950/40 my-4.5" />
-
-                  {/* Footer (Price & CTA Button) */}
-                  <div className="flex items-center justify-between mt-2">
-                    <div className="flex flex-col">
-                      <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">
-                        {event.priceLabel}
-                      </span>
-                      <span className="text-white font-extrabold text-lg mt-0.5">
-                        {event.price}
-                      </span>
                     </div>
 
-                    <button className="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white rounded-xl px-4 py-2.5 text-xs font-semibold tracking-wide transition-all cursor-pointer">
-                      {event.buttonText}
-                    </button>
+                    <div>
+                      {/* Render attendee avatars or skip depending on description visibility */}
+                      {!hasDescription && (
+                        <div className="flex items-center gap-2 mb-6">
+                          <div className="flex -space-x-2.5 overflow-hidden">
+                            {mockAvatars.map((avatar, idx) => (
+                              <img
+                                key={idx}
+                                src={avatar}
+                                alt="Attendee"
+                                className="inline-block h-6.5 w-6.5 rounded-full ring-2 ring-[#0b0914] object-cover"
+                              />
+                            ))}
+                          </div>
+                          <span className="text-zinc-500 text-xs font-medium">
+                            {formattedAttending}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Card Separator */}
+                      <div className="border-t border-purple-950/40 my-4.5" />
+
+                      {/* Footer (Price & CTA Button) */}
+                      <div className="flex items-center justify-between mt-2">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">
+                            {priceLabel}
+                          </span>
+                          <span className="text-white font-extrabold text-lg mt-0.5">
+                            {priceVal}
+                          </span>
+                        </div>
+
+                        <button className="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white rounded-xl px-4 py-2.5 text-xs font-semibold tracking-wide transition-all cursor-pointer">
+                          {buttonText}
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          ))}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </main>
 
       <Footer />

@@ -16,6 +16,7 @@ import {
   deleteOtpByUserId,
   updatePassword,
   updateUser,
+  getExploreEventsRepo,
 } from "../repository/user.repo.js";
 import { generateResetToken } from "../utils/generateToken.js";
 
@@ -203,4 +204,8 @@ export const logoutUserService = async (token) => {
   if (user) {
     await updateRefreshToken(user._id, null);
   }
+};
+
+export const getExploreEventsService = async () => {
+  return await getExploreEventsRepo();
 };

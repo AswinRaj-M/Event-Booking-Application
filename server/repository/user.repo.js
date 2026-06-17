@@ -1,5 +1,6 @@
 import User from "../models/user.model.js";
 import Otp from "../models/user.otp.model.js";
+import Event from "../models/event.model.js";
 
 
 
@@ -73,4 +74,15 @@ export const updatePassword = async(userId,password) =>{
 
 export const deleteOtpByUserId = async (userId) => {
   return await Otp.deleteOne({ userId });
+};
+
+export const getExploreEventsRepo = async () => {
+  return await Event.find({ 
+    isDeleted: { $ne: true }, 
+    isBlocked: { $ne: true }, 
+    eventStatus: { $ne: "draft" } 
+  })
+  .populate("category")
+  .populate("vendorId")
+  .sort({ createdAt: -1 });
 };
