@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import { toast } from 'sonner';
 import { 
   Calendar, 
   MapPin, 
@@ -14,88 +16,215 @@ import {
   Bell
 } from 'lucide-react';
 import VendorSidebar from '../../components/vendor/VendorSidebar';
+import { getVendorEventsApi, cancelEventApi, fetchCategories, deleteEventApi } from '../../services/vendor.api';
+import VendorEditEventModal from '../../components/vendor/VendorEditEvent.Modal';
 
-// Asset imports
 import portfolio3 from '../../assets/vendor/portfolio_3.png';
 import avatarImg from '../../assets/vendor/common_avatar.png';
 
 const VendorMyEvent = () => {
-  // State for filters & search interactivity
+  const vendor = useSelector((state) => state.vendor?.vendor);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
-  
-  // Custom mock data for the 4 events shown in the photo
-  const events = [
-    {
-      id: 1,
-      title: 'Future Tech Summit 2024',
-      description: 'Explore the future of AI and Robotics',
-      category: 'Technology',
-      price: '$299',
-      date: 'Oct 15, 2024 • 09:00 AM',
-      location: 'Convention Center, San Francisco',
-      status: 'upcoming',
-      ticketsSold: 1240,
-      totalSeats: 1500,
-      progress: 82,
-      hasImage: false,
-      actions: ['edit', 'toggle']
-    },
-    {
-      id: 2,
-      title: 'Neon Nights Festival',
-      description: 'Electronic music under the stars',
-      category: 'Music',
-      price: '$120',
-      date: 'Nov 12, 2024 • 06:00 PM',
-      location: 'Waterfront Park, Miami',
-      status: 'upcoming',
-      ticketsSold: 4500,
-      totalSeats: 5000,
-      progress: 90,
-      hasImage: false,
-      actions: ['edit', 'toggle', 'more']
-    },
-    {
-      id: 3,
-      title: 'Modern Abstract Showcase',
-      description: 'Featuring local contemporary artists',
-      category: 'Art Gallery',
-      price: '$45',
-      date: 'Sep 20, 2024 • 05:00 PM',
-      location: 'Downtown Gallery, NY',
-      status: 'completed',
-      statusMsg: 'Event concluded successfully',
-      statusMsgColor: 'bg-emerald-500',
-      hasImage: true,
-      image: portfolio3,
-      actions: ['report', 'delete']
-    },
-    {
-      id: 4,
-      title: 'Summer Park Meetup',
-      description: 'Annual community gathering',
-      category: 'Community',
-      price: 'Free',
-      date: 'Aug 10, 2024 • 11:00 AM',
-      location: 'Central Park, Area 5',
-      status: 'cancelled',
-      statusMsg: 'Cancelled due to weather',
-      statusMsgColor: 'bg-rose-500',
-      hasImage: false,
-      actions: ['edit', 'delete']
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [priceFilter, setPriceFilter] = useState('all');
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const response = await getVendorEventsApi();
+        if (response.data && response.data.success) {
+          const fetchedEvents = (response.data.events || []).filter(event => event.eventStatus !== 'draft');
+          
+          const formatted = fetchedEvents.map(event => {
+            const ticketPriceVal = event.ticketPrice;
+            const priceStr = event.ticketType === 'Free' ? 'Free' : `$${ticketPriceVal}`;
+            
+            let formattedDate = 'N/A';
+            if (event.schedule?.date) {
+              const d = new Date(event.schedule.date);
+              const options = { month: 'short', day: 'numeric', year: 'numeric' };
+              formattedDate = `${d.toLocaleDateString('en-US', options)} • ${event.schedule.startTime || ''}`;
+            }
+
+            const locationStr = `${event.venue || ''}, ${event.city || ''}`;
+            const statusStr = event.eventStatus === 'pending' ? 'upcoming' : event.eventStatus;
+            const tSold = event.soldTickets || 0;
+            const tTotal = event.totalTickets || 0;
+            const progressVal = tTotal > 0 ? Math.round((tSold / tTotal) * 100) : 0;
+            
+            let actionsList = ['edit', 'cancel'];
+            if (statusStr === 'completed') {
+              actionsList = ['report', 'delete'];
+            } else if (statusStr === 'cancelled') {
+              actionsList = ['edit', 'delete'];
+            }
+
+            return {
+              id: event._id,
+              title: event.title,
+              description: event.description,
+              category: event.category?.name || 'Uncategorized',
+              price: priceStr,
+              date: formattedDate,
+              location: locationStr,
+              status: statusStr,
+              ticketsSold: tSold,
+              totalSeats: tTotal,
+              progress: progressVal,
+              hasImage: !!event.thumbnail?.fileUrl,
+              image: event.thumbnail?.fileUrl || '',
+              actions: actionsList,
+              statusMsg: statusStr === 'completed' ? 'Event concluded successfully' : statusStr === 'cancelled' ? (event.blockedReason || 'Event cancelled') : '',
+              statusMsgColor: statusStr === 'completed' ? 'bg-emerald-500' : 'bg-rose-500',
+              rawEvent: event
+            };
+          });
+
+          setEvents(formatted);
+        } else {
+          toast.error(response.data?.message || 'Failed to fetch events');
+        }
+      } catch (error) {
+        console.error('Error fetching vendor events:', error);
+        toast.error('Failed to load events. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEvents();
+  }, []);
+
+  useEffect(() => {
+    const getCategories = async () => {
+      try {
+        const response = await fetchCategories();
+        if (response.data && response.data.success) {
+          setCategories(response.data.data || []);
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      }
+    };
+    getCategories();
+  }, []);
+
+  const handleCancelEvent = async (id) => {
+    if (!window.confirm("Are you sure you want to cancel this event?")) {
+      return;
     }
-  ];
 
-  // Optional local toggle state for demo
-  const [activeToggles, setActiveToggles] = useState({ 1: true, 2: true });
-
-  const handleToggle = (id) => {
-    setActiveToggles(prev => ({ ...prev, [id]: !prev[id] }));
+    try {
+      const response = await cancelEventApi(id);
+      if (response.data && response.data.success) {
+        toast.success("Event cancelled successfully");
+        setEvents(prevEvents => 
+          prevEvents.map(e => {
+            if (e.id === id) {
+              return {
+                ...e,
+                status: 'cancelled',
+                actions: ['edit', 'delete'],
+                statusMsg: 'Event cancelled',
+                statusMsgColor: 'bg-rose-500'
+              };
+            }
+            return e;
+          })
+        );
+      } else {
+        toast.error(response.data?.message || "Failed to cancel event");
+      }
+    } catch (error) {
+      console.error("Error cancelling event:", error);
+      toast.error(error.response?.data?.message || "Failed to cancel event");
+    }
   };
 
-  // Filter logic
+  const handleDeleteEvent = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this event? (This will permanently remove the event from your dashboard)")) {
+      return;
+    }
+
+    try {
+      const response = await deleteEventApi(id);
+      if (response.data && response.data.success) {
+        toast.success("Event deleted successfully");
+        setEvents(prevEvents => prevEvents.filter(e => e.id !== id));
+      } else {
+        toast.error(response.data?.message || "Failed to delete event");
+      }
+    } catch (error) {
+      console.error("Error deleting event:", error);
+      toast.error(error.response?.data?.message || "Failed to delete event");
+    }
+  };
+
+  const handleEditClick = (event) => {
+    setSelectedEvent(event);
+    setIsEditModalOpen(true);
+  };
+
+  const handleEventUpdated = (updatedEvent) => {
+    setEvents(prevEvents => 
+      prevEvents.map(e => {
+        if (e.id === updatedEvent._id) {
+          const ticketPriceVal = updatedEvent.ticketPrice;
+          const priceStr = updatedEvent.ticketType === 'Free' ? 'Free' : `$${ticketPriceVal}`;
+          
+          let formattedDate = 'N/A';
+          if (updatedEvent.schedule?.date) {
+            const d = new Date(updatedEvent.schedule.date);
+            const options = { month: 'short', day: 'numeric', year: 'numeric' };
+            formattedDate = `${d.toLocaleDateString('en-US', options)} • ${updatedEvent.schedule.startTime || ''}`;
+          }
+
+          const locationStr = `${updatedEvent.venue || ''}, ${updatedEvent.city || ''}`;
+          const statusStr = updatedEvent.eventStatus === 'pending' ? 'upcoming' : updatedEvent.eventStatus;
+          const tSold = updatedEvent.soldTickets || 0;
+          const tTotal = updatedEvent.totalTickets || 0;
+          const progressVal = tTotal > 0 ? Math.round((tSold / tTotal) * 100) : 0;
+          
+          let actionsList = ['edit', 'cancel'];
+          if (statusStr === 'completed') {
+            actionsList = ['report', 'delete'];
+          } else if (statusStr === 'cancelled') {
+            actionsList = ['edit', 'delete'];
+          }
+
+          return {
+            id: updatedEvent._id,
+            title: updatedEvent.title,
+            description: updatedEvent.description,
+            category: updatedEvent.category?.name || 'Uncategorized',
+            price: priceStr,
+            date: formattedDate,
+            location: locationStr,
+            status: statusStr,
+            ticketsSold: tSold,
+            totalSeats: tTotal,
+            progress: progressVal,
+            hasImage: !!updatedEvent.thumbnail?.fileUrl,
+            image: updatedEvent.thumbnail?.fileUrl || '',
+            actions: actionsList,
+            statusMsg: statusStr === 'completed' ? 'Event concluded successfully' : statusStr === 'cancelled' ? (updatedEvent.blockedReason || 'Event cancelled') : '',
+            statusMsgColor: statusStr === 'completed' ? 'bg-emerald-500' : 'bg-rose-500',
+            rawEvent: updatedEvent
+          };
+        }
+        return e;
+      })
+    );
+  };
+
+
+  
   const filteredEvents = events.filter(event => {
     const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           event.description.toLowerCase().includes(searchQuery.toLowerCase());
@@ -103,7 +232,11 @@ const VendorMyEvent = () => {
     const matchesStatus = statusFilter === 'all' || event.status === statusFilter;
     const matchesCategory = categoryFilter === 'all' || event.category.toLowerCase() === categoryFilter.toLowerCase();
     
-    return matchesSearch && matchesStatus && matchesCategory;
+    const matchesPrice = priceFilter === 'all' || 
+                         (priceFilter === 'free' && event.price === 'Free') || 
+                         (priceFilter === 'paid' && event.price !== 'Free');
+    
+    return matchesSearch && matchesStatus && matchesCategory && matchesPrice;
   });
 
   return (
@@ -127,11 +260,11 @@ const VendorMyEvent = () => {
             {/* User Profile Info */}
             <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-2">
               <div className="text-right">
-                <p className="text-xs font-bold text-white">Alex Morgan</p>
+                <p className="text-xs font-bold text-white">{vendor?.organizerName || 'Alex Morgan'}</p>
                 <p className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider">Pro Organizer</p>
               </div>
               <div className="w-9 h-9 rounded-full border border-purple-500/20 overflow-hidden bg-zinc-950">
-                <img src={avatarImg} alt="Avatar" className="w-full h-full object-cover" />
+                <img src={vendor?.profilePicture?.fileUrl || avatarImg} alt="Avatar" className="w-full h-full object-cover" />
               </div>
             </div>
           </div>
@@ -188,10 +321,22 @@ const VendorMyEvent = () => {
                 className="w-full bg-[#12101F] text-white px-4 py-3 rounded-xl border border-zinc-800/80 focus:outline-none focus:border-purple-500 transition-colors appearance-none cursor-pointer text-sm"
               >
                 <option value="all">All Categories</option>
-                <option value="technology">Technology</option>
-                <option value="music">Music</option>
-                <option value="art gallery">Art Gallery</option>
-                <option value="community">Community</option>
+                {categories.map((cat) => (
+                  <option key={cat._id} value={cat.name.toLowerCase()}>{cat.name}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-zinc-500 pointer-events-none" />
+            </div>
+
+            <div className="relative w-full md:w-44">
+              <select
+                value={priceFilter}
+                onChange={(e) => setPriceFilter(e.target.value)}
+                className="w-full bg-[#12101F] text-white px-4 py-3 rounded-xl border border-zinc-800/80 focus:outline-none focus:border-purple-500 transition-colors appearance-none cursor-pointer text-sm"
+              >
+                <option value="all">All Ticket Types</option>
+                <option value="free">Free</option>
+                <option value="paid">Paid</option>
               </select>
               <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-zinc-500 pointer-events-none" />
             </div>
@@ -199,7 +344,12 @@ const VendorMyEvent = () => {
         </div>
 
         {/* Events Cards Grid */}
-        {filteredEvents.length > 0 ? (
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 bg-[#0B0A11] border border-white/5 rounded-2xl w-full">
+            <div className="w-10 h-10 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mb-4" />
+            <p className="text-zinc-400 text-sm font-medium">Loading your events...</p>
+          </div>
+        ) : filteredEvents.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredEvents.map((event) => {
               // Status Styling
@@ -311,20 +461,24 @@ const VendorMyEvent = () => {
 
                       {/* Edit button */}
                       {event.actions.includes('edit') && (
-                        <button type="button" className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-bold rounded-xl transition-all cursor-pointer">
+                        <button 
+                          type="button" 
+                          onClick={() => handleEditClick(event)}
+                          className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
+                        >
                           <Edit3 className="w-3.5 h-3.5 text-zinc-400" />
                           Edit
                         </button>
                       )}
 
-                      {/* Active Toggle */}
-                      {event.actions.includes('toggle') && (
+                      {/* Cancel Event button */}
+                      {event.actions.includes('cancel') && (
                         <button 
-                          type="button"
-                          onClick={() => handleToggle(event.id)}
-                          className={`w-9 h-5 rounded-full transition-all relative p-0.5 cursor-pointer shrink-0 ${activeToggles[event.id] ? 'bg-purple-600' : 'bg-zinc-800'}`}
+                          type="button" 
+                          onClick={() => handleCancelEvent(event.id)}
+                          className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 bg-rose-950/20 hover:bg-rose-900/40 border border-rose-500/20 hover:border-rose-500/40 text-rose-300 hover:text-rose-200 text-xs font-bold rounded-xl transition-all cursor-pointer"
                         >
-                          <span className={`w-4 h-4 rounded-full bg-white transition-all block ${activeToggles[event.id] ? 'translate-x-4' : 'translate-x-0'}`} />
+                          Cancel Event
                         </button>
                       )}
 
@@ -337,7 +491,11 @@ const VendorMyEvent = () => {
 
                       {/* Delete button */}
                       {event.actions.includes('delete') && (
-                        <button type="button" className="p-2.5 bg-white/5 hover:bg-rose-950/20 border border-white/10 hover:border-rose-500/30 text-zinc-400 hover:text-rose-400 rounded-xl transition-all cursor-pointer">
+                        <button 
+                          type="button" 
+                          onClick={() => handleDeleteEvent(event.id)}
+                          className="p-2.5 bg-white/5 hover:bg-rose-950/20 border border-white/10 hover:border-rose-500/30 text-zinc-400 hover:text-rose-400 rounded-xl transition-all cursor-pointer"
+                        >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       )}
@@ -353,6 +511,12 @@ const VendorMyEvent = () => {
           </div>
         )}
       </main>
+      <VendorEditEventModal 
+        isOpen={isEditModalOpen} 
+        onClose={() => setIsEditModalOpen(false)} 
+        event={selectedEvent} 
+        onUpdate={handleEventUpdated} 
+      />
     </div>
   );
 };

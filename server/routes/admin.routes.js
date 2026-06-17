@@ -15,7 +15,9 @@ import {
   vendorSuspend,
   vendorUnsuspend,
   getAllUsers,
-  toggleUserBlock
+  toggleUserBlock,
+  getAllEventsAdmin,
+  toggleBlockEvent
 } from "../controllers/admin.controller.js"
 import { protect } from '../middleware/auth.middleware.js'
 import { requireRole } from '../middleware/role.middleware.js'
@@ -50,6 +52,8 @@ router.put(
   ]), protect, requireRole("admin"), asyncHandler(updateCategory))
 router.put('/status-update/:id', protect, requireRole("admin"), asyncHandler(toggleCategoryStatus))
 router.delete('/delete-category/:id', protect, requireRole("admin"), asyncHandler(deleteCategory))
+router.get("/events-management", protect, requireRole("admin"), asyncHandler(getAllEventsAdmin))
+router.patch("/events/toggle-block/:eventId", protect, requireRole("admin"), asyncHandler(toggleBlockEvent))
 
 
 export default router

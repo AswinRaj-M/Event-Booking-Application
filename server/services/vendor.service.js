@@ -13,6 +13,10 @@ import {
   removeVendorImage,
   removeVendorPortfolioPicture,
   createEventRepo,
+  getVendorEventsRepo,
+  cancelEventRepo,
+  updateEventRepo,
+  deleteEventRepo,
 } from "../repository/vendor.repo.js";
 
 export const applyVendorService = async (data) => {
@@ -136,6 +140,7 @@ export const createEventService = async(data)=>{
     ticketPrice : data.ticketType === "Paid" || data.ticketType === "paid" ? (Number(data.ticketPrice) || 0) : 0,
     totalTickets : Number(data.totalTickets) || 0,
     maxTicketPerPerson : Number(data.maxTicketPerPerson) || undefined,
+    eventStatus : data.eventStatus || "pending",
 
 
     offer : {
@@ -165,4 +170,61 @@ export const removeVendorPortfolioService = async (vendorId, pictureId) => {
 
 export const updateVendorProfileService = async (vendorId, profileData) => {
   return await findVendorByIdAndUpdate(vendorId, profileData);
+};
+
+export const getVendorEventsService = async (vendorId) => {
+  return await getVendorEventsRepo(vendorId);
+};
+
+export const cancelEventService = async (eventId, vendorId) => {
+  return await cancelEventRepo(eventId, vendorId);
+};
+
+export const updateEventService = async (eventId, vendorId, data) => {
+  const updateData = {
+    title: data.title,
+    description: data.description,
+    category: data.category,
+    eventType: data.eventType,
+    
+    schedule: {
+      date: data.date,
+      startTime: data.startTime,
+      endTime: data.endTime
+    },
+
+    venue: data.venue,
+    address: data.address,
+    city: data.city,
+    state: data.state,
+
+    location: {
+      latitude: Number(data.latitude) || undefined,
+      longitude: Number(data.longitude) || undefined
+    },
+
+    ageRestriction: {
+      enabled: data.ageRestriction === "true" || data.ageRestriction === true,
+      minAge: 18,
+    },
+
+    ticketType: data.ticketType,
+    ticketPrice: data.ticketType === "Paid" || data.ticketType === "paid" ? (Number(data.ticketPrice) || 0) : 0,
+    totalTickets: Number(data.totalTickets) || 0,
+    maxTicketPerPerson: Number(data.maxTicketPerPerson) || undefined,
+  };
+
+  if (data.eventStatus) {
+    updateData.eventStatus = data.eventStatus;
+  }
+
+  if (data.thumbnail) {
+    updateData.thumbnail = data.thumbnail;
+  }
+
+  return await updateEventRepo(eventId, vendorId, updateData);
+};
+
+export const deleteEventService = async (eventId, vendorId) => {
+  return await deleteEventRepo(eventId, vendorId);
 };

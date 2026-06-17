@@ -102,54 +102,56 @@ const VendorCreateEvent = () => {
     setGalleryPreviews(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handlePublish = async () => {
+  const handlePublish = async (status = 'pending') => {
     if (!eventTitle.trim()) {
       toast.error('Event title is required');
       return;
     }
-    if (!eventCategory) {
-      toast.error('Event category is required');
-      return;
-    }
-    if (!shortDescription.trim()) {
-      toast.error('Event description is required');
-      return;
-    }
-    if (!thumbnail) {
-      toast.error('Cover image (thumbnail) is required');
-      return;
-    }
-    if (!date) {
-      toast.error('Event date is required');
-      return;
-    }
-    if (!venueName.trim()) {
-      toast.error('Venue name is required');
-      return;
-    }
-    if (!address.trim()) {
-      toast.error('Address is required');
-      return;
-    }
-    if (!city.trim()) {
-      toast.error('City is required');
-      return;
-    }
-    if (!state.trim()) {
-      toast.error('State is required');
-      return;
-    }
-    if (!totalSeats) {
-      toast.error('Total seats limit is required');
-      return;
-    }
-    if (ticketType === 'paid' && (!price || parseFloat(price) <= 0)) {
-      toast.error('Ticket price must be greater than 0 for paid events');
-      return;
-    }
-    if (!agreedTerms) {
-      toast.error('You must agree to the Vendor Terms to publish the event');
-      return;
+    if (status !== 'draft') {
+      if (!eventCategory) {
+        toast.error('Event category is required');
+        return;
+      }
+      if (!shortDescription.trim()) {
+        toast.error('Event description is required');
+        return;
+      }
+      if (!thumbnail) {
+        toast.error('Cover image (thumbnail) is required');
+        return;
+      }
+      if (!date) {
+        toast.error('Event date is required');
+        return;
+      }
+      if (!venueName.trim()) {
+        toast.error('Venue name is required');
+        return;
+      }
+      if (!address.trim()) {
+        toast.error('Address is required');
+        return;
+      }
+      if (!city.trim()) {
+        toast.error('City is required');
+        return;
+      }
+      if (!state.trim()) {
+        toast.error('State is required');
+        return;
+      }
+      if (!totalSeats) {
+        toast.error('Total seats limit is required');
+        return;
+      }
+      if (ticketType === 'paid' && (!price || parseFloat(price) <= 0)) {
+        toast.error('Ticket price must be greater than 0 for paid events');
+        return;
+      }
+      if (!agreedTerms) {
+        toast.error('You must agree to the Vendor Terms to publish the event');
+        return;
+      }
     }
 
     const formData = new FormData();
@@ -177,7 +179,7 @@ const VendorCreateEvent = () => {
     const formattedTicketType = ticketType === 'paid' ? 'Paid' : 'Free';
     formData.append('ticketType', formattedTicketType);
     formData.append('ticketPrice', ticketType === 'paid' ? price : '0');
-    formData.append('totalTickets', totalSeats);
+    formData.append('totalTickets', totalSeats || '0');
     formData.append('maxTicketPerPerson', maxTicketsPerPerson || '5');
     
     formData.append('offerEnabled', enableOffer ? 'true' : 'false');
@@ -188,11 +190,15 @@ const VendorCreateEvent = () => {
       formData.append('validUntil', validUntil || '');
     }
     
-    formData.append('thumbnail', thumbnail);
+    if (thumbnail) {
+      formData.append('thumbnail', thumbnail);
+    }
     
     galleryImages.forEach((img) => {
       formData.append('images', img);
     });
+
+    formData.append('eventStatus', status);
 
     setLoading(true);
     try {
@@ -228,7 +234,11 @@ const VendorCreateEvent = () => {
             <button className="text-zinc-400 hover:text-white transition-colors text-sm font-semibold px-4 py-2">
               Cancel
             </button>
-            <button className="px-5 py-2.5 bg-[#1C1A30] hover:bg-[#252245] text-white text-sm font-semibold rounded-xl transition-all border border-purple-500/20">
+            <button 
+              type="button"
+              onClick={() => handlePublish('draft')}
+              className="px-5 py-2.5 bg-[#1C1A30] hover:bg-[#252245] text-white text-sm font-semibold rounded-xl transition-all border border-purple-500/20 cursor-pointer"
+            >
               Save as Draft
             </button>
           </div>

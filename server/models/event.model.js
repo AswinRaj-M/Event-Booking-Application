@@ -1,6 +1,10 @@
 import mongoose from "mongoose";
 import fileSchema from "./file.schema.js";
 
+const requiredIfNotDraft = function() {
+  return this.eventStatus !== "draft";
+};
+
 
 const eventSchema = new mongoose.Schema({
 
@@ -12,15 +16,15 @@ const eventSchema = new mongoose.Schema({
 
   description : {
     type : String,
-    required :true,
+    required : requiredIfNotDraft,
     trim : true,
     maxlength : 500
   },
 
   category : {
     type : mongoose.Schema.Types.ObjectId,
-    ref : "Category",
-    required : true,
+    ref : "category",
+    required : requiredIfNotDraft,
 
   },
   vendorId : {
@@ -31,11 +35,11 @@ const eventSchema = new mongoose.Schema({
   eventType : {
     type : String,
     enum : ["In-person","Online"],
-    required : true
+    required : requiredIfNotDraft
   },
   thumbnail : {
     type : fileSchema,
-    required : true
+    required : requiredIfNotDraft
   },
   images : {
     type : [fileSchema],
@@ -44,35 +48,35 @@ const eventSchema = new mongoose.Schema({
   schedule  : {
     date : {
       type : Date,
-      required : true
+      required : requiredIfNotDraft
     },
     startTime: {
       type : String,
-      required : true
+      required : requiredIfNotDraft
     },
     endTime : {
       type : String,
-      required : true
+      required : requiredIfNotDraft
     }
   },
   venue : {
     type : String,
-    required : true,
+    required : requiredIfNotDraft,
     trim : true
   },
   address : {
     type : String,
-    required : true,
+    required : requiredIfNotDraft,
     trim : true
   },
   city : {
     type : String,
-    required : true,
+    required : requiredIfNotDraft,
     trim : true
   },
   state : {
     type : String,
-    required : true,
+    required : requiredIfNotDraft,
     trim : true
   },
   
@@ -148,7 +152,7 @@ const eventSchema = new mongoose.Schema({
   },
   eventStatus : {
     type : String,
-    enum : ["pending","cancelled","completed"],
+    enum : ["draft","pending","cancelled","completed"],
     default : "pending"
   } ,
   isBlocked : {
@@ -157,6 +161,10 @@ const eventSchema = new mongoose.Schema({
   },
   blockedReason : {
     type : String,
+  },
+  isDeleted : {
+    type : Boolean,
+    default : false
   }
 
 },{timestamps : true})

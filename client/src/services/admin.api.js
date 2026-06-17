@@ -62,3 +62,11 @@ export const toggleCategoryStatus = (id) => {
 export const deleteCategory = (id) => {
   return axiosInstance.delete(`/admin/delete-category/${id}`)
 }
+
+export const fetchAllEventsAdmin = () => {
+  return axiosInstance.get("/admin/events-management");
+};
+
+export const toggleBlockEventApi = (eventId, data) => {
+  return axiosInstance.patch(`/admin/events/toggle-block/${eventId}`, data);
+};

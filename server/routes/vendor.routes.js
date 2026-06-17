@@ -11,6 +11,10 @@ import { applyVendor,
    verifyVendorOTP,
    resendVendorOtp,
    createEvent,
+   getVendorEvents,
+   cancelEvent,
+   updateEvent,
+   deleteEvent,
    } from "../controllers/vendor.controller.js"
 import upload from '../middleware/upload.js'
 import { asyncHandler } from '../middleware/error.middleware.js'
@@ -62,6 +66,11 @@ router.post(
   ]),
   asyncHandler(createEvent)
 )
+
+router.get("/my-events", protect, requireRole("vendor"), asyncHandler(getVendorEvents))
+router.patch("/cancel-event/:eventId", protect, requireRole("vendor"), asyncHandler(cancelEvent))
+router.put("/update-event/:eventId", protect, requireRole("vendor"), upload.single("thumbnail"), asyncHandler(updateEvent))
+router.delete("/delete-event/:eventId", protect, requireRole("vendor"), asyncHandler(deleteEvent))
 
 router.post("/logout", protect, requireRole("vendor"), asyncHandler(vendorLogout))
 router.get("/status", protect, requireRole("vendor"), (req, res) => {

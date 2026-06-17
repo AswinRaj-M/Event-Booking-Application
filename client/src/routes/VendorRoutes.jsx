@@ -6,6 +6,7 @@ import VendorDashboard from '../pages/vendor/VendorDashboard'
 import VendorProfilePage from "../pages/vendor/VendorProfilePage.jsx"
 import VendorCreateEvent from "../pages/vendor/VendorCreateEvent.jsx"
 import VendorMyEvent from "../pages/vendor/VendorMyEvent.jsx"
+import VendorDraft from "../pages/vendor/VendorDraft.jsx"
 import { ProtectedRoute } from '../auth/ProtectedRoute.jsx'
 
 function VendorRoutes() {
@@ -36,6 +37,11 @@ function VendorRoutes() {
       <Route path="events" element={
         <ProtectedRoute role="vendor">
           <VendorMyEvent />
+        </ProtectedRoute>
+      } />
+      <Route path="events/drafts" element={
+        <ProtectedRoute role="vendor">
+          <VendorDraft />
         </ProtectedRoute>
       } />
     </Routes>

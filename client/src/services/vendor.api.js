@@ -67,3 +67,23 @@ export const createEventApi = (formData) => {
     },
   });
 };
+
+export const getVendorEventsApi = () => {
+  return axiosInstance.get("/vendor/my-events");
+};
+
+export const cancelEventApi = (eventId) => {
+  return axiosInstance.patch(`/vendor/cancel-event/${eventId}`);
+};
+
+export const updateEventApi = (eventId, formData) => {
+  return axiosInstance.put(`/vendor/update-event/${eventId}`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+};
+
+export const deleteEventApi = (eventId) => {
+  return axiosInstance.delete(`/vendor/delete-event/${eventId}`);
+};

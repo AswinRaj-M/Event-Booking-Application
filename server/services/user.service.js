@@ -170,8 +170,13 @@ export const refreshAccessTokenService = async (token, decoded) => {
   let user;
   if (decoded.role === 'vendor') {
     user = await Vendor.findById(decoded.id);
-  } else {
+  } else if (decoded.role === 'admin' || decoded.role === 'user') {
     user = await User.findById(decoded.id);
+  } else {
+    user = await Vendor.findById(decoded.id);
+    if (!user) {
+      user = await User.findById(decoded.id);
+    }
   }
 
   if (!user || user.refreshToken !== hashToken(token)) {

@@ -1,6 +1,7 @@
 import User from "../models/user.model.js";
 import Vendor from "../models/vendor.model.js";
 import Category from "../models/category.model.js"
+import Event from "../models/event.model.js";
 
 export const findAdminByEmail = async (email) => {
   return await User.findOne({ email });
@@ -85,3 +86,18 @@ export const getallusersRepo = async() =>{
   return await User.find()
   .select("-password")
 }
+
+export const getAllEventsRepo = async () => {
+  return await Event.find({ isDeleted: { $ne: true }, eventStatus: { $ne: "draft" } })
+    .sort({ createdAt: -1 })
+    .populate("category")
+    .populate("vendorId");
+};
+
+export const findEventById = async (id) => {
+  return await Event.findById(id);
+};
+
+export const saveEvent = async (event) => {
+  return await event.save();
+};

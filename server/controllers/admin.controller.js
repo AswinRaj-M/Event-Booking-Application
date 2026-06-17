@@ -20,6 +20,8 @@ import {
   vendorUnsuspendService,
   getAllUsersService,
   toggleUserBlockService,
+  getAllEventsService,
+  toggleBlockEventService,
 } from "../services/admin.service.js";
 import { saveAdmin } from "../repository/admin.repo.js"
 import { uploadToCloudinary } from "../utils/cloudinaryUpload.js";
@@ -323,6 +325,26 @@ export const toggleUserBlock = async(req,res) => {
     data : user
   })
 }
+
+export const getAllEventsAdmin = async (req, res) => {
+  const events = await getAllEventsService();
+  return res.status(200).json({
+    success: true,
+    message: "Events fetched successfully",
+    events
+  });
+};       
+
+export const toggleBlockEvent = async (req, res) => {
+  const { eventId } = req.params;
+  const { reason } = req.body;
+  const event = await toggleBlockEventService(eventId, reason);
+  return res.status(200).json({
+    success: true,
+    message: `Event status updated successfully`,
+    event
+  });
+};
 
 
 

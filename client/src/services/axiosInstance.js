@@ -78,16 +78,20 @@ axiosInstance.interceptors.response.use(
         let logoutAction;
         let redirectPath;
 
-        if (originalRequest.url?.startsWith('/admin')) {
+        const state = store ? store.getState() : null;
+        const isAdmin = state?.admin?.admin || originalRequest.url?.includes('/admin');
+        const isVendor = state?.vendor?.vendor || originalRequest.url?.includes('/vendor');
+
+        if (isAdmin) {
           const { refreshAdminToken, logoutAdminState } = await import("../features/admin.slice.js")
           refreshAction = refreshAdminToken
           logoutAction = logoutAdminState
           redirectPath = "/admin/login"
-        } else if (originalRequest.url?.startsWith('/vendor')) {
+        } else if (isVendor) {
           const { refreshVendorToken, vendorLogoutState } = await import("../features/vendorSlice.js")
           refreshAction = refreshVendorToken
           logoutAction = vendorLogoutState
-          redirectPath = "/vendor/login"
+          redirectPath = "/login"
         } else {
           const { refreshUserToken, logoutUserState } = await import("../features/user.slice.js")
           refreshAction = refreshUserToken
@@ -95,30 +99,35 @@ axiosInstance.interceptors.response.use(
           redirectPath = "/login"
         }
 
-        await store.dispatch(refreshAction())
-        console.log(`[Axios Interceptor] Token refreshed successfully. Retrying ${originalRequest.url}...`);
+        await store.dispatch(refreshAction()).unwrap()
+        console.error(`Token refreshed successfully. Retrying ${originalRequest.url}...`);
         return axiosInstance(originalRequest)
       } catch (refreshError) {
-        console.error(`[Axios Interceptor] Token refresh failed. Redirecting to login...`, refreshError);
-        // Find logoutAction if not already defined (in case dispatch(refreshAction) fails)
+        console.error(` Token refresh failed. Redirecting to login...`, refreshError);
         let logoutAction;
         let redirectPath;
 
-        if (originalRequest.url?.startsWith('/admin')) {
+        const state = store ? store.getState() : null;
+        const isAdmin = state?.admin?.admin || originalRequest.url?.includes('/admin');
+        const isVendor = state?.vendor?.vendor || originalRequest.url?.includes('/vendor');
+
+        if (isAdmin) {
           const { logoutAdminState } = await import("../features/admin.slice.js")
           logoutAction = logoutAdminState
           redirectPath = "/admin/login"
-        } else if (originalRequest.url?.startsWith('/vendor')) {
+        } else if (isVendor) {
           const { vendorLogoutState } = await import("../features/vendorSlice.js")
           logoutAction = vendorLogoutState
-          redirectPath = "/vendor/login"
+          redirectPath = "/login"
         } else {
           const { logoutUserState } = await import("../features/user.slice.js")
           logoutAction = logoutUserState
           redirectPath = "/login"
         }
 
-        store.dispatch(logoutAction())
+        if (store && logoutAction) {
+          store.dispatch(logoutAction())
+        }
         window.location.href = redirectPath
       }
     }

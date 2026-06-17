@@ -7,6 +7,7 @@ import AdminVendorApplicationView from '../pages/admin/AdminVendorApplicationVie
 import { ProtectedRoute, PublicRoute } from '../auth/ProtectedRoute.jsx'
 import AdminCategoryManagement from '../pages/admin/AdminCategoryManagement.jsx'
 import AdminUsersManagement from '../pages/admin/AdminUsersManagement.jsx'
+import AdminEventManagement from '../pages/admin/AdminEventManagement.jsx'
 
 function AdminRoutes() {
   return (
@@ -39,6 +40,11 @@ function AdminRoutes() {
       <Route path="/vendor-application/:id" element={
         <ProtectedRoute role="admin">
           <AdminVendorApplicationView />
+        </ProtectedRoute>
+      } />
+      <Route path="/events" element={
+        <ProtectedRoute role="admin">
+          <AdminEventManagement />
         </ProtectedRoute>
       } />
     </Routes>
