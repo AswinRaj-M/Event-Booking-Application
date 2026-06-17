@@ -38,7 +38,6 @@ const UserExploreEvent = () => {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
-  const [selectedLocation, setSelectedLocation] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
 
   useEffect(() => {
@@ -61,33 +60,12 @@ const UserExploreEvent = () => {
     fetchEvents();
   }, []);
 
-  // Compute unique filter options from real data
+
   const categories = useMemo(() => {
     const set = new Set();
     events.forEach(e => {
       const name = e.category?.name || (typeof e.category === 'string' ? e.category : '');
       if (name) set.add(name);
-    });
-    return Array.from(set);
-  }, [events]);
-
-  const locations = useMemo(() => {
-    const set = new Set();
-    events.forEach(e => {
-      if (e.city) set.add(e.city);
-    });
-    return Array.from(set);
-  }, [events]);
-
-  const dates = useMemo(() => {
-    const set = new Set();
-    events.forEach(e => {
-      if (e.schedule?.date) {
-        try {
-          const monthName = new Date(e.schedule.date).toLocaleDateString('en-US', { month: 'long' });
-          set.add(monthName);
-        } catch (_) {}
-      }
     });
     return Array.from(set);
   }, [events]);
@@ -106,25 +84,21 @@ const UserExploreEvent = () => {
       const matchesCategory = selectedCategory === "" || 
         catName.toLowerCase() === selectedCategory.toLowerCase();
 
-      const matchesLocation = selectedLocation === "" || 
-        city.toLowerCase() === selectedLocation.toLowerCase();
-
       let matchesDate = selectedDate === "";
       if (!matchesDate && event.schedule?.date) {
         try {
-          const m = new Date(event.schedule.date).toLocaleDateString('en-US', { month: 'long' });
-          matchesDate = m.toLowerCase() === selectedDate.toLowerCase();
+          const eventDateStr = new Date(event.schedule.date).toISOString().split('T')[0];
+          matchesDate = eventDateStr === selectedDate;
         } catch (_) {}
       }
 
-      return matchesSearch && matchesCategory && matchesLocation && matchesDate;
+      return matchesSearch && matchesCategory && matchesDate;
     });
-  }, [events, searchQuery, selectedCategory, selectedLocation, selectedDate]);
+  }, [events, searchQuery, selectedCategory, selectedDate]);
 
   const handleResetFilters = () => {
     setSearchQuery("");
     setSelectedCategory("");
-    setSelectedLocation("");
     setSelectedDate("");
   };
 
@@ -153,7 +127,7 @@ const UserExploreEvent = () => {
           <div className="bg-[#0b0914]/80 border border-purple-500/15 backdrop-blur-md rounded-2xl p-4 md:p-5 shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5 items-center">
               {/* Search */}
-              <div className="lg:col-span-4 relative">
+              <div className="lg:col-span-5 relative">
                 <Search className="w-4 h-4 text-zinc-500 absolute left-4 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
@@ -165,7 +139,7 @@ const UserExploreEvent = () => {
               </div>
 
               {/* Categories */}
-              <div className="lg:col-span-2 relative">
+              <div className="lg:col-span-3 relative">
                 <Music className="w-4 h-4 text-zinc-500 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <select
                   value={selectedCategory}
@@ -180,36 +154,16 @@ const UserExploreEvent = () => {
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500 text-[10px]">▼</div>
               </div>
 
-              {/* Location */}
-              <div className="lg:col-span-2 relative">
-                <MapPin className="w-4 h-4 text-zinc-500 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <select
-                  value={selectedLocation}
-                  onChange={(e) => setSelectedLocation(e.target.value)}
-                  className="w-full bg-[#110d21]/80 border border-purple-900/30 rounded-xl py-3 pl-11 pr-4 text-white text-sm focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20 appearance-none cursor-pointer transition-colors"
-                >
-                  <option value="">Location</option>
-                  {locations.map((loc) => (
-                    <option key={loc} value={loc}>{loc}</option>
-                  ))}
-                </select>
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500 text-[10px]">▼</div>
-              </div>
-
-              {/* Date Select */}
+              {/* Date Select (Calendar) */}
               <div className="lg:col-span-3 relative">
-                <Calendar className="w-4 h-4 text-zinc-500 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <select
+                <Calendar className="w-4 h-4 text-zinc-500 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none z-10" />
+                <input
+                  type="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-full bg-[#110d21]/80 border border-purple-900/30 rounded-xl py-3 pl-11 pr-4 text-white text-sm focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20 appearance-none cursor-pointer transition-colors"
-                >
-                  <option value="">Select Date</option>
-                  {dates.map((m) => (
-                    <option key={m} value={m}>{m} 2026</option>
-                  ))}
-                </select>
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500 text-[10px]">▼</div>
+                  style={{ colorScheme: 'dark' }}
+                  className="w-full bg-[#110d21]/80 border border-purple-900/30 rounded-xl py-3 pl-11 pr-4 text-white text-sm focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20 transition-colors cursor-pointer select-none"
+                />
               </div>
 
               {/* Submit Button */}
