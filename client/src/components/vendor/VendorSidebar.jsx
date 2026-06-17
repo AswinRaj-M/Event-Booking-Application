@@ -1,5 +1,6 @@
 import React from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
 import {
     LayoutDashboard,
     CalendarDays,
@@ -11,9 +12,24 @@ import {
     Settings,
     LogOut
 } from "lucide-react";
+import { vendorLogoutThunk, vendorLogoutState } from "../../features/vendorSlice";
+import { toast } from "sonner";
 
 const VendorSidebar = () => {
     const location = useLocation();
+    const dispatch = useDispatch();
+    const navigate = useNavigate();
+
+    const handleLogout = async () => {
+        try {
+            await dispatch(vendorLogoutThunk()).unwrap();
+            dispatch(vendorLogoutState());
+            toast.success("Logged out successfully");
+            navigate("/login");
+        } catch (error) {
+            toast.error("Logout failed. Please try again.");
+        }
+    };
 
     // Navigation Links Data
     const mainLinks = [
@@ -21,13 +37,13 @@ const VendorSidebar = () => {
         { path: "/vendor/events", icon: CalendarDays, label: "My Events" },
         { path: "/vendor/events/drafts", icon: FileEdit, label: "Draft Events" },
         { path: "/vendor/create-event", icon: PlusCircle, label: "Create Event" },
-        { path: "/vendor/bookings", icon: Ticket, label: "Bookings" },
-        { path: "/vendor/earnings", icon: Wallet, label: "Earnings" },
+        { path: "#", icon: Ticket, label: "Bookings" },
+        { path: "#", icon: Wallet, label: "Earnings" },
     ];
 
     const accountLinks = [
         { path: "/vendor/profile", icon: UserCircle, label: "Vendor Profile" },
-        { path: "/vendor/settings", icon: Settings, label: "Settings" },
+        { path: "#", icon: Settings, label: "Settings" },
     ];
 
     return (
@@ -97,7 +113,10 @@ const VendorSidebar = () => {
                         })}
 
                         {/* Logout Button */}
-                        <button className="flex w-full items-center gap-3 px-3 py-2.5 rounded-xl text-red-500 hover:bg-red-500/10 hover:text-red-400 transition-all mt-1">
+                        <button
+                            onClick={handleLogout}
+                            className="flex w-full items-center gap-3 px-3 py-2.5 rounded-xl text-red-500 hover:bg-red-500/10 hover:text-red-400 transition-all mt-1 cursor-pointer"
+                        >
                             <LogOut className="w-5 h-5" />
                             <span className="text-sm font-medium">Logout</span>
                         </button>
