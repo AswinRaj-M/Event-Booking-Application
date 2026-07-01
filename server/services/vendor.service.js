@@ -137,8 +137,7 @@ export const createEventService = async(data)=>{
     },
 
     ticketType : data.ticketType,
-    ticketPrice : data.ticketType === "Paid" || data.ticketType === "paid" ? (Number(data.ticketPrice) || 0) : 0,
-    totalTickets : Number(data.totalTickets) || 0,
+    ticketTiers : data.ticketTiers,
     maxTicketPerPerson : Number(data.maxTicketPerPerson) || undefined,
     eventStatus : data.eventStatus || "pending",
 
@@ -173,7 +172,17 @@ export const updateVendorProfileService = async (vendorId, profileData) => {
 };
 
 export const getVendorEventsService = async (vendorId) => {
-  return await getVendorEventsRepo(vendorId);
+  const events =  await getVendorEventsRepo(vendorId);
+  return events.map((event) =>{
+    const totalTickets = event.ticketTiers.reduce(
+      (sum,tier) => sum + tier.capacity,0
+    )
+
+    return {
+      ...event.toObject(),
+      totalTickets
+    }
+  })
 };
 
 export const cancelEventService = async (eventId, vendorId) => {
@@ -209,8 +218,7 @@ export const updateEventService = async (eventId, vendorId, data) => {
     },
 
     ticketType: data.ticketType,
-    ticketPrice: data.ticketType === "Paid" || data.ticketType === "paid" ? (Number(data.ticketPrice) || 0) : 0,
-    totalTickets: Number(data.totalTickets) || 0,
+    ticketTiers: data.ticketTiers,
     maxTicketPerPerson: Number(data.maxTicketPerPerson) || undefined,
   };
 

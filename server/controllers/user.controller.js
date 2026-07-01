@@ -355,8 +355,16 @@ export const getUserProfile = async (req, res) => {
 
 export const updateUserProfile = async (req, res) => {
   const userId = req.user._id;
-  const { fullName, phoneNumber } = req.body;
-  const updatedUser = await updateUserProfileService(userId, { fullName, phoneNumber });
+  const { fullName, phoneNumber, email } = req.body;
+
+  if (email && email !== req.user.email) {
+    const existingUser = await findUserByEmail(email);
+    if (existingUser) {
+      throw new AppError("Email already registered by another account", 400);
+    }
+  }
+
+  const updatedUser = await updateUserProfileService(userId, { fullName, phoneNumber, email });
   return res.status(200).json({
     success: true,
     message: "Profile updated successfully",

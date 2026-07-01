@@ -6,6 +6,32 @@ const requiredIfNotDraft = function() {
 };
 
 
+const ticketTierSchema = new mongoose.Schema({
+  name : {
+    type : String,
+    required : true,
+    trim : true
+  },
+  price : {
+    type  : Number,
+    required : true,
+    min : 0
+  },
+  capacity : {
+    type : Number,
+    required : true,
+    min : 1
+  },
+  sold : {
+    type : Number,
+    default : 0
+  },
+  benefits : {
+    type : [String],
+    default : []
+  }
+},{_id : true})
+
 const eventSchema = new mongoose.Schema({
 
   title : {
@@ -103,17 +129,20 @@ const eventSchema = new mongoose.Schema({
     enum : ["Free","Paid"],
     default : "Paid"
   },
-  ticketPrice : {
-    type : Number,
-    defualt : 0
-  },
-  totalTickets:{
-    type : Number,
-    default : 0
-  },
-  soldTickets : {
-    type : Number,
-    default : 0
+  ticketTiers : {
+    type :[ticketTierSchema],
+    default : [],
+
+    validate :{
+      validator : function (tiers) {
+        if(this.ticketType === "Free"){
+          return true
+        }
+
+        return tiers.length > 0 
+      },
+      message : "At least one ticket tier is required for paid events"
+    }
   },
   maxTicketPerPerson : {
     type : Number,
@@ -152,7 +181,7 @@ const eventSchema = new mongoose.Schema({
   },
   eventStatus : {
     type : String,
-    enum : ["draft","pending","cancelled","completed"],
+    enum : ["draft","pending","cancelled","completed","pending"],
     default : "pending"
   } ,
   isBlocked : {

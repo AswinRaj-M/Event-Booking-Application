@@ -80,7 +80,7 @@ export const updateEventRepo = async (eventId, vendorId, updateData) => {
 
 export const deleteEventRepo = async (eventId, vendorId) => {
   return await Event.findOneAndUpdate(
-    { _id: eventId, vendorId, eventStatus: "cancelled" },
+    { _id: eventId, vendorId, eventStatus: { $in: ["cancelled", "draft"] } },
     { $set: { isDeleted: true } },
     { new: true }
   )

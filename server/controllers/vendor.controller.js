@@ -384,10 +384,20 @@ export const updateVendorProfile = async (req, res) => {
 };
 
 export const createEvent = async(req,res) =>{
+  console.log("req.body : " ,req.body)
+  console.log("status :",req.body.eventStatus)
   const vendorId = req.user._id
 
   if(!vendorId){
     throw new AppError("vendor ID is required",400)
+  }
+
+  if (req.body.ticketTiers && typeof req.body.ticketTiers === 'string') {
+    try {
+      req.body.ticketTiers = JSON.parse(req.body.ticketTiers);
+    } catch (e) {
+      console.error("Error parsing ticketTiers in createEvent:", e);
+    }
   }
 
   let thumbnail = null;
@@ -447,6 +457,8 @@ export const getVendorEvents = async(req, res) => {
   }
 
   const events = await getVendorEventsService(vendorId)
+  
+  
 
   return res.status(200).json({
     success: true,
@@ -486,6 +498,14 @@ export const updateEvent = async (req, res) => {
 
   if (!eventId) {
     throw new AppError("Event ID is required", 400)
+  }
+
+  if (req.body.ticketTiers && typeof req.body.ticketTiers === 'string') {
+    try {
+      req.body.ticketTiers = JSON.parse(req.body.ticketTiers);
+    } catch (e) {
+      console.error("Error parsing ticketTiers in updateEvent:", e);
+    }
   }
 
   let thumbnail = null
@@ -532,7 +552,7 @@ export const deleteEvent = async (req, res) => {
   const event = await deleteEventService(eventId, vendorId)
 
   if (!event) {
-    throw new AppError("Event not found or cannot be deleted (only cancelled events can be deleted)", 404)
+    throw new AppError("Event not found or cannot be deleted (only cancelled or draft events can be deleted)", 404)
   }
 
   return res.status(200).json({
