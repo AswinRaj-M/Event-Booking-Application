@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import AppRoutes from './routes/AppRoutes';
 import AdminRoutes from './routes/AdminRoutes';
-import VendorRoutes from './routes/VendorRoutes';
+import VendorRoutes from './routes/vendorRoutes';
 import { Toaster, toast } from "sonner";
 import { Routes, Route } from 'react-router-dom';
 
