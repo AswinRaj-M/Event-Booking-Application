@@ -87,3 +87,15 @@ export const updateEventApi = (eventId, formData) => {
 export const deleteEventApi = (eventId) => {
   return axiosInstance.delete(`/vendor/delete-event/${eventId}`);
 };
+
+export const sendVendorEmailUpdateOtp = (newEmail) => {
+  return axiosInstance.post("/vendor/send-email-update-otp", { newEmail });
+};
+
+export const verifyVendorEmailUpdateOtp = (data) => {
+  return axiosInstance.post("/vendor/verify-email-update-otp", data);
+};
+
+export const resendVendorEmailUpdateOtp = () => {
+  return axiosInstance.post("/vendor/resend-email-update-otp");
+};

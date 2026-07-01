@@ -16,6 +16,7 @@ import {
   Phone,
   ArrowUpRight,
   Trash2,
+  Shield,
 } from "lucide-react";
 import VendorSidebar from "../../components/vendor/VendorSidebar";
 import VendorPortfolioPicturesModal from "../../components/vendor/vendorPorfolioPicturesModal";
@@ -31,6 +32,9 @@ import { vendorProfile,
     deleteVendorPortfolio,
      updateVendorProfile, 
      fetchCategories,                          
+     sendVendorEmailUpdateOtp,
+     verifyVendorEmailUpdateOtp,
+     resendVendorEmailUpdateOtp,
     } from "../../services/vendor.api";
 import { useAsyncError } from "react-router-dom";
 import { toast } from "sonner";
@@ -60,6 +64,27 @@ const VendorProfilePage = () => {
   const coverInputRef = useRef(null);
   const portfolioInputRef = useRef(null);
 
+  // Email Update & OTP Verification States
+  const [originalEmail, setOriginalEmail] = useState("");
+  const [showOtpInput, setShowOtpInput] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [resendTimer, setResendTimer] = useState(60);
+  const [isResendingOtp, setIsResendingOtp] = useState(false);
+
+  // OTP Countdown timer
+  useEffect(() => {
+    let interval = null;
+    if (showOtpInput && resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => prev - 1);
+      }, 1000);
+    } else {
+      clearInterval(interval);
+    }
+    return () => clearInterval(interval);
+  }, [showOtpInput, resendTimer]);
+
   useEffect(() => {
     const getVendorDetails = async () => {
       setLoading(false);
@@ -72,6 +97,7 @@ const VendorProfilePage = () => {
           setCategory(vendorDetails.eventCategory);
           setExperience(vendorDetails.experience);
           setBusinessEmail(vendorDetails.businessEmail);
+          setOriginalEmail(vendorDetails.businessEmail);
           setAboutText(vendorDetails.description);
           setSocialMedia(vendorDetails.websiteOrInstagram);
           setContactPhone(vendorDetails.contactPhone);
@@ -210,26 +236,108 @@ const VendorProfilePage = () => {
 
   const handleEditProfile = async () => {
     if (isEditing) {
+      if (!organizerName.trim()) {
+        toast.error("Organizer name cannot be empty");
+        return;
+      }
+      if (!businessEmail.trim()) {
+        toast.error("Business email cannot be empty");
+        return;
+      }
+      if (!contactPhone.trim()) {
+        toast.error("Contact phone cannot be empty");
+        return;
+      }
+
+      const emailChanged = businessEmail.trim().toLowerCase() !== originalEmail.toLowerCase();
+
       setLoading(true);
       try {
-        const response = await updateVendorProfile({
-          organizerName,
-          eventCategory: category,
-          experience,
-          description: aboutText,
-          websiteOrInstagram: socialMedia,
-        });
-        if (response.data && response.data.success) {
-          toast.success("Profile updated successfully!");
+        if (emailChanged) {
+          const response = await sendVendorEmailUpdateOtp(businessEmail.trim());
+          if (response.data && response.data.success) {
+            toast.success("Verification code sent to your new email");
+            setResendTimer(60);
+            setShowOtpInput(true);
+            setLoading(false);
+            return;
+          }
+        } else {
+          const response = await updateVendorProfile({
+            organizerName,
+            eventCategory: category,
+            experience,
+            description: aboutText,
+            websiteOrInstagram: socialMedia,
+            contactPhone,
+          });
+          if (response.data && response.data.success) {
+            toast.success("Profile updated successfully!");
+            const vendorDetails = response.data.vendor;
+            setOriginalEmail(vendorDetails.businessEmail);
+          }
         }
       } catch (error) {
         console.error("Error updating profile:", error);
-        toast.error("Failed to update profile!");
-      } finally {
+        toast.error(error.response?.data?.message || "Failed to update profile!");
         setLoading(false);
+        return;
+      } finally {
+        if (!emailChanged) setLoading(false);
       }
     }
     setIsEditing(!isEditing);
+  };
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    if (!otp.trim()) {
+      toast.error("Please enter the verification code");
+      return;
+    }
+
+    setIsVerifyingOtp(true);
+    try {
+      const response = await verifyVendorEmailUpdateOtp({
+        otp: otp.trim(),
+        organizerName,
+        eventCategory: category,
+        experience,
+        description: aboutText,
+        websiteOrInstagram: socialMedia,
+        contactPhone,
+      });
+      if (response.data && response.data.success) {
+        toast.success("Profile and email updated successfully!");
+        const vendorDetails = response.data.vendor;
+        setOriginalEmail(vendorDetails.businessEmail);
+        setBusinessEmail(vendorDetails.businessEmail);
+        setShowOtpInput(false);
+        setOtp("");
+        setIsEditing(false);
+      }
+    } catch (error) {
+      console.error("Error verifying OTP:", error);
+      toast.error(error.response?.data?.message || "Verification failed");
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (resendTimer > 0 || isResendingOtp) return;
+    setIsResendingOtp(true);
+    try {
+      const response = await resendVendorEmailUpdateOtp();
+      if (response.data && response.data.success) {
+        toast.success("Verification code resent successfully");
+        setResendTimer(60);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to resend code");
+    } finally {
+      setIsResendingOtp(false);
+    }
   };
 
   const handleAboutChange = (e) => {
@@ -658,10 +766,23 @@ const VendorProfilePage = () => {
                   <span className="text-[9px] font-extrabold uppercase tracking-widest text-zinc-500">
                     Primary Email
                   </span>
-                  <div className="bg-[#1A1825]/90 border border-zinc-800/80 p-3.5 rounded-xl flex items-center gap-3 text-sm text-zinc-300 font-medium">
-                    <Mail className="w-4 h-4 text-purple-400/80" />
-                    <span>{businessEmail}</span>
-                  </div>
+                  {isEditing ? (
+                    <div className="relative">
+                      <Mail className="absolute left-4 top-3.5 w-4 h-4 text-purple-400/80" />
+                      <input
+                        type="email"
+                        value={businessEmail}
+                        onChange={(e) => setBusinessEmail(e.target.value)}
+                        className="w-full bg-[#1A1825] text-white pl-11 pr-4 py-3 rounded-xl border border-zinc-800 focus:outline-none focus:border-purple-500 transition-colors text-sm"
+                        placeholder="Enter primary email"
+                      />
+                    </div>
+                  ) : (
+                    <div className="bg-[#1A1825]/90 border border-zinc-800/80 p-3.5 rounded-xl flex items-center gap-3 text-sm text-zinc-300 font-medium">
+                      <Mail className="w-4 h-4 text-purple-400/80" />
+                      <span>{businessEmail}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Business Phone */}
@@ -669,10 +790,23 @@ const VendorProfilePage = () => {
                   <span className="text-[9px] font-extrabold uppercase tracking-widest text-zinc-500">
                     Business Phone
                   </span>
-                  <div className="bg-[#1A1825]/90 border border-zinc-800/80 p-3.5 rounded-xl flex items-center gap-3 text-sm text-zinc-300 font-medium">
-                    <Phone className="w-4 h-4 text-purple-400/80" />
-                    <span>{contactPhone}</span>
-                  </div>
+                  {isEditing ? (
+                    <div className="relative">
+                      <Phone className="absolute left-4 top-3.5 w-4 h-4 text-purple-400/80" />
+                      <input
+                        type="text"
+                        value={contactPhone}
+                        onChange={(e) => setContactPhone(e.target.value)}
+                        className="w-full bg-[#1A1825] text-white pl-11 pr-4 py-3 rounded-xl border border-zinc-800 focus:outline-none focus:border-purple-500 transition-colors text-sm"
+                        placeholder="Enter phone number"
+                      />
+                    </div>
+                  ) : (
+                    <div className="bg-[#1A1825]/90 border border-zinc-800/80 p-3.5 rounded-xl flex items-center gap-3 text-sm text-zinc-300 font-medium">
+                      <Phone className="w-4 h-4 text-purple-400/80" />
+                      <span>{contactPhone}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -743,6 +877,92 @@ const VendorProfilePage = () => {
         imageUrl={viewingImageUrl} 
         title="Portfolio Image" 
       />
+
+      {/* OTP Verification Modal */}
+      {showOtpInput && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/60 backdrop-blur-md"
+            onClick={() => {
+              setShowOtpInput(false);
+              setOtp("");
+            }}
+          />
+          
+          {/* Modal Card */}
+          <div className="relative w-full max-w-md bg-[#0d0722]/95 border border-purple-500/20 rounded-3xl p-6 md:p-8 shadow-[0_25px_60px_rgba(0,0,0,0.8)] overflow-hidden animate-in fade-in zoom-in-95 duration-300">
+            {/* Top gradient highlight */}
+            <div className="absolute top-0 inset-x-0 h-[3px] bg-gradient-to-r from-purple-500 to-fuchsia-500" />
+            
+            <h2 className="text-xl font-extrabold text-white mb-6 flex items-center gap-2">
+              <Shield className="w-5 h-5 text-purple-400 animate-pulse" />
+              Verify New Email
+            </h2>
+            
+            <form onSubmit={handleVerifyOtp} className="space-y-5">
+              <p className="text-xs text-zinc-300 leading-relaxed">
+                We've sent a verification code to <span className="font-semibold text-purple-400">{businessEmail}</span>. Enter the code below to verify your email and save your changes.
+              </p>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] uppercase font-bold tracking-widest text-zinc-400">
+                  Verification Code
+                </label>
+                <div className="relative">
+                  <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-400/70" />
+                  <input
+                    type="text"
+                    maxLength={6}
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                    placeholder="Enter OTP"
+                    className="w-full bg-[#04020a]/80 text-white pl-11 pr-4 py-3 rounded-xl border border-white/10 hover:border-purple-500/30 focus:border-purple-500 focus:outline-none transition-all duration-300 text-sm tracking-[0.2em] font-mono text-center font-bold text-lg"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-zinc-400">Didn't receive the code?</span>
+                {resendTimer > 0 ? (
+                  <span className="text-zinc-500">
+                    Resend in <span className="text-purple-400 font-semibold font-mono">{resendTimer}s</span>
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleResendOtp}
+                    disabled={isResendingOtp}
+                    className="text-purple-400 hover:text-purple-300 font-bold transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {isResendingOtp ? "Resending..." : "Resend Code"}
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowOtpInput(false);
+                    setOtp("");
+                  }}
+                  className="px-5 py-2.5 rounded-xl border border-white/10 text-zinc-300 hover:text-white hover:bg-white/5 text-sm font-semibold transition-all duration-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isVerifyingOtp}
+                  className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-sm font-bold shadow-[0_4px_15px_rgba(139,92,246,0.3)] transition-all duration-300 disabled:opacity-50"
+                >
+                  {isVerifyingOtp ? "Verifying..." : "Verify & Save"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
