@@ -52,3 +52,15 @@ export const updateUserProfilePicture = (formData) => {
 export const getExploreEvents = () => {
   return axiosInstance.get("/users/explore-events");
 }
+
+export const sendEmailUpdateOtp = (newEmail) => {
+  return axiosInstance.post("/users/send-email-update-otp", { newEmail });
+}
+
+export const verifyEmailUpdateOtp = (data) => {
+  return axiosInstance.post("/users/verify-email-update-otp", data);
+}
+
+export const resendEmailUpdateOtp = () => {
+  return axiosInstance.post("/users/resend-email-update-otp");
+}

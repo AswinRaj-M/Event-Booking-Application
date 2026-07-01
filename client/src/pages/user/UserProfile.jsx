@@ -4,7 +4,7 @@ import Navbar from "../../components/layout/Navbar";
 import UserSideBar from "../../components/user/UserSideBar";
 import { User, Mail, Wallet, Calendar, Pencil, KeyRound, CheckCircle, Shield, Sparkles, Phone, Camera, Loader2 } from "lucide-react";
 import { updateUserData } from "../../features/user.slice";
-import { getUserProfile, updateUserProfile, updateUserProfilePicture } from "../../services/user.api";
+import { getUserProfile, updateUserProfile, updateUserProfilePicture, sendEmailUpdateOtp, verifyEmailUpdateOtp, resendEmailUpdateOtp } from "../../services/user.api";
 import { toast } from "sonner";
 import avatarImg from "../../assets/vendor/common_avatar.png";
 
@@ -21,6 +21,26 @@ const UserProfile = () => {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+
+  // OTP Verification States
+  const [showOtpInput, setShowOtpInput] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [resendTimer, setResendTimer] = useState(60);
+  const [isResendingOtp, setIsResendingOtp] = useState(false);
+
+  // OTP Countdown timer
+  useEffect(() => {
+    let interval = null;
+    if (showOtpInput && resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => prev - 1);
+      }, 1000);
+    } else {
+      clearInterval(interval);
+    }
+    return () => clearInterval(interval);
+  }, [showOtpInput, resendTimer]);
 
   // Fetch real profile details on load
   useEffect(() => {
@@ -68,6 +88,8 @@ const UserProfile = () => {
     setFullName(user?.fullName || "");
     setPhoneNumber(user?.phoneNumber || "");
     setEmail(user?.email || "");
+    setShowOtpInput(false);
+    setOtp("");
     setIsEditModalOpen(true);
   };
 
@@ -82,18 +104,73 @@ const UserProfile = () => {
       return;
     }
 
+    const emailChanged = email.trim().toLowerCase() !== user?.email?.toLowerCase();
+
     setIsSaving(true);
     try {
-      const response = await updateUserProfile({ fullName, phoneNumber, email });
-      if (response.data?.success) {
-        dispatch(updateUserData(response.data.user));
-        toast.success("Profile updated successfully");
-        setIsEditModalOpen(false);
+      if (emailChanged) {
+        const response = await sendEmailUpdateOtp(email.trim());
+        if (response.data?.success) {
+          toast.success("Verification code sent to your new email");
+          setResendTimer(60);
+          setShowOtpInput(true);
+        }
+      } else {
+        const response = await updateUserProfile({ fullName, phoneNumber });
+        if (response.data?.success) {
+          dispatch(updateUserData(response.data.user));
+          toast.success("Profile updated successfully");
+          setIsEditModalOpen(false);
+        }
       }
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to update profile");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    if (!otp.trim()) {
+      toast.error("Please enter the verification code");
+      return;
+    }
+
+    setIsVerifyingOtp(true);
+    try {
+      const response = await verifyEmailUpdateOtp({
+        otp: otp.trim(),
+        fullName,
+        phoneNumber,
+      });
+      if (response.data?.success) {
+        dispatch(updateUserData(response.data.user));
+        toast.success("Profile and email updated successfully");
+        setShowOtpInput(false);
+        setIsEditModalOpen(false);
+        setOtp("");
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Verification failed");
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (resendTimer > 0 || isResendingOtp) return;
+    setIsResendingOtp(true);
+    try {
+      const response = await resendEmailUpdateOtp();
+      if (response.data?.success) {
+        toast.success("Verification code resent successfully");
+        setResendTimer(60);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to resend code");
+    } finally {
+      setIsResendingOtp(false);
     }
   };
 
@@ -343,76 +420,148 @@ const UserProfile = () => {
             <div className="absolute top-0 inset-x-0 h-[3px] bg-gradient-to-r from-purple-500 to-fuchsia-500" />
             
             <h2 className="text-xl font-extrabold text-white mb-6 flex items-center gap-2">
-              <Pencil className="w-5 h-5 text-purple-400" />
-              Edit Profile
+              {showOtpInput ? (
+                <>
+                  <Shield className="w-5 h-5 text-purple-400 animate-pulse" />
+                  Verify New Email
+                </>
+              ) : (
+                <>
+                  <Pencil className="w-5 h-5 text-purple-400" />
+                  Edit Profile
+                </>
+              )}
             </h2>
             
-            <form onSubmit={handleSaveProfile} className="space-y-5">
-              <div className="space-y-1.5">
-                <label className="text-[10px] uppercase font-bold tracking-widest text-zinc-400">
-                  Full Name
-                </label>
-                <div className="relative">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-400/70" />
-                  <input
-                    type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Enter your name"
-                    className="w-full bg-[#04020a]/80 text-white pl-11 pr-4 py-3 rounded-xl border border-white/10 hover:border-purple-500/30 focus:border-purple-500 focus:outline-none transition-all duration-300 text-sm"
-                  />
-                </div>
-              </div>
+            {showOtpInput ? (
+              <form onSubmit={handleVerifyOtp} className="space-y-5">
+                <p className="text-xs text-zinc-300 leading-relaxed">
+                  We've sent a verification code to <span className="font-semibold text-purple-400">{email}</span>. Enter the code below to verify your email and apply your changes.
+                </p>
 
-              <div className="space-y-1.5">
-                <label className="text-[10px] uppercase font-bold tracking-widest text-zinc-400">
-                  Email Address
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-400/70" />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email"
-                    className="w-full bg-[#04020a]/80 text-white pl-11 pr-4 py-3 rounded-xl border border-white/10 hover:border-purple-500/30 focus:border-purple-500 focus:outline-none transition-all duration-300 text-sm"
-                  />
+                <div className="space-y-1.5">
+                  <label className="text-[10px] uppercase font-bold tracking-widest text-zinc-400">
+                    Verification Code
+                  </label>
+                  <div className="relative">
+                    <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-400/70" />
+                    <input
+                      type="text"
+                      maxLength={6}
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                      placeholder="Enter OTP"
+                      className="w-full bg-[#04020a]/80 text-white pl-11 pr-4 py-3 rounded-xl border border-white/10 hover:border-purple-500/30 focus:border-purple-500 focus:outline-none transition-all duration-300 text-sm tracking-[0.2em] font-mono text-center font-bold text-lg"
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div className="space-y-1.5">
-                <label className="text-[10px] uppercase font-bold tracking-widest text-zinc-400">
-                  Phone Number
-                </label>
-                <div className="relative">
-                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-400/70" />
-                  <input
-                    type="text"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    placeholder="Enter phone number"
-                    className="w-full bg-[#04020a]/80 text-white pl-11 pr-4 py-3 rounded-xl border border-white/10 hover:border-purple-500/30 focus:border-purple-500 focus:outline-none transition-all duration-300 text-sm"
-                  />
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-zinc-400">Didn't receive the code?</span>
+                  {resendTimer > 0 ? (
+                    <span className="text-zinc-500">
+                      Resend in <span className="text-purple-400 font-semibold font-mono">{resendTimer}s</span>
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleResendOtp}
+                      disabled={isResendingOtp}
+                      className="text-purple-400 hover:text-purple-300 font-bold transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      {isResendingOtp ? "Resending..." : "Resend Code"}
+                    </button>
+                  )}
                 </div>
-              </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/5">
-                <button
-                  type="button"
-                  onClick={() => setIsEditModalOpen(false)}
-                  className="px-5 py-2.5 rounded-xl border border-white/10 text-zinc-300 hover:text-white hover:bg-white/5 text-sm font-semibold transition-all duration-300"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSaving}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-sm font-bold shadow-[0_4px_15px_rgba(139,92,246,0.3)] transition-all duration-300 disabled:opacity-50"
-                >
-                  {isSaving ? "Saving..." : "Save Changes"}
-                </button>
-              </div>
-            </form>
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowOtpInput(false);
+                      setOtp("");
+                    }}
+                    className="px-5 py-2.5 rounded-xl border border-white/10 text-zinc-300 hover:text-white hover:bg-white/5 text-sm font-semibold transition-all duration-300"
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isVerifyingOtp}
+                    className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-sm font-bold shadow-[0_4px_15px_rgba(139,92,246,0.3)] transition-all duration-300 disabled:opacity-50"
+                  >
+                    {isVerifyingOtp ? "Verifying..." : "Verify & Save"}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <form onSubmit={handleSaveProfile} className="space-y-5">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] uppercase font-bold tracking-widest text-zinc-400">
+                    Full Name
+                  </label>
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-400/70" />
+                    <input
+                      type="text"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="Enter your name"
+                      className="w-full bg-[#04020a]/80 text-white pl-11 pr-4 py-3 rounded-xl border border-white/10 hover:border-purple-500/30 focus:border-purple-500 focus:outline-none transition-all duration-300 text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] uppercase font-bold tracking-widest text-zinc-400">
+                    Email Address
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-400/70" />
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="Enter your email"
+                      className="w-full bg-[#04020a]/80 text-white pl-11 pr-4 py-3 rounded-xl border border-white/10 hover:border-purple-500/30 focus:border-purple-500 focus:outline-none transition-all duration-300 text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] uppercase font-bold tracking-widest text-zinc-400">
+                    Phone Number
+                  </label>
+                  <div className="relative">
+                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-400/70" />
+                    <input
+                      type="text"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      placeholder="Enter phone number"
+                      className="w-full bg-[#04020a]/80 text-white pl-11 pr-4 py-3 rounded-xl border border-white/10 hover:border-purple-500/30 focus:border-purple-500 focus:outline-none transition-all duration-300 text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/5">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditModalOpen(false)}
+                    className="px-5 py-2.5 rounded-xl border border-white/10 text-zinc-300 hover:text-white hover:bg-white/5 text-sm font-semibold transition-all duration-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSaving}
+                    className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-sm font-bold shadow-[0_4px_15px_rgba(139,92,246,0.3)] transition-all duration-300 disabled:opacity-50"
+                  >
+                    {isSaving ? "Saving..." : "Save Changes"}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
