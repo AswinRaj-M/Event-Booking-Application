@@ -45,7 +45,7 @@ const vendorSchema = new mongoose.Schema({
   },
   emailVerify: {
     type: Boolean,
-    defualt: false
+    default: false
   },
   eventCategory: String,
   experience: String,
