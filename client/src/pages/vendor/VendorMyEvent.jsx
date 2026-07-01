@@ -42,8 +42,7 @@ const VendorMyEvent = () => {
           const fetchedEvents = (response.data.events || []).filter(event => event.eventStatus !== 'draft');
           
           const formatted = fetchedEvents.map(event => {
-            const ticketPriceVal = event.ticketPrice;
-            const priceStr = event.ticketType === 'Free' ? 'Free' : `$${ticketPriceVal}`;
+            const priceStr = event.ticketType === 'Free' ? 'Free' : 'Paid';
             
             let formattedDate = 'N/A';
             if (event.schedule?.date) {
@@ -115,15 +114,39 @@ const VendorMyEvent = () => {
     getCategories();
   }, []);
 
-  const handleCancelEvent = async (id) => {
-    if (!window.confirm("Are you sure you want to cancel this event?")) {
-      return;
-    }
+  const handleCancelEvent = (id) => {
+    const toastId = toast((t) => (
+      <div className="flex flex-col gap-3 p-1">
+        <p className="text-xs font-semibold text-white">Are you sure you want to cancel this event?</p>
+        <div className="flex gap-2 justify-end">
+          <button 
+            onClick={() => {
+              toast.dismiss(toastId);
+              proceedCancelEvent(id);
+            }}
+            className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-bold rounded-lg transition-all cursor-pointer"
+          >
+            Yes
+          </button>
+          <button 
+            onClick={() => toast.dismiss(toastId)}
+            className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-bold rounded-lg transition-all cursor-pointer"
+          >
+            No
+          </button>
+        </div>
+      </div>
+    ), {
+      position: 'bottom-center',
+      duration: Infinity,
+    });
+  };
 
+  const proceedCancelEvent = async (id) => {
     try {
       const response = await cancelEventApi(id);
       if (response.data && response.data.success) {
-        toast.success("Event cancelled successfully");
+        toast.success("Event cancelled successfully", { position: 'bottom-center' });
         setEvents(prevEvents => 
           prevEvents.map(e => {
             if (e.id === id) {
@@ -139,30 +162,54 @@ const VendorMyEvent = () => {
           })
         );
       } else {
-        toast.error(response.data?.message || "Failed to cancel event");
+        toast.error(response.data?.message || "Failed to cancel event", { position: 'bottom-center' });
       }
     } catch (error) {
       console.error("Error cancelling event:", error);
-      toast.error(error.response?.data?.message || "Failed to cancel event");
+      toast.error(error.response?.data?.message || "Failed to cancel event", { position: 'bottom-center' });
     }
   };
 
-  const handleDeleteEvent = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this event? (This will permanently remove the event from your dashboard)")) {
-      return;
-    }
+  const handleDeleteEvent = (id) => {
+    const toastId = toast((t) => (
+      <div className="flex flex-col gap-3 p-1">
+        <p className="text-xs font-semibold text-white">Are you sure you want to delete this event?</p>
+        <div className="flex gap-2 justify-end">
+          <button 
+            onClick={() => {
+              toast.dismiss(toastId);
+              proceedDeleteEvent(id);
+            }}
+            className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-bold rounded-lg transition-all cursor-pointer"
+          >
+            Yes
+          </button>
+          <button 
+            onClick={() => toast.dismiss(toastId)}
+            className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-bold rounded-lg transition-all cursor-pointer"
+          >
+            No
+          </button>
+        </div>
+      </div>
+    ), {
+      position: 'bottom-center',
+      duration: Infinity,
+    });
+  };
 
+  const proceedDeleteEvent = async (id) => {
     try {
       const response = await deleteEventApi(id);
       if (response.data && response.data.success) {
-        toast.success("Event deleted successfully");
+        toast.success("Event deleted successfully", { position: 'bottom-center' });
         setEvents(prevEvents => prevEvents.filter(e => e.id !== id));
       } else {
-        toast.error(response.data?.message || "Failed to delete event");
+        toast.error(response.data?.message || "Failed to delete event", { position: 'bottom-center' });
       }
     } catch (error) {
       console.error("Error deleting event:", error);
-      toast.error(error.response?.data?.message || "Failed to delete event");
+      toast.error(error.response?.data?.message || "Failed to delete event", { position: 'bottom-center' });
     }
   };
 
@@ -175,8 +222,7 @@ const VendorMyEvent = () => {
     setEvents(prevEvents => 
       prevEvents.map(e => {
         if (e.id === updatedEvent._id) {
-          const ticketPriceVal = updatedEvent.ticketPrice;
-          const priceStr = updatedEvent.ticketType === 'Free' ? 'Free' : `$${ticketPriceVal}`;
+          const priceStr = updatedEvent.ticketType === 'Free' ? 'Free' : 'Paid';
           
           let formattedDate = 'N/A';
           if (updatedEvent.schedule?.date) {
@@ -395,7 +441,11 @@ const VendorMyEvent = () => {
                       <span className="px-2.5 py-1 bg-zinc-950/80 backdrop-blur-md border border-zinc-800/80 text-[10px] font-bold text-zinc-300 rounded-lg uppercase tracking-wide">
                         {event.category}
                       </span>
-                      <span className={`px-2.5 py-1 text-[10px] font-extrabold rounded-lg ${event.price === 'Free' ? 'bg-indigo-600/90 border border-indigo-500/30 text-white' : 'bg-purple-600/90 border border-purple-500/30 text-white'}`}>
+                      <span className={`px-2.5 py-1 text-[10px] font-extrabold rounded-lg ${
+                        event.price === 'Free' 
+                          ? 'bg-emerald-950/80 border border-emerald-500/20 text-emerald-400' 
+                          : 'bg-purple-950/80 border border-purple-500/20 text-purple-400'
+                      }`}>
                         {event.price}
                       </span>
                     </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import { Search, MapPin, Calendar, Music, RotateCcw, ArrowRight } from 'lucide-react';
@@ -241,9 +242,8 @@ const UserExploreEvent = () => {
             {filteredEvents.map((event) => {
               const categoryName = event.category?.name || (typeof event.category === 'string' ? event.category : 'General');
               const imageSrc = event.thumbnail?.fileUrl || "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=600&auto=format&fit=crop";
-              const priceLabel = event.ticketType === "Free" ? "Entry" : "Starting from";
-              const priceVal = event.ticketType === "Free" ? "Free" : `$${event.ticketPrice || 0}`;
-              const buttonText = event.ticketType === "Free" ? "RSVP Now" : "View Details";
+              const priceLabel = event.ticketType === "Free" ? "Entry" : "Admission";
+              const priceVal = event.ticketType === "Free" ? "Free" : "Paid";
 
               // Show description if it exists (like Abstract Minds Exhibit in screenshot)
               // Otherwise render stack of avatars and attendee text
@@ -256,9 +256,10 @@ const UserExploreEvent = () => {
                 : `+${attendingCountNum} attending`;
 
               return (
-                <div
+                <Link
                   key={event._id}
-                  className="group bg-[#0b0914]/60 hover:bg-[#0c0a1c]/90 border border-white/5 hover:border-purple-500/20 rounded-3xl overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.3)] hover:shadow-[0_20px_40px_rgba(139,92,246,0.12)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col h-full"
+                  to={`/user/event/${event._id}`}
+                  className="group bg-[#0b0914]/60 hover:bg-[#0c0a1c]/90 border border-white/5 hover:border-purple-500/20 rounded-3xl overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.3)] hover:shadow-[0_20px_40px_rgba(139,92,246,0.12)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col h-full text-left"
                 >
                   {/* Event Image */}
                   <div className="relative h-52 w-full overflow-hidden">
@@ -270,7 +271,7 @@ const UserExploreEvent = () => {
                     />
                     {/* Badge Overlay */}
                     <div className="absolute top-4 right-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold tracking-wide backdrop-blur-md ${categoryBadgeStyles[categoryName] || 'bg-zinc-800 text-zinc-300'}`}>
+                      <span className="px-3 py-1 rounded-full text-xs font-semibold tracking-wide backdrop-blur-md bg-purple-950/80 text-purple-300 border border-purple-500/20">
                         {categoryName}
                       </span>
                     </div>
@@ -285,9 +286,11 @@ const UserExploreEvent = () => {
                       </span>
 
                       {/* Title */}
-                      <h3 className="text-xl font-bold text-white mb-3 tracking-tight group-hover:text-purple-300 transition-colors line-clamp-1" title={event.title}>
-                        {event.title}
-                      </h3>
+                      <div className="block group-hover:underline decoration-purple-500 decoration-2 underline-offset-4">
+                        <h3 className="text-xl font-bold text-white mb-3 tracking-tight group-hover:text-purple-300 transition-colors line-clamp-1" title={event.title}>
+                          {event.title}
+                        </h3>
+                      </div>
 
                       {/* Description (if present) */}
                       {hasDescription && (
@@ -326,24 +329,22 @@ const UserExploreEvent = () => {
                       {/* Card Separator */}
                       <div className="border-t border-purple-950/40 my-4.5" />
 
-                      {/* Footer (Price & CTA Button) */}
+                      {/* Footer (Price Only) */}
                       <div className="flex items-center justify-between mt-2">
                         <div className="flex flex-col">
                           <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">
                             {priceLabel}
                           </span>
-                          <span className="text-white font-extrabold text-lg mt-0.5">
+                          <span className={`${
+                            priceVal === "Free" ? "text-emerald-400" : "text-purple-400"
+                          } font-extrabold text-lg mt-0.5`}>
                             {priceVal}
                           </span>
                         </div>
-
-                        <button className="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white rounded-xl px-4 py-2.5 text-xs font-semibold tracking-wide transition-all cursor-pointer">
-                          {buttonText}
-                        </button>
                       </div>
                     </div>
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>

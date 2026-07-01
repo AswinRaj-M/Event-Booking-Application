@@ -290,7 +290,7 @@ const VendorEditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
                   <Calendar className="w-4 h-4" />
                   <span>Schedule</span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <label className="text-[10px] font-semibold text-zinc-400">Date</label>
                     <input 
@@ -302,41 +302,152 @@ const VendorEditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-semibold text-zinc-400">Start Time</label>
-                    <div className="relative">
-                      <select 
-                        value={startTime}
-                        onChange={(e) => setStartTime(e.target.value)}
-                        className="w-full bg-[#12101F] text-white px-3 py-2.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-purple-500 appearance-none cursor-pointer text-xs"
+                    <div className="flex items-center bg-[#12101F] rounded-xl border border-zinc-800 p-1.5 focus-within:border-purple-500 transition-colors w-full min-w-0">
+                      <input 
+                        type="text" 
+                        maxLength={2}
+                        placeholder="07"
+                        value={startTime.split(' ')[0]?.split(':')[0] || ''}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '');
+                          const parts = startTime.split(' ');
+                          const period = parts[1] || 'PM';
+                          const mm = parts[0]?.split(':')[1] || '00';
+                          setStartTime(`${val}:${mm} ${period}`);
+                        }}
+                        onBlur={(e) => {
+                          let val = e.target.value.replace(/\D/g, '');
+                          if (val) {
+                            let num = parseInt(val, 10);
+                            if (num > 12) num = 12;
+                            if (num < 1) num = 1;
+                            val = String(num).padStart(2, '0');
+                          } else {
+                            val = '07';
+                          }
+                          const parts = startTime.split(' ');
+                          const period = parts[1] || 'PM';
+                          const mm = parts[0]?.split(':')[1] || '00';
+                          setStartTime(`${val}:${mm} ${period}`);
+                        }}
+                        className="w-8 shrink-0 bg-transparent text-white text-center focus:outline-none text-xs font-semibold"
+                      />
+                      <span className="text-zinc-600 font-bold mx-0.5 shrink-0">:</span>
+                      <input 
+                        type="text" 
+                        maxLength={2}
+                        placeholder="00"
+                        value={startTime.split(' ')[0]?.split(':')[1] || ''}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '');
+                          const parts = startTime.split(' ');
+                          const period = parts[1] || 'PM';
+                          const hh = parts[0]?.split(':')[0] || '07';
+                          setStartTime(`${hh}:${val} ${period}`);
+                        }}
+                        onBlur={(e) => {
+                          let val = e.target.value.replace(/\D/g, '');
+                          if (val) {
+                            let num = parseInt(val, 10);
+                            if (num > 59) num = 59;
+                            val = String(num).padStart(2, '0');
+                          } else {
+                            val = '00';
+                          }
+                          const parts = startTime.split(' ');
+                          const period = parts[1] || 'PM';
+                          const hh = parts[0]?.split(':')[0] || '07';
+                          setStartTime(`${hh}:${val} ${period}`);
+                        }}
+                        className="w-8 shrink-0 bg-transparent text-white text-center focus:outline-none text-xs font-semibold"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const parts = startTime.split(' ');
+                          const period = parts[1] === 'AM' ? 'PM' : 'AM';
+                          const timePart = parts[0] || '07:00';
+                          setStartTime(`${timePart} ${period}`);
+                        }}
+                        className="ml-auto px-1.5 py-0.5 shrink-0 bg-[#1C1A30] hover:bg-[#252245] border border-purple-500/20 text-purple-300 text-[10px] font-bold rounded-md transition-all cursor-pointer"
                       >
-                        <option value="07:00 PM">07:00 PM</option>
-                        <option value="08:00 PM">08:00 PM</option>
-                        <option value="09:00 PM">09:00 PM</option>
-                        <option value="10:00 PM">10:00 PM</option>
-                        <option value="09:00 AM">09:00 AM</option>
-                        <option value="10:00 AM">10:00 AM</option>
-                        <option value="11:00 AM">11:00 AM</option>
-                        <option value="12:00 PM">12:00 PM</option>
-                      </select>
-                      <ChevronDown className="absolute right-3 top-3 w-3.5 h-3.5 text-zinc-500 pointer-events-none" />
+                        {startTime.split(' ')[1] || 'PM'}
+                      </button>
                     </div>
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-semibold text-zinc-400">End Time</label>
-                    <div className="relative">
-                      <select 
-                        value={endTime}
-                        onChange={(e) => setEndTime(e.target.value)}
-                        className="w-full bg-[#12101F] text-white px-3 py-2.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-purple-500 appearance-none cursor-pointer text-xs"
+                    <div className="flex items-center bg-[#12101F] rounded-xl border border-zinc-800 p-1.5 focus-within:border-purple-500 transition-colors w-full min-w-0">
+                      <input 
+                        type="text" 
+                        maxLength={2}
+                        placeholder="11"
+                        value={endTime.split(' ')[0]?.split(':')[0] || ''}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '');
+                          const parts = endTime.split(' ');
+                          const period = parts[1] || 'PM';
+                          const mm = parts[0]?.split(':')[1] || '00';
+                          setEndTime(`${val}:${mm} ${period}`);
+                        }}
+                        onBlur={(e) => {
+                          let val = e.target.value.replace(/\D/g, '');
+                          if (val) {
+                            let num = parseInt(val, 10);
+                            if (num > 12) num = 12;
+                            if (num < 1) num = 1;
+                            val = String(num).padStart(2, '0');
+                          } else {
+                            val = '11';
+                          }
+                          const parts = endTime.split(' ');
+                          const period = parts[1] || 'PM';
+                          const mm = parts[0]?.split(':')[1] || '00';
+                          setEndTime(`${val}:${mm} ${period}`);
+                        }}
+                        className="w-8 shrink-0 bg-transparent text-white text-center focus:outline-none text-xs font-semibold"
+                      />
+                      <span className="text-zinc-600 font-bold mx-0.5 shrink-0">:</span>
+                      <input 
+                        type="text" 
+                        maxLength={2}
+                        placeholder="00"
+                        value={endTime.split(' ')[0]?.split(':')[1] || ''}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '');
+                          const parts = endTime.split(' ');
+                          const period = parts[1] || 'PM';
+                          const hh = parts[0]?.split(':')[0] || '11';
+                          setEndTime(`${hh}:${val} ${period}`);
+                        }}
+                        onBlur={(e) => {
+                          let val = e.target.value.replace(/\D/g, '');
+                          if (val) {
+                            let num = parseInt(val, 10);
+                            if (num > 59) num = 59;
+                            val = String(num).padStart(2, '0');
+                          } else {
+                            val = '00';
+                          }
+                          const parts = endTime.split(' ');
+                          const period = parts[1] || 'PM';
+                          const hh = parts[0]?.split(':')[0] || '11';
+                          setEndTime(`${hh}:${val} ${period}`);
+                        }}
+                        className="w-8 shrink-0 bg-transparent text-white text-center focus:outline-none text-xs font-semibold"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const parts = endTime.split(' ');
+                          const period = parts[1] === 'AM' ? 'PM' : 'AM';
+                          const timePart = parts[0] || '11:00';
+                          setEndTime(`${timePart} ${period}`);
+                        }}
+                        className="ml-auto px-1.5 py-0.5 shrink-0 bg-[#1C1A30] hover:bg-[#252245] border border-purple-500/20 text-purple-300 text-[10px] font-bold rounded-md transition-all cursor-pointer"
                       >
-                        <option value="11:00 PM">11:00 PM</option>
-                        <option value="12:00 AM">12:00 AM</option>
-                        <option value="01:00 AM">01:00 AM</option>
-                        <option value="02:00 AM">02:00 AM</option>
-                        <option value="05:00 PM">05:00 PM</option>
-                        <option value="06:00 PM">06:00 PM</option>
-                        <option value="07:00 PM">07:00 PM</option>
-                      </select>
-                      <ChevronDown className="absolute right-3 top-3 w-3.5 h-3.5 text-zinc-500 pointer-events-none" />
+                        {endTime.split(' ')[1] || 'PM'}
+                      </button>
                     </div>
                   </div>
                 </div>

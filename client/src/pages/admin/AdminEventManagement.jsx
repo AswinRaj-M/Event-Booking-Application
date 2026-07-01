@@ -19,6 +19,8 @@ import AdminSidebar from '../../components/admin/AdminSidebar';
 import { fetchAllEventsAdmin, toggleBlockEventApi } from '../../services/admin.api';
 import { getAllCategories } from '../../services/common.api';
 import avatarImg from '../../assets/vendor/common_avatar.png';
+import AdminReasonSending from '../../components/admin/adminReasonSending';
+import AdminViewEventDetails from '../../components/admin/AdminViewEventDetails';
 
 const AdminEventManagement = () => {
   const adminState = useSelector((state) => state.admin);
@@ -34,6 +36,8 @@ const AdminEventManagement = () => {
   
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
+  const [blockingEvent, setBlockingEvent] = useState(null);
 
   
   useEffect(() => {
@@ -59,35 +63,54 @@ const AdminEventManagement = () => {
     getInitialData();
   }, []);
 
-  const handleToggleBlockEvent = async (event) => {
-    const action = event.isBlocked ? 'unblock' : 'block';
-    let reason = '';
-
-    if (action === 'block') {
-      reason = window.prompt(`Please enter the reason for blocking the event "${event.title}":`);
-      if (reason === null) {
-        return;
-      }
-      if (!reason.trim()) {
-        toast.error("A reason is required to block an event.");
-        return;
-      }
-    } else {
-      if (!window.confirm(`Are you sure you want to unblock the event "${event.title}"?`)) {
-        return;
-      }
-    }
-
+  const executeToggleBlock = async (event, reason) => {
     try {
       const response = await toggleBlockEventApi(event._id, { reason });
       if (response.data && response.data.success) {
         const updatedEvent = response.data.event;
         setEvents(prev => prev.map(item => item._id === event._id ? updatedEvent : item));
-        toast.success(`Event has been ${updatedEvent.isBlocked ? 'blocked' : 'unblocked'} successfully.`);
+        toast.success(`Event has been ${updatedEvent.isBlocked ? 'blocked' : 'unblocked'} successfully.`, { position: 'bottom-center' });
       }
     } catch (error) {
       console.error("Failed to toggle block status:", error);
-      toast.error(error.response?.data?.message || "Failed to update event block status");
+      toast.error(error.response?.data?.message || "Failed to update event block status", { position: 'bottom-center' });
+    }
+  };
+
+  const handleToggleBlockEvent = (event) => {
+    const action = event.isBlocked ? 'unblock' : 'block';
+
+    if (action === 'block') {
+      setBlockingEvent(event);
+      setIsBlockModalOpen(true);
+    } else {
+      const toastId = toast((t) => (
+        <div className="flex flex-col gap-3 p-1 text-white">
+          <p className="text-xs font-semibold">
+            Are you sure you want to unblock "{event.title}"?
+          </p>
+          <div className="flex gap-2 justify-end">
+            <button 
+              onClick={async () => {
+                toast.dismiss(toastId);
+                await executeToggleBlock(event, '');
+              }}
+              className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-[10px] font-bold rounded-lg transition-all cursor-pointer border-none"
+            >
+              Unblock
+            </button>
+            <button 
+              onClick={() => toast.dismiss(toastId)}
+              className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-bold rounded-lg transition-all cursor-pointer border-none"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ), {
+        position: 'bottom-center',
+        duration: Infinity,
+      });
     }
   };
 
@@ -105,7 +128,7 @@ const AdminEventManagement = () => {
   };
 
   const getEventPriceText = (event) => {
-    return event.ticketType === 'Free' ? 'Free' : `$${event.ticketPrice}`;
+    return event.ticketType === 'Free' ? 'Free' : 'Paid';
   };
 
   const getOrganizerName = (event) => {
@@ -319,7 +342,9 @@ const AdminEventManagement = () => {
                           }`}>
                             {event.title}
                           </h3>
-                          <span className="text-purple-400 text-lg font-bold shrink-0">
+                          <span className={`${
+                            getEventPriceText(event) === 'Free' ? 'text-emerald-400' : 'text-purple-400'
+                          } text-lg font-bold shrink-0`}>
                             {getEventPriceText(event)}
                           </span>
                         </div>
@@ -405,108 +430,27 @@ const AdminEventManagement = () => {
       </main>
 
       {/* Detail & Summary Modal Overlay */}
-      {isModalOpen && selectedEvent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-[#151221] border border-gray-800 w-full max-w-2xl rounded-2xl overflow-hidden relative text-white font-sans shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            {/* Modal Image Header Section */}
-            <div className="relative h-56 w-full bg-[#1A182E] flex items-center justify-center border-b border-gray-850">
-              {selectedEvent.thumbnail?.fileUrl ? (
-                <img 
-                  src={selectedEvent.thumbnail.fileUrl} 
-                  alt={selectedEvent.title}
-                  className="w-full h-full object-cover" 
-                />
-              ) : (
-                <div className="w-full h-full bg-[#E5E7EB] flex items-center justify-center text-[#9CA3AF] font-bold text-sm">
-                  Image not available
-                </div>
-              )}
-
-              {/* Close Button */}
-              <button 
-                onClick={() => setIsModalOpen(false)}
-                className="absolute top-4 right-4 p-1.5 bg-black/60 hover:bg-black/80 rounded-lg border border-white/10 transition-colors text-white cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-
-              {/* Category & Status Overlay */}
-              <div className="absolute bottom-4 left-4 flex gap-2">
-                <span className="px-2.5 py-1 bg-purple-600/90 text-white text-[10px] font-bold rounded-lg uppercase tracking-wide">
-                  {selectedEvent.category?.name || 'Uncategorized'}
-                </span>
-                <span className="px-2.5 py-1 bg-black/60 text-white text-[10px] font-bold rounded-lg uppercase tracking-wide border border-white/10">
-                  {getEventStatusText(selectedEvent.eventStatus)}
-                </span>
-              </div>
-            </div>
-
-            {/* Modal Body Content */}
-            <div className="p-6 space-y-6">
-              <div>
-                <div className="flex justify-between items-start gap-4 mb-2">
-                  <h2 className="text-2xl font-bold text-white leading-tight">
-                    {selectedEvent.title}
-                  </h2>
-                  <span className="text-purple-400 text-2xl font-extrabold shrink-0">
-                    {getEventPriceText(selectedEvent)}
-                  </span>
-                </div>
-                <p className="text-zinc-400 text-sm leading-relaxed">
-                  {selectedEvent.description || 'No description provided.'}
-                </p>
-              </div>
-
-              {/* Organizer Row */}
-              <div className="bg-[#0B0914] p-4 rounded-xl border border-gray-800 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <img 
-                    src={getOrganizerAvatar(selectedEvent)} 
-                    alt={getOrganizerName(selectedEvent)}
-                    className="w-10 h-10 rounded-full object-cover border border-gray-700 bg-zinc-800" 
-                  />
-                  <div>
-                    <h4 className="text-sm font-bold text-white leading-tight">{getOrganizerName(selectedEvent)}</h4>
-                    <p className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider">Host Organizer</p>
-                  </div>
-                </div>
-                <span className="px-2.5 py-1 bg-purple-500/10 border border-purple-500/20 text-purple-400 text-xs font-bold rounded-lg uppercase tracking-wide">
-                  {getOrganizerRole(selectedEvent)} Account
-                </span>
-              </div>
-
-              {/* Event Schedule & Location Grid */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-[#0B0914] p-4 rounded-xl border border-gray-800 space-y-1">
-                  <div className="flex items-center gap-2 text-xs font-bold text-purple-400 uppercase tracking-wider">
-                    <Calendar className="w-3.5 h-3.5" />
-                    <span>Date & Time</span>
-                  </div>
-                  <p className="text-xs text-zinc-300">{getFormattedDate(selectedEvent)}</p>
-                </div>
-
-                <div className="bg-[#0B0914] p-4 rounded-xl border border-gray-800 space-y-1">
-                  <div className="flex items-center gap-2 text-xs font-bold text-purple-400 uppercase tracking-wider">
-                    <MapPin className="w-3.5 h-3.5" />
-                    <span>Location</span>
-                  </div>
-                  <p className="text-xs text-zinc-300 truncate">{getFormattedLocation(selectedEvent)}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="px-6 py-4 bg-[#0B0914] border-t border-gray-800 flex justify-end">
-              <button 
-                onClick={() => setIsModalOpen(false)}
-                className="px-5 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
-              >
-                Close Summary
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <AdminViewEventDetails
+        isOpen={isModalOpen}
+        selectedEvent={selectedEvent}
+        onClose={() => {
+          setIsModalOpen(false);
+          setSelectedEvent(null);
+        }}
+      />      <AdminReasonSending
+        isOpen={isBlockModalOpen}
+        eventTitle={blockingEvent?.title || ''}
+        onClose={() => {
+          setIsBlockModalOpen(false);
+          setBlockingEvent(null);
+        }}
+        onSubmit={async (reason) => {
+          const eventToBlock = blockingEvent;
+          setIsBlockModalOpen(false);
+          setBlockingEvent(null);
+          await executeToggleBlock(eventToBlock, reason);
+        }}
+      />
     </div>
   );
 };

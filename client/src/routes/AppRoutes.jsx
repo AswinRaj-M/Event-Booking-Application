@@ -11,6 +11,7 @@ import ForgotPassword from '../pages/auth/ForgotPassword.jsx';
 import ResetPassword from '../pages/auth/ResetPassword.jsx';
 import GoogleAuthSuccess from '../pages/auth/GoogleAuthSuccess.jsx';
 import UserExploreEvent from '../pages/user/UserExploreEvent.jsx';
+import UserEventDetails from '../pages/user/UserEventDetails.jsx';
 
 const AppRoutes = () => {
     return (
@@ -29,6 +30,11 @@ const AppRoutes = () => {
             <Route path='/user/explore' element={
                 <ProtectedRoute role="user">
                     <UserExploreEvent />
+                </ProtectedRoute>
+            } />
+            <Route path='/user/event/:id' element={
+                <ProtectedRoute role="user">
+                    <UserEventDetails />
                 </ProtectedRoute>
             } />
             <Route path="/" element={

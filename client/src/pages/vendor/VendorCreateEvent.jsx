@@ -9,7 +9,8 @@ import {
   Upload, 
   Info,
   ChevronDown,
-  X
+  X,
+  Trash2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
@@ -55,6 +56,76 @@ const VendorCreateEvent = () => {
   const [totalSeats, setTotalSeats] = useState('');
   const [maxTicketsPerPerson, setMaxTicketsPerPerson] = useState('');
   const [agreedTerms, setAgreedTerms] = useState(false);
+  const [ticketTiers, setTicketTiers] = useState([
+    {
+      name: '',
+      price: '',
+      capacity: '',
+      benefits: ['']
+    }
+  ]);
+
+  const addTier = () => {
+    setTicketTiers(prev => [
+      ...prev,
+      {
+        name: '',
+        price: '',
+        capacity: '',
+        benefits: ['']
+      }
+    ]);
+  };
+
+  const removeTier = (index) => {
+    setTicketTiers(prev => prev.filter((_, idx) => idx !== index));
+  };
+
+  const handleTierChange = (index, field, value) => {
+    setTicketTiers(prev => {
+      const updated = [...prev];
+      updated[index] = {
+        ...updated[index],
+        [field]: value
+      };
+      return updated;
+    });
+  };
+
+  const addBenefit = (tierIndex) => {
+    setTicketTiers(prev => {
+      const updated = [...prev];
+      updated[tierIndex] = {
+        ...updated[tierIndex],
+        benefits: [...updated[tierIndex].benefits, '']
+      };
+      return updated;
+    });
+  };
+
+  const removeBenefit = (tierIndex, benefitIndex) => {
+    setTicketTiers(prev => {
+      const updated = [...prev];
+      updated[tierIndex] = {
+        ...updated[tierIndex],
+        benefits: updated[tierIndex].benefits.filter((_, idx) => idx !== benefitIndex)
+      };
+      return updated;
+    });
+  };
+
+  const handleBenefitChange = (tierIndex, benefitIndex, value) => {
+    setTicketTiers(prev => {
+      const updated = [...prev];
+      const updatedBenefits = [...updated[tierIndex].benefits];
+      updatedBenefits[benefitIndex] = value;
+      updated[tierIndex] = {
+        ...updated[tierIndex],
+        benefits: updatedBenefits
+      };
+      return updated;
+    });
+  };
 
   // File states & previews
   const [thumbnail, setThumbnail] = useState(null);
@@ -140,13 +211,38 @@ const VendorCreateEvent = () => {
         toast.error('State is required');
         return;
       }
-      if (!totalSeats) {
-        toast.error('Total seats limit is required');
-        return;
-      }
-      if (ticketType === 'paid' && (!price || parseFloat(price) <= 0)) {
-        toast.error('Ticket price must be greater than 0 for paid events');
-        return;
+      if (ticketType === 'paid') {
+        if (!ticketTiers || ticketTiers.length === 0) {
+          toast.error('At least one ticket tier is required for paid events');
+          return;
+        }
+        for (let i = 0; i < ticketTiers.length; i++) {
+          const tier = ticketTiers[i];
+          if (!tier.name || !tier.name.trim()) {
+            toast.error(`Tier ${i + 1} name is required`);
+            return;
+          }
+          const priceNum = parseFloat(tier.price);
+          if (isNaN(priceNum) || priceNum <= 0) {
+            toast.error(`Tier ${i + 1} price must be greater than 0`);
+            return;
+          }
+          const capacityNum = parseInt(tier.capacity, 10);
+          if (isNaN(capacityNum) || capacityNum <= 0) {
+            toast.error(`Tier ${i + 1} capacity must be greater than 0`);
+            return;
+          }
+          const validBenefits = tier.benefits ? tier.benefits.filter(b => b.trim() !== '') : [];
+          if (validBenefits.length === 0) {
+            toast.error(`Tier ${i + 1} must have at least one benefit`);
+            return;
+          }
+        }
+      } else {
+        if (!totalSeats) {
+          toast.error('Total seats limit is required');
+          return;
+        }
       }
       if (!agreedTerms) {
         toast.error('You must agree to the Vendor Terms to publish the event');
@@ -178,8 +274,23 @@ const VendorCreateEvent = () => {
     
     const formattedTicketType = ticketType === 'paid' ? 'Paid' : 'Free';
     formData.append('ticketType', formattedTicketType);
-    formData.append('ticketPrice', ticketType === 'paid' ? price : '0');
-    formData.append('totalTickets', totalSeats || '0');
+    
+    if (formattedTicketType === 'Paid') {
+      const sumSeats = ticketTiers.reduce((sum, tier) => sum + (parseInt(tier.capacity, 10) || 0), 0);
+      const minPrice = Math.min(...ticketTiers.map(tier => parseFloat(tier.price) || 0));
+      
+      formData.append('ticketTiers', JSON.stringify(ticketTiers.map(t => ({
+        name: t.name,
+        price: parseFloat(t.price) || 0,
+        capacity: parseInt(t.capacity, 10) || 0,
+        benefits: (t.benefits || []).filter(b => b.trim() !== '')
+      }))));
+      formData.append('ticketPrice', isFinite(minPrice) ? minPrice.toString() : '0');
+      formData.append('totalTickets', sumSeats.toString());
+    } else {
+      formData.append('ticketPrice', '0');
+      formData.append('totalTickets', totalSeats || '0');
+    }
     formData.append('maxTicketPerPerson', maxTicketsPerPerson || '5');
     
     formData.append('offerEnabled', enableOffer ? 'true' : 'false');
@@ -562,36 +673,156 @@ const VendorCreateEvent = () => {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-xs font-semibold text-zinc-400">Start Time</label>
-                    <div className="relative">
-                      <select 
-                        value={startTime}
-                        onChange={(e) => setStartTime(e.target.value)}
-                        className="w-full bg-[#12101F] text-white px-3 py-3.5 rounded-xl border border-zinc-800/80 focus:outline-none focus:border-purple-500 transition-colors appearance-none cursor-pointer text-xs"
+                    <div className="flex items-center bg-[#12101F] rounded-xl border border-zinc-800/80 p-1.5 focus-within:border-purple-500 transition-colors w-full min-w-0">
+                      <input 
+                        type="text" 
+                        maxLength={2}
+                        placeholder="07"
+                        value={startTime.split(' ')[0]?.split(':')[0] || ''}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '');
+                          const parts = startTime.split(' ');
+                          const period = parts[1] || 'PM';
+                          const mm = parts[0]?.split(':')[1] || '00';
+                          setStartTime(`${val}:${mm} ${period}`);
+                        }}
+                        onBlur={(e) => {
+                          let val = e.target.value.replace(/\D/g, '');
+                          if (val) {
+                            let num = parseInt(val, 10);
+                            if (num > 12) num = 12;
+                            if (num < 1) num = 1;
+                            val = String(num).padStart(2, '0');
+                          } else {
+                            val = '07';
+                          }
+                          const parts = startTime.split(' ');
+                          const period = parts[1] || 'PM';
+                          const mm = parts[0]?.split(':')[1] || '00';
+                          setStartTime(`${val}:${mm} ${period}`);
+                        }}
+                        className="w-8 shrink-0 bg-transparent text-white text-center focus:outline-none text-sm font-semibold"
+                      />
+                      <span className="text-zinc-600 font-bold mx-0.5 shrink-0">:</span>
+                      <input 
+                        type="text" 
+                        maxLength={2}
+                        placeholder="00"
+                        value={startTime.split(' ')[0]?.split(':')[1] || ''}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '');
+                          const parts = startTime.split(' ');
+                          const period = parts[1] || 'PM';
+                          const hh = parts[0]?.split(':')[0] || '07';
+                          setStartTime(`${hh}:${val} ${period}`);
+                        }}
+                        onBlur={(e) => {
+                          let val = e.target.value.replace(/\D/g, '');
+                          if (val) {
+                            let num = parseInt(val, 10);
+                            if (num > 59) num = 59;
+                            val = String(num).padStart(2, '0');
+                          } else {
+                            val = '00';
+                          }
+                          const parts = startTime.split(' ');
+                          const period = parts[1] || 'PM';
+                          const hh = parts[0]?.split(':')[0] || '07';
+                          setStartTime(`${hh}:${val} ${period}`);
+                        }}
+                        className="w-8 shrink-0 bg-transparent text-white text-center focus:outline-none text-sm font-semibold"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const parts = startTime.split(' ');
+                          const period = parts[1] === 'AM' ? 'PM' : 'AM';
+                          const timePart = parts[0] || '07:00';
+                          setStartTime(`${timePart} ${period}`);
+                        }}
+                        className="ml-auto px-1.5 py-0.5 shrink-0 bg-[#1C1A30] hover:bg-[#252245] border border-purple-500/20 text-purple-300 text-[10px] font-bold rounded-md transition-all cursor-pointer"
                       >
-                        <option value="07:00 PM">07:00 PM</option>
-                        <option value="08:00 PM">08:00 PM</option>
-                        <option value="09:00 PM">09:00 PM</option>
-                      </select>
-                      <ChevronDown className="absolute right-3 top-4 w-3.5 h-3.5 text-zinc-500 pointer-events-none" />
+                        {startTime.split(' ')[1] || 'PM'}
+                      </button>
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <label className="text-xs font-semibold text-zinc-400">End Time</label>
-                    <div className="relative">
-                      <select 
-                        value={endTime}
-                        onChange={(e) => setEndTime(e.target.value)}
-                        className="w-full bg-[#12101F] text-white px-3 py-3.5 rounded-xl border border-zinc-800/80 focus:outline-none focus:border-purple-500 transition-colors appearance-none cursor-pointer text-xs"
+                    <div className="flex items-center bg-[#12101F] rounded-xl border border-zinc-800/80 p-1.5 focus-within:border-purple-500 transition-colors w-full min-w-0">
+                      <input 
+                        type="text" 
+                        maxLength={2}
+                        placeholder="11"
+                        value={endTime.split(' ')[0]?.split(':')[0] || ''}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '');
+                          const parts = endTime.split(' ');
+                          const period = parts[1] || 'PM';
+                          const mm = parts[0]?.split(':')[1] || '00';
+                          setEndTime(`${val}:${mm} ${period}`);
+                        }}
+                        onBlur={(e) => {
+                          let val = e.target.value.replace(/\D/g, '');
+                          if (val) {
+                            let num = parseInt(val, 10);
+                            if (num > 12) num = 12;
+                            if (num < 1) num = 1;
+                            val = String(num).padStart(2, '0');
+                          } else {
+                            val = '11';
+                          }
+                          const parts = endTime.split(' ');
+                          const period = parts[1] || 'PM';
+                          const mm = parts[0]?.split(':')[1] || '00';
+                          setEndTime(`${val}:${mm} ${period}`);
+                        }}
+                        className="w-8 shrink-0 bg-transparent text-white text-center focus:outline-none text-sm font-semibold"
+                      />
+                      <span className="text-zinc-600 font-bold mx-0.5 shrink-0">:</span>
+                      <input 
+                        type="text" 
+                        maxLength={2}
+                        placeholder="00"
+                        value={endTime.split(' ')[0]?.split(':')[1] || ''}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '');
+                          const parts = endTime.split(' ');
+                          const period = parts[1] || 'PM';
+                          const hh = parts[0]?.split(':')[0] || '11';
+                          setEndTime(`${hh}:${val} ${period}`);
+                        }}
+                        onBlur={(e) => {
+                          let val = e.target.value.replace(/\D/g, '');
+                          if (val) {
+                            let num = parseInt(val, 10);
+                            if (num > 59) num = 59;
+                            val = String(num).padStart(2, '0');
+                          } else {
+                            val = '00';
+                          }
+                          const parts = endTime.split(' ');
+                          const period = parts[1] || 'PM';
+                          const hh = parts[0]?.split(':')[0] || '11';
+                          setEndTime(`${hh}:${val} ${period}`);
+                        }}
+                        className="w-8 shrink-0 bg-transparent text-white text-center focus:outline-none text-sm font-semibold"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const parts = endTime.split(' ');
+                          const period = parts[1] === 'AM' ? 'PM' : 'AM';
+                          const timePart = parts[0] || '11:00';
+                          setEndTime(`${timePart} ${period}`);
+                        }}
+                        className="ml-auto px-1.5 py-0.5 shrink-0 bg-[#1C1A30] hover:bg-[#252245] border border-purple-500/20 text-purple-300 text-[10px] font-bold rounded-md transition-all cursor-pointer"
                       >
-                        <option value="11:00 PM">11:00 PM</option>
-                        <option value="12:00 AM">12:00 AM</option>
-                        <option value="01:00 AM">01:00 AM</option>
-                      </select>
-                      <ChevronDown className="absolute right-3 top-4 w-3.5 h-3.5 text-zinc-500 pointer-events-none" />
+                        {endTime.split(' ')[1] || 'PM'}
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -716,33 +947,131 @@ const VendorCreateEvent = () => {
                   </button>
                 </div>
 
-                {ticketType === 'paid' && (
-                  <div className="space-y-2">
-                    <label className="text-xs font-semibold text-zinc-400">Price per Ticket</label>
-                    <div className="relative">
-                      <span className="absolute left-4 top-3.5 text-sm text-zinc-500 font-bold">$</span>
-                      <input 
-                        type="number" 
-                        placeholder="0.00"
-                        value={price}
-                        onChange={(e) => setPrice(e.target.value)}
-                        className="w-full bg-[#12101F] text-white pl-8 pr-4 py-3.5 rounded-xl border border-zinc-800/80 focus:outline-none focus:border-purple-500 transition-colors text-sm font-semibold"
-                      />
+                {ticketType === 'paid' ? (
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <label className="text-xs font-semibold text-zinc-400">Ticket Tiers</label>
+                      <button
+                        type="button"
+                        onClick={addTier}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1C1A30] hover:bg-[#252245] border border-purple-500/20 text-purple-300 text-xs font-bold rounded-lg transition-all cursor-pointer"
+                      >
+                        <Plus className="w-3 h-3" />
+                        Add Tier
+                      </button>
+                    </div>
+
+                    <div className="space-y-4">
+                      {ticketTiers.map((tier, idx) => (
+                        <div key={idx} className="bg-[#12101F] border border-zinc-800/80 rounded-2xl p-5 space-y-4 relative group">
+                          <div className="flex justify-between items-center">
+                            <div className="text-[10px] font-extrabold text-purple-400 uppercase tracking-wider">Tier #{idx + 1}</div>
+                            {ticketTiers.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeTier(idx)}
+                                className="p-1.5 bg-[#0B0A11]/60 hover:bg-rose-950/20 border border-zinc-800/80 hover:border-rose-500/30 text-zinc-500 hover:text-rose-400 rounded-lg transition-all cursor-pointer"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                          
+                          <div className="space-y-3">
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Tier Name</label>
+                              <input
+                                type="text"
+                                placeholder="e.g. VIP"
+                                value={tier.name}
+                                onChange={(e) => handleTierChange(idx, 'name', e.target.value)}
+                                className="w-full bg-[#0B0A11] text-white px-3 py-2.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-purple-500 text-xs transition-colors"
+                              />
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-1.5">
+                                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Price ($)</label>
+                                <input
+                                  type="number"
+                                  placeholder="e.g. 99"
+                                  value={tier.price}
+                                  onChange={(e) => handleTierChange(idx, 'price', e.target.value)}
+                                  className="w-full bg-[#0B0A11] text-white px-3 py-2.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-purple-500 text-xs transition-colors"
+                                />
+                              </div>
+
+                              <div className="space-y-1.5">
+                                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Capacity</label>
+                                <input
+                                  type="number"
+                                  placeholder="e.g. 50"
+                                  value={tier.capacity}
+                                  onChange={(e) => handleTierChange(idx, 'capacity', e.target.value)}
+                                  className="w-full bg-[#0B0A11] text-white px-3 py-2.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-purple-500 text-xs transition-colors"
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Benefits section */}
+                          <div className="space-y-2 pt-2 border-t border-zinc-800/40">
+                            <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Benefits</label>
+                            <div className="space-y-2">
+                              {(tier.benefits || []).map((benefit, bIdx) => (
+                                <div key={bIdx} className="flex gap-2 items-center">
+                                  <input
+                                    type="text"
+                                    placeholder="e.g. Backstage pass, Free drinks"
+                                    value={benefit}
+                                    onChange={(e) => handleBenefitChange(idx, bIdx, e.target.value)}
+                                    className="flex-1 bg-[#0B0A11] text-white px-3 py-2 rounded-xl border border-zinc-800 focus:outline-none focus:border-purple-500 text-xs transition-colors"
+                                  />
+                                  {tier.benefits.length > 1 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => removeBenefit(idx, bIdx)}
+                                      className="p-2 bg-[#0B0A11] hover:bg-rose-950/20 border border-zinc-800 hover:border-rose-500/30 text-zinc-500 hover:text-rose-400 rounded-xl transition-colors cursor-pointer"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => addBenefit(idx)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0B0A11] hover:bg-[#1A182E] border border-purple-500/20 text-purple-300 text-[10px] font-bold rounded-lg transition-all mt-1 cursor-pointer"
+                            >
+                              <Plus className="w-3 h-3" />
+                              Add Benefit
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex justify-between items-center text-xs text-zinc-500 pt-1">
+                      <span>Total Capacity across tiers:</span>
+                      <span className="text-white font-bold text-sm">
+                        {ticketTiers.reduce((sum, t) => sum + (parseInt(t.capacity, 10) || 0), 0)} seats
+                      </span>
                     </div>
                   </div>
+                ) : (
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-zinc-400">Total Seats</label>
+                    <input 
+                      type="number" 
+                      placeholder="e.g. 500"
+                      value={totalSeats}
+                      onChange={(e) => setTotalSeats(e.target.value)}
+                      className="w-full bg-[#12101F] text-white px-4 py-3.5 rounded-xl border border-zinc-800/80 focus:outline-none focus:border-purple-500 transition-colors text-sm"
+                    />
+                    <p className="text-[10px] text-zinc-500 leading-relaxed">We'll stop sales once this limit is reached.</p>
+                  </div>
                 )}
-
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-zinc-400">Total Seats</label>
-                  <input 
-                    type="number" 
-                    placeholder="e.g. 500"
-                    value={totalSeats}
-                    onChange={(e) => setTotalSeats(e.target.value)}
-                    className="w-full bg-[#12101F] text-white px-4 py-3.5 rounded-xl border border-zinc-800/80 focus:outline-none focus:border-purple-500 transition-colors text-sm"
-                  />
-                  <p className="text-[10px] text-zinc-500 leading-relaxed">We'll stop sales once this limit is reached.</p>
-                </div>
 
                 <div className="space-y-2">
                   <label className="text-xs font-semibold text-zinc-400">Maximum Tickets per Person</label>
@@ -785,7 +1114,7 @@ const VendorCreateEvent = () => {
             {/* Main Submit Button */}
             <button 
               type="button" 
-              onClick={handlePublish}
+              onClick={()=>handlePublish("pending")}
               disabled={loading}
               className={`w-full py-4 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(139,92,246,0.3)] hover:shadow-[0_0_25px_rgba(139,92,246,0.5)] active:scale-[0.99] duration-200 cursor-pointer flex justify-center items-center gap-2 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
             >

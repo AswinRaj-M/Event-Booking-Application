@@ -19,6 +19,7 @@ const UserProfile = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [fullName, setFullName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [email, setEmail] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
   // Fetch real profile details on load
@@ -66,6 +67,7 @@ const UserProfile = () => {
   const handleOpenEditModal = () => {
     setFullName(user?.fullName || "");
     setPhoneNumber(user?.phoneNumber || "");
+    setEmail(user?.email || "");
     setIsEditModalOpen(true);
   };
 
@@ -75,10 +77,14 @@ const UserProfile = () => {
       toast.error("Name cannot be empty");
       return;
     }
+    if (!email.trim()) {
+      toast.error("Email cannot be empty");
+      return;
+    }
 
     setIsSaving(true);
     try {
-      const response = await updateUserProfile({ fullName, phoneNumber });
+      const response = await updateUserProfile({ fullName, phoneNumber, email });
       if (response.data?.success) {
         dispatch(updateUserData(response.data.user));
         toast.success("Profile updated successfully");
@@ -353,6 +359,22 @@ const UserProfile = () => {
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="Enter your name"
+                    className="w-full bg-[#04020a]/80 text-white pl-11 pr-4 py-3 rounded-xl border border-white/10 hover:border-purple-500/30 focus:border-purple-500 focus:outline-none transition-all duration-300 text-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] uppercase font-bold tracking-widest text-zinc-400">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-400/70" />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter your email"
                     className="w-full bg-[#04020a]/80 text-white pl-11 pr-4 py-3 rounded-xl border border-white/10 hover:border-purple-500/30 focus:border-purple-500 focus:outline-none transition-all duration-300 text-sm"
                   />
                 </div>

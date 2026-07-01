@@ -30,7 +30,7 @@ import { vendorProfile,
     deleteVendorImage, 
     deleteVendorPortfolio,
      updateVendorProfile, 
-     fetchCategories, 
+     fetchCategories,                          
     } from "../../services/vendor.api";
 import { useAsyncError } from "react-router-dom";
 import { toast } from "sonner";
