@@ -209,3 +209,66 @@ export const logoutUserService = async (token) => {
 export const getExploreEventsService = async () => {
   return await getExploreEventsRepo();
 };
+
+export const sendEmailUpdateOtpService = async (userId, newEmail, otp) => {
+  const user = await findUserById(userId);
+  if (!user) throw new AppError("User not found", 404);
+
+  const existingUser = await findUserByEmail(newEmail);
+  if (existingUser && existingUser._id.toString() !== userId.toString()) {
+    throw new AppError("Email already registered by another account", 400);
+  }
+
+  await upsertOtp(userId, otp, { tempEmail: newEmail });
+
+  return user;
+};
+
+export const verifyEmailUpdateOtpService = async (userId, otp, profileData) => {
+  if (!userId || !otp) {
+    throw new AppError("OTP Required", 400);
+  }
+
+  const user = await findUserById(userId);
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  const otpDoc = await findOtpByUserId(userId);
+  if (!otpDoc) {
+    throw new AppError("Invalid or Expired OTP", 400);
+  }
+
+  if (otp !== otpDoc.otp) {
+    throw new AppError("Invalid OTP", 400);
+  }
+
+  if (!otpDoc.tempEmail) {
+    throw new AppError("No pending email update found", 400);
+  }
+
+  const existingUser = await findUserByEmail(otpDoc.tempEmail);
+  if (existingUser && existingUser._id.toString() !== userId.toString()) {
+    throw new AppError("Email already registered by another account", 400);
+  }
+
+  user.email = otpDoc.tempEmail;
+  if (profileData.fullName) user.fullName = profileData.fullName;
+  if (profileData.phoneNumber) user.phoneNumber = profileData.phoneNumber;
+
+  await user.save();
+  await deleteOtpByUserId(userId);
+
+  return user;
+};
+
+export const resendEmailUpdateOtpService = async (userId, otp) => {
+  const otpDoc = await findOtpByUserId(userId);
+  if (!otpDoc || !otpDoc.tempEmail) {
+    throw new AppError("No pending email update found", 400);
+  }
+
+  await upsertOtp(userId, otp, { tempEmail: otpDoc.tempEmail });
+
+  return otpDoc.tempEmail;
+};

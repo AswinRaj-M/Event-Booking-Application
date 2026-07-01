@@ -20,6 +20,9 @@ import {
   getUserProfileService,
   updateUserProfileService,
   getExploreEventsService,
+  sendEmailUpdateOtpService,
+  verifyEmailUpdateOtpService,
+  resendEmailUpdateOtpService,
 } from "../services/user.service.js";
 import { AppError } from "../utils/AppError.js";
 
@@ -358,13 +361,10 @@ export const updateUserProfile = async (req, res) => {
   const { fullName, phoneNumber, email } = req.body;
 
   if (email && email !== req.user.email) {
-    const existingUser = await findUserByEmail(email);
-    if (existingUser) {
-      throw new AppError("Email already registered by another account", 400);
-    }
+    throw new AppError("Email change requires verification. Please use OTP verification flow.", 400);
   }
 
-  const updatedUser = await updateUserProfileService(userId, { fullName, phoneNumber, email });
+  const updatedUser = await updateUserProfileService(userId, { fullName, phoneNumber });
   return res.status(200).json({
     success: true,
     message: "Profile updated successfully",
@@ -378,6 +378,75 @@ export const updateUserProfile = async (req, res) => {
       profilePicture: updatedUser.profilePicture,
       createdAt: updatedUser.createdAt,
     },
+  });
+};
+
+export const sendEmailUpdateOtp = async (req, res) => {
+  const userId = req.user._id;
+  const { newEmail } = req.body;
+
+  if (!newEmail) {
+    throw new AppError("New email is required", 400);
+  }
+
+  const otp = generateOTP();
+  await sendEmailUpdateOtpService(userId, newEmail, otp);
+
+  try {
+    await sendOTP(newEmail, otp);
+  } catch (mailError) {
+    console.error("Failed to send OTP to new email:", mailError);
+    throw new AppError("Failed to send verification email. Please try again.", 500);
+  }
+
+  console.log("Email update OTP is:", otp);
+
+  return res.status(200).json({
+    success: true,
+    message: "OTP sent to new email address",
+  });
+};
+
+export const verifyEmailUpdateOtp = async (req, res) => {
+  const userId = req.user._id;
+  const { otp, fullName, phoneNumber } = req.body;
+
+  const updatedUser = await verifyEmailUpdateOtpService(userId, otp, { fullName, phoneNumber });
+
+  return res.status(200).json({
+    success: true,
+    message: "Profile updated successfully",
+    user: {
+      id: updatedUser._id,
+      fullName: updatedUser.fullName,
+      email: updatedUser.email,
+      phoneNumber: updatedUser.phoneNumber,
+      walletBalance: updatedUser.walletBalance,
+      role: updatedUser.role,
+      profilePicture: updatedUser.profilePicture,
+      createdAt: updatedUser.createdAt,
+    },
+  });
+};
+
+export const resendEmailUpdateOtp = async (req, res) => {
+  const userId = req.user._id;
+
+  const otp = generateOTP();
+  const tempEmail = await resendEmailUpdateOtpService(userId, otp);
+
+  try {
+    await sendOTP(tempEmail, otp);
+  } catch (mailError) {
+    console.error("Failed to resend OTP to new email:", mailError);
+    throw new AppError("Failed to send verification email. Please try again.", 500);
+  }
+
+  console.log("Resent Email update OTP is:", otp);
+
+  return res.status(200).json({
+    success: true,
+    message: "OTP resent to new email address",
   });
 };
 

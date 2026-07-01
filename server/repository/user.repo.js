@@ -48,10 +48,10 @@ export const findByRefreshToken = async (token) => {
 
 
 
-export const upsertOtp = async (userId, otp) => {
+export const upsertOtp = async (userId, otp, extraData = {}) => {
   return await Otp.findOneAndUpdate(
     { userId },
-    { otp, createdAt: Date.now() },
+    { otp, createdAt: Date.now(), ...extraData },
     { upsert: true, new: true }
   );
 };

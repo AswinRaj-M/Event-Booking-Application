@@ -12,7 +12,10 @@ import {
   getUserProfile,
   updateUserProfile,
   updateUserProfilePicture,
-  getExploreEvents
+  getExploreEvents,
+  sendEmailUpdateOtp,
+  verifyEmailUpdateOtp,
+  resendEmailUpdateOtp
 } from "../controllers/user.controller.js"
 import passport from "passport"
 import upload from "../middleware/upload.js"
@@ -55,6 +58,9 @@ router.get('/explore-events', protect, requireRole("user"), asyncHandler(getExpl
 
 router.get('/profile', protect, requireRole("user"), asyncHandler(getUserProfile))
 router.put('/update-profile', protect, requireRole("user"), asyncHandler(updateUserProfile))
+router.post('/send-email-update-otp', protect, requireRole("user"), asyncHandler(sendEmailUpdateOtp))
+router.post('/verify-email-update-otp', protect, requireRole("user"), asyncHandler(verifyEmailUpdateOtp))
+router.post('/resend-email-update-otp', protect, requireRole("user"), asyncHandler(resendEmailUpdateOtp))
 router.patch('/profile/picture', protect, requireRole("user"), upload.single('profilePicture'), asyncHandler(updateUserProfilePicture))
 
 export default router

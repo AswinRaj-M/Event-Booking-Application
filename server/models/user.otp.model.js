@@ -10,6 +10,12 @@ const userOtpSchema = new mongoose.Schema({
     type : String,
     required : true
   },
+  tempEmail : {
+    type : String
+  },
+  email : {
+    type : String
+  },
   createdAt :{
     type : Date,
     default : Date.now,
