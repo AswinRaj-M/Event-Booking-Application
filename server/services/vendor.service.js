@@ -42,10 +42,10 @@ export const applyVendorService = async (data) => {
   return vendor;
 };
 
-export const createVendorOtpService = async (vendorId, otp) => {
+export const createVendorOtpService = async (vendorId, otp, extraData = {}) => {
   return await Otp.findOneAndUpdate(
     { userId: vendorId },
-    { otp, createdAt: new Date() },
+    { otp, createdAt: new Date(), ...extraData },
     { upsert: true, new: true }
   );
 };
@@ -235,4 +235,71 @@ export const updateEventService = async (eventId, vendorId, data) => {
 
 export const deleteEventService = async (eventId, vendorId) => {
   return await deleteEventRepo(eventId, vendorId);
+};
+
+export const sendVendorEmailUpdateOtpService = async (vendorId, newEmail, otp) => {
+  const vendor = await Vendor.findById(vendorId);
+  if (!vendor) throw new AppError("Vendor not found", 404);
+
+  const existingVendor = await Vendor.findOne({ businessEmail: newEmail });
+  if (existingVendor && existingVendor._id.toString() !== vendorId.toString()) {
+    throw new AppError("Email already registered by another account", 400);
+  }
+
+  await createVendorOtpService(vendorId, otp, { tempEmail: newEmail });
+
+  return vendor;
+};
+
+export const verifyVendorEmailUpdateOtpService = async (vendorId, otp, profileData) => {
+  if (!vendorId || !otp) {
+    throw new AppError("OTP Required", 400);
+  }
+
+  const vendor = await Vendor.findById(vendorId);
+  if (!vendor) {
+    throw new AppError("Vendor not found", 404);
+  }
+
+  const otpDoc = await Otp.findOne({ userId: vendorId });
+  if (!otpDoc) {
+    throw new AppError("Invalid or Expired OTP", 400);
+  }
+
+  if (otpDoc.otp !== otp) {
+    throw new AppError("Invalid OTP", 400);
+  }
+
+  if (!otpDoc.tempEmail) {
+    throw new AppError("No pending email update found", 400);
+  }
+
+  const existingVendor = await Vendor.findOne({ businessEmail: otpDoc.tempEmail });
+  if (existingVendor && existingVendor._id.toString() !== vendorId.toString()) {
+    throw new AppError("Email already registered by another account", 400);
+  }
+
+  vendor.businessEmail = otpDoc.tempEmail;
+  if (profileData.organizerName) vendor.organizerName = profileData.organizerName;
+  if (profileData.eventCategory) vendor.eventCategory = profileData.eventCategory;
+  if (profileData.experience) vendor.experience = profileData.experience;
+  if (profileData.description) vendor.description = profileData.description;
+  if (profileData.websiteOrInstagram) vendor.websiteOrInstagram = profileData.websiteOrInstagram;
+  if (profileData.contactPhone) vendor.contactPhone = profileData.contactPhone;
+
+  await vendor.save();
+  await Otp.deleteOne({ userId: vendorId });
+
+  return vendor;
+};
+
+export const resendVendorEmailUpdateOtpService = async (vendorId, otp) => {
+  const otpDoc = await Otp.findOne({ userId: vendorId });
+  if (!otpDoc || !otpDoc.tempEmail) {
+    throw new AppError("No pending email update found", 400);
+  }
+
+  await createVendorOtpService(vendorId, otp, { tempEmail: otpDoc.tempEmail });
+
+  return otpDoc.tempEmail;
 };

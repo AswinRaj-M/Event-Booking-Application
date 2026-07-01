@@ -15,6 +15,9 @@ import { applyVendor,
    cancelEvent,
    updateEvent,
    deleteEvent,
+   sendVendorEmailUpdateOtp,
+   verifyVendorEmailUpdateOtp,
+   resendVendorEmailUpdateOtp,
    } from "../controllers/vendor.controller.js"
 import upload from '../middleware/upload.js'
 import { asyncHandler } from '../middleware/error.middleware.js'
@@ -54,6 +57,9 @@ router.patch('/profile/images',
   asyncHandler(updateVendorImages)
 )
 router.put('/update-profile', protect, requireRole("vendor"), asyncHandler(updateVendorProfile))
+router.post('/send-email-update-otp', protect, requireRole("vendor"), asyncHandler(sendVendorEmailUpdateOtp))
+router.post('/verify-email-update-otp', protect, requireRole("vendor"), asyncHandler(verifyVendorEmailUpdateOtp))
+router.post('/resend-email-update-otp', protect, requireRole("vendor"), asyncHandler(resendVendorEmailUpdateOtp))
 router.post('/profile/portfolios', protect, requireRole("vendor"), upload.single('portfolio'), asyncHandler(addVendorPortfolio))
 router.delete('/profile/remove-portfolios/:portfolioId', protect, requireRole("vendor"), asyncHandler(deleteVendorPortfolio))
 router.delete('/profile/remove-images/:imageType', protect, requireRole("vendor"), asyncHandler(deleteVendorImage))

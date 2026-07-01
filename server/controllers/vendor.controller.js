@@ -20,6 +20,9 @@ import {
   cancelEventService,
   updateEventService,
   deleteEventService,
+  sendVendorEmailUpdateOtpService,
+  verifyVendorEmailUpdateOtpService,
+  resendVendorEmailUpdateOtpService,
 } from "../services/vendor.service.js";
 import { generateOTP } from "../utils/generateOtp.js";
 import { sendOTP } from "../utils/sendMail.js";
@@ -364,7 +367,11 @@ export const updateVendorProfile = async (req, res) => {
     throw new AppError("Vendor ID is required", 400);
   }
 
-  const { organizerName, eventCategory, experience, description, websiteOrInstagram } = req.body;
+  const { organizerName, eventCategory, experience, description, websiteOrInstagram, contactPhone, businessEmail } = req.body;
+
+  if (businessEmail && businessEmail !== req.user.businessEmail) {
+    throw new AppError("Email change requires verification. Please use OTP verification flow.", 400);
+  }
 
   const updateData = {
     organizerName,
@@ -372,6 +379,7 @@ export const updateVendorProfile = async (req, res) => {
     experience,
     description,
     websiteOrInstagram,
+    contactPhone,
   };
 
   const updatedVendor = await updateVendorProfileService(vendorId, updateData);
@@ -380,6 +388,73 @@ export const updateVendorProfile = async (req, res) => {
     success: true,
     message: "Profile updated successfully",
     vendor: updatedVendor,
+  });
+};
+
+export const sendVendorEmailUpdateOtp = async (req, res) => {
+  const vendorId = req.user._id;
+  const { newEmail } = req.body;
+
+  if (!newEmail) {
+    throw new AppError("New email is required", 400);
+  }
+
+  const otp = generateOTP();
+  await sendVendorEmailUpdateOtpService(vendorId, newEmail, otp);
+
+  try {
+    await sendOTP(newEmail, otp);
+  } catch (mailError) {
+    console.error("Failed to send OTP to new email:", mailError);
+    throw new AppError("Failed to send verification email. Please try again.", 500);
+  }
+
+  console.log("Vendor Email update OTP is:", otp);
+
+  return res.status(200).json({
+    success: true,
+    message: "OTP sent to new email address",
+  });
+};
+
+export const verifyVendorEmailUpdateOtp = async (req, res) => {
+  const vendorId = req.user._id;
+  const { otp, organizerName, eventCategory, experience, description, websiteOrInstagram, contactPhone } = req.body;
+
+  const updatedVendor = await verifyVendorEmailUpdateOtpService(vendorId, otp, {
+    organizerName,
+    eventCategory,
+    experience,
+    description,
+    websiteOrInstagram,
+    contactPhone,
+  });
+
+  return res.status(200).json({
+    success: true,
+    message: "Profile updated successfully",
+    vendor: updatedVendor,
+  });
+};
+
+export const resendVendorEmailUpdateOtp = async (req, res) => {
+  const vendorId = req.user._id;
+
+  const otp = generateOTP();
+  const tempEmail = await resendVendorEmailUpdateOtpService(vendorId, otp);
+
+  try {
+    await sendOTP(tempEmail, otp);
+  } catch (mailError) {
+    console.error("Failed to resend OTP to new email:", mailError);
+    throw new AppError("Failed to send verification email. Please try again.", 500);
+  }
+
+  console.log("Resent Vendor Email update OTP is:", otp);
+
+  return res.status(200).json({
+    success: true,
+    message: "OTP resent to new email address",
   });
 };
 
