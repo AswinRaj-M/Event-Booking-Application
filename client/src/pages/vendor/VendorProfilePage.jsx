@@ -36,10 +36,12 @@ import { vendorProfile,
      verifyVendorEmailUpdateOtp,
      resendVendorEmailUpdateOtp,
     } from "../../services/vendor.api";
-import { useAsyncError } from "react-router-dom";
+import { useAsyncError, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 const VendorProfilePage = () => {
+  const navigate = useNavigate();
+  const [vendorId, setVendorId] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [businessName, setBusinessName] = useState("");
@@ -66,24 +68,6 @@ const VendorProfilePage = () => {
 
   // Email Update & OTP Verification States
   const [originalEmail, setOriginalEmail] = useState("");
-  const [showOtpInput, setShowOtpInput] = useState(false);
-  const [otp, setOtp] = useState("");
-  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
-  const [resendTimer, setResendTimer] = useState(60);
-  const [isResendingOtp, setIsResendingOtp] = useState(false);
-
-  // OTP Countdown timer
-  useEffect(() => {
-    let interval = null;
-    if (showOtpInput && resendTimer > 0) {
-      interval = setInterval(() => {
-        setResendTimer((prev) => prev - 1);
-      }, 1000);
-    } else {
-      clearInterval(interval);
-    }
-    return () => clearInterval(interval);
-  }, [showOtpInput, resendTimer]);
 
   useEffect(() => {
     const getVendorDetails = async () => {
@@ -92,6 +76,7 @@ const VendorProfilePage = () => {
         const response = await vendorProfile();
         if (response.data && response.data.success) {
           const vendorDetails = response.data.vendor;
+          setVendorId(vendorDetails._id);
           setBusinessName(vendorDetails.businessName);
           setOrganizerName(vendorDetails.organizerName);
           setCategory(vendorDetails.eventCategory);
@@ -257,9 +242,23 @@ const VendorProfilePage = () => {
           const response = await sendVendorEmailUpdateOtp(businessEmail.trim());
           if (response.data && response.data.success) {
             toast.success("Verification code sent to your new email");
-            setResendTimer(60);
-            setShowOtpInput(true);
             setLoading(false);
+            navigate("/verify-otp", {
+              state: {
+                email: businessEmail.trim(),
+                userId: vendorId,
+                isVendor: true,
+                isEmailUpdate: true,
+                profileData: {
+                  organizerName,
+                  eventCategory: category,
+                  experience,
+                  description: aboutText,
+                  websiteOrInstagram: socialMedia,
+                  contactPhone,
+                }
+              }
+            });
             return;
           }
         } else {
@@ -287,57 +286,6 @@ const VendorProfilePage = () => {
       }
     }
     setIsEditing(!isEditing);
-  };
-
-  const handleVerifyOtp = async (e) => {
-    e.preventDefault();
-    if (!otp.trim()) {
-      toast.error("Please enter the verification code");
-      return;
-    }
-
-    setIsVerifyingOtp(true);
-    try {
-      const response = await verifyVendorEmailUpdateOtp({
-        otp: otp.trim(),
-        organizerName,
-        eventCategory: category,
-        experience,
-        description: aboutText,
-        websiteOrInstagram: socialMedia,
-        contactPhone,
-      });
-      if (response.data && response.data.success) {
-        toast.success("Profile and email updated successfully!");
-        const vendorDetails = response.data.vendor;
-        setOriginalEmail(vendorDetails.businessEmail);
-        setBusinessEmail(vendorDetails.businessEmail);
-        setShowOtpInput(false);
-        setOtp("");
-        setIsEditing(false);
-      }
-    } catch (error) {
-      console.error("Error verifying OTP:", error);
-      toast.error(error.response?.data?.message || "Verification failed");
-    } finally {
-      setIsVerifyingOtp(false);
-    }
-  };
-
-  const handleResendOtp = async () => {
-    if (resendTimer > 0 || isResendingOtp) return;
-    setIsResendingOtp(true);
-    try {
-      const response = await resendVendorEmailUpdateOtp();
-      if (response.data && response.data.success) {
-        toast.success("Verification code resent successfully");
-        setResendTimer(60);
-      }
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to resend code");
-    } finally {
-      setIsResendingOtp(false);
-    }
   };
 
   const handleAboutChange = (e) => {
@@ -877,92 +825,6 @@ const VendorProfilePage = () => {
         imageUrl={viewingImageUrl} 
         title="Portfolio Image" 
       />
-
-      {/* OTP Verification Modal */}
-      {showOtpInput && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* Backdrop */}
-          <div 
-            className="absolute inset-0 bg-black/60 backdrop-blur-md"
-            onClick={() => {
-              setShowOtpInput(false);
-              setOtp("");
-            }}
-          />
-          
-          {/* Modal Card */}
-          <div className="relative w-full max-w-md bg-[#0d0722]/95 border border-purple-500/20 rounded-3xl p-6 md:p-8 shadow-[0_25px_60px_rgba(0,0,0,0.8)] overflow-hidden animate-in fade-in zoom-in-95 duration-300">
-            {/* Top gradient highlight */}
-            <div className="absolute top-0 inset-x-0 h-[3px] bg-gradient-to-r from-purple-500 to-fuchsia-500" />
-            
-            <h2 className="text-xl font-extrabold text-white mb-6 flex items-center gap-2">
-              <Shield className="w-5 h-5 text-purple-400 animate-pulse" />
-              Verify New Email
-            </h2>
-            
-            <form onSubmit={handleVerifyOtp} className="space-y-5">
-              <p className="text-xs text-zinc-300 leading-relaxed">
-                We've sent a verification code to <span className="font-semibold text-purple-400">{businessEmail}</span>. Enter the code below to verify your email and save your changes.
-              </p>
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] uppercase font-bold tracking-widest text-zinc-400">
-                  Verification Code
-                </label>
-                <div className="relative">
-                  <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-400/70" />
-                  <input
-                    type="text"
-                    maxLength={6}
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-                    placeholder="Enter OTP"
-                    className="w-full bg-[#04020a]/80 text-white pl-11 pr-4 py-3 rounded-xl border border-white/10 hover:border-purple-500/30 focus:border-purple-500 focus:outline-none transition-all duration-300 text-sm tracking-[0.2em] font-mono text-center font-bold text-lg"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-zinc-400">Didn't receive the code?</span>
-                {resendTimer > 0 ? (
-                  <span className="text-zinc-500">
-                    Resend in <span className="text-purple-400 font-semibold font-mono">{resendTimer}s</span>
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleResendOtp}
-                    disabled={isResendingOtp}
-                    className="text-purple-400 hover:text-purple-300 font-bold transition-colors cursor-pointer disabled:opacity-50"
-                  >
-                    {isResendingOtp ? "Resending..." : "Resend Code"}
-                  </button>
-                )}
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowOtpInput(false);
-                    setOtp("");
-                  }}
-                  className="px-5 py-2.5 rounded-xl border border-white/10 text-zinc-300 hover:text-white hover:bg-white/5 text-sm font-semibold transition-all duration-300"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isVerifyingOtp}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-sm font-bold shadow-[0_4px_15px_rgba(139,92,246,0.3)] transition-all duration-300 disabled:opacity-50"
-                >
-                  {isVerifyingOtp ? "Verifying..." : "Verify & Save"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

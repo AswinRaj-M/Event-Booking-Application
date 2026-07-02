@@ -48,6 +48,10 @@ export const PublicRoute = ({ children }) => {
   const admin = useSelector((state) => state.admin?.admin)
   const location = useLocation()
 
+  if (location.state?.isEmailUpdate) {
+    return children
+  }
+
   if (admin && location.pathname.startsWith("/admin")) {
     return <Navigate to="/admin/dashboard" replace />
   } else if (vendor) {

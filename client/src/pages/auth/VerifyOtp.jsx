@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { verifyOTPThunk } from '../../features/user.slice';
-import { resendOtp } from '../../services/user.api';
-import { verifyVendorOTP, resendVendorOtp } from '../../services/vendor.api';
+import { verifyOTPThunk, updateUserData } from '../../features/user.slice';
+import { resendOtp, verifyEmailUpdateOtp, resendEmailUpdateOtp } from '../../services/user.api';
+import { verifyVendorOTP, resendVendorOtp, verifyVendorEmailUpdateOtp, resendVendorEmailUpdateOtp } from '../../services/vendor.api';
 import { setVendorData } from '../../features/vendorSlice';
 import { toast } from 'sonner';
 import Loader from '../../components/common/Loader';
@@ -97,18 +97,31 @@ const VerifyOtp = () => {
       setLocalLoading(true);
       setLocalError("");
       try {
-        const response = await verifyVendorOTP({ vendorId: userId, otp: finalOtp });
-        if (response.data?.vendor) {
-          toast.success("Email verified successfully!");
-          const vendor = response.data.vendor;
-          dispatch(setVendorData(vendor));
-          if (vendor.applicationStatus === "pending" || vendor.applicationStatus === "rejected") {
-            navigate("/vendor/status", {
-              replace: true,
-              state: { businessName: vendor.businessName }
-            });
-          } else {
-            navigate("/vendor/dashboard", { replace: true });
+        if (location.state?.isEmailUpdate) {
+          const response = await verifyVendorEmailUpdateOtp({
+            otp: finalOtp,
+            ...location.state.profileData,
+          });
+          if (response.data && response.data.success) {
+            toast.success("Profile and email updated successfully!");
+            const vendor = response.data.vendor;
+            dispatch(setVendorData(vendor));
+            navigate("/vendor/profile", { replace: true });
+          }
+        } else {
+          const response = await verifyVendorOTP({ vendorId: userId, otp: finalOtp });
+          if (response.data?.vendor) {
+            toast.success("Email verified successfully!");
+            const vendor = response.data.vendor;
+            dispatch(setVendorData(vendor));
+            if (vendor.applicationStatus === "pending" || vendor.applicationStatus === "rejected") {
+              navigate("/vendor/status", {
+                replace: true,
+                state: { businessName: vendor.businessName }
+              });
+            } else {
+              navigate("/vendor/dashboard", { replace: true });
+            }
           }
         }
       } catch (err) {
@@ -118,21 +131,50 @@ const VerifyOtp = () => {
         setLocalLoading(false);
       }
     } else {
-      dispatch(
-        verifyOTPThunk({
-          userId,
-          otp: finalOtp,
-        })
-      );
+      if (location.state?.isEmailUpdate) {
+        setLocalLoading(true);
+        setLocalError("");
+        try {
+          const response = await verifyEmailUpdateOtp({
+            otp: finalOtp,
+            ...location.state.profileData,
+          });
+          if (response.data?.success) {
+            toast.success("Profile and email updated successfully!");
+            dispatch(updateUserData(response.data.user));
+            navigate("/user/profile", { replace: true });
+          }
+        } catch (err) {
+          console.error("User OTP verify error:", err);
+          setLocalError(err.response?.data?.message || "Verification failed");
+        } finally {
+          setLocalLoading(false);
+        }
+      } else {
+        dispatch(
+          verifyOTPThunk({
+            userId,
+            otp: finalOtp,
+          })
+        );
+      }
     }
   };
 
   const handleResend = async () => {
     try {
       if (isVendor) {
-        await resendVendorOtp({ vendorId: userId });
+        if (location.state?.isEmailUpdate) {
+          await resendVendorEmailUpdateOtp();
+        } else {
+          await resendVendorOtp({ vendorId: userId });
+        }
       } else {
-        await resendOtp(userId);
+        if (location.state?.isEmailUpdate) {
+          await resendEmailUpdateOtp();
+        } else {
+          await resendOtp(userId);
+        }
       }
       toast.success("Resend otp Successfully");
     } catch (error) {
@@ -165,7 +207,9 @@ const VerifyOtp = () => {
         </div>
 
         {/* Title & Description */}
-        <h2 className="text-2xl font-bold mb-2 text-center">Verify Your Account</h2>
+        <h2 className="text-2xl font-bold mb-2 text-center">
+          {location.state?.isEmailUpdate ? 'Verify New Email' : 'Verify Your Account'}
+        </h2>
         <p className="text-gray-400 text-sm text-center mb-8">
           Enter the 6-digit code sent to your email<br />
           <span className="text-white font-medium">{email || 'your email'}</span>
@@ -227,10 +271,18 @@ const VerifyOtp = () => {
         {/* Footer */}
         <div className="mt-6 text-center">
           <p className="text-xs text-gray-500">
-            Entered the wrong email?{' '}
-            <Link to={isVendor ? "/vendor/application" : "/signup"} className="text-purple-400 hover:text-purple-300 transition-colors">
-              Change details
-            </Link>
+            {location.state?.isEmailUpdate ? (
+              <Link to={isVendor ? "/vendor/profile" : "/user/profile"} className="text-purple-400 hover:text-purple-300 transition-colors">
+                Cancel & Go Back
+              </Link>
+            ) : (
+              <>
+                Entered the wrong email?{' '}
+                <Link to={isVendor ? "/vendor/application" : "/signup"} className="text-purple-400 hover:text-purple-300 transition-colors">
+                  Change details
+                </Link>
+              </>
+            )}
           </p>
         </div>
 
