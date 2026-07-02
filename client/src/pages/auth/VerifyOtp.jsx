@@ -40,10 +40,10 @@ const VerifyOtp = () => {
   }, [timer]);
 
   useEffect(() => {
-    if (!isVendor && success) {
+    if (!isVendor && success && !location.state?.isEmailUpdate) {
       navigate('/user/home', { replace: true });
     }
-  }, [success, isVendor, navigate]);
+  }, [success, isVendor, navigate, location.state?.isEmailUpdate]);
 
   const handleChange = (value, index) => {
     if (!/^\d?$/.test(value)) return;
