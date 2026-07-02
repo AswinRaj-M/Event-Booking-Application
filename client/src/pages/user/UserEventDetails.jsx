@@ -415,12 +415,14 @@ const UserEventDetails = () => {
               {/* Venue Card */}
               <div className="bg-white/[0.03] border border-white/10 hover:border-purple-500/20 backdrop-blur-md px-4 py-3 rounded-2xl flex items-center gap-3 transition-colors">
                 <div className="w-10 h-10 rounded-xl bg-purple-950/45 border border-purple-500/20 flex items-center justify-center text-purple-400 shrink-0">
-                  <MapPin className="w-5 h-5" />
+                  {event.eventType === 'Online' ? <Sparkles className="w-5 h-5" /> : <MapPin className="w-5 h-5" />}
                 </div>
                 <div className="flex flex-col min-w-0">
-                  <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-semibold">Location</span>
-                  <span className="text-white text-xs sm:text-sm font-bold truncate" title={`${event.venue}, ${event.city}`}>
-                    {event.venue || "TBA"}, {event.city || "TBA"}
+                  <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-semibold">
+                    {event.eventType === 'Online' ? 'Event Type' : 'Location'}
+                  </span>
+                  <span className="text-white text-xs sm:text-sm font-bold truncate" title={event.eventType === 'Online' ? 'Online Event' : `${event.venue}, ${event.city}`}>
+                    {event.eventType === 'Online' ? 'Online Event' : `${event.venue || "TBA"}, ${event.city || "TBA"}`}
                   </span>
                 </div>
               </div>
@@ -521,7 +523,7 @@ const UserEventDetails = () => {
                   ) : (
                     <div className="bg-purple-950/20 border border-purple-500/20 rounded-xl p-4 flex gap-3 items-center text-xs text-purple-300">
                       <Info className="w-4 h-4 shrink-0 text-purple-400" />
-                      <span>The online access link will be updated by the organizer closer to the event time.</span>
+                      <span>Link not attached yet, the organizer will attach it soon.</span>
                     </div>
                   )}
                 </div>
