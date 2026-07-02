@@ -835,80 +835,113 @@ const VendorCreateEvent = () => {
                 <div className="w-7 h-7 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
                   <MapPin className="w-4 h-4" />
                 </div>
-                <h2 className="text-lg font-bold text-white tracking-wide">Location</h2>
+                <h2 className="text-lg font-bold text-white tracking-wide">
+                  {eventType === 'online' ? 'Online Details' : 'Location'}
+                </h2>
               </div>
 
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-zinc-400">Venue Name</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. Grand Arena"
-                    value={venueName}
-                    onChange={(e) => setVenueName(e.target.value)}
-                    className="w-full bg-[#12101F] text-white placeholder-zinc-600 px-4 py-3.5 rounded-xl border border-zinc-800/80 focus:outline-none focus:border-purple-500 transition-colors text-sm"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-zinc-400">Address</label>
-                  <input 
-                    type="text" 
-                    placeholder="Street address"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    className="w-full bg-[#12101F] text-white placeholder-zinc-600 px-4 py-3.5 rounded-xl border border-zinc-800/80 focus:outline-none focus:border-purple-500 transition-colors text-sm"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
+              {eventType === 'online' ? (
+                <div className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-xs font-semibold text-zinc-400">City</label>
+                    <label className="text-xs font-semibold text-zinc-400">Google Meet / Online Link</label>
+                    <input 
+                      type="url" 
+                      placeholder="e.g. https://meet.google.com/abc-defg-hij"
+                      value={onlineLink}
+                      onChange={(e) => setOnlineLink(e.target.value)}
+                      className="w-full bg-[#12101F] text-white placeholder-zinc-600 px-4 py-3.5 rounded-xl border border-zinc-800/80 focus:outline-none focus:border-purple-500 transition-colors text-sm"
+                    />
+                  </div>
+
+                  {/* Age Restriction Toggle */}
+                  <div className="flex justify-between items-center pt-2">
+                    <div className="space-y-0.5">
+                      <label className="text-xs font-semibold text-white">Age Restriction</label>
+                      <p className="text-[10px] text-zinc-400">Strictly 18+ only</p>
+                    </div>
+
+                    <button 
+                      type="button"
+                      onClick={() => setAgeRestriction(!ageRestriction)}
+                      className={`w-10 h-5.5 rounded-full transition-all relative p-0.5 cursor-pointer ${ageRestriction ? 'bg-purple-600' : 'bg-zinc-800'}`}
+                    >
+                      <span className={`w-4.5 h-4.5 rounded-full bg-white transition-all block ${ageRestriction ? 'translate-x-4.5' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-zinc-400">Venue Name</label>
                     <input 
                       type="text" 
-                      placeholder="City"
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
+                      placeholder="e.g. Grand Arena"
+                      value={venueName}
+                      onChange={(e) => setVenueName(e.target.value)}
                       className="w-full bg-[#12101F] text-white placeholder-zinc-600 px-4 py-3.5 rounded-xl border border-zinc-800/80 focus:outline-none focus:border-purple-500 transition-colors text-sm"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-semibold text-zinc-400">State</label>
+                    <label className="text-xs font-semibold text-zinc-400">Address</label>
                     <input 
                       type="text" 
-                      placeholder="State"
-                      value={state}
-                      onChange={(e) => setState(e.target.value)}
+                      placeholder="Street address"
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
                       className="w-full bg-[#12101F] text-white placeholder-zinc-600 px-4 py-3.5 rounded-xl border border-zinc-800/80 focus:outline-none focus:border-purple-500 transition-colors text-sm"
                     />
                   </div>
-                </div>
 
-                {/* Map preview box */}
-                <div className="h-32 rounded-xl bg-zinc-800/30 border border-zinc-800/80 relative overflow-hidden flex items-center justify-center bg-[radial-gradient(#3f3f46_1px,transparent_1px)] [background-size:16px_16px]">
-                  <button type="button" className="px-4 py-2 bg-zinc-950/80 hover:bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-white rounded-lg text-xs font-bold transition-all shadow-lg flex items-center gap-1.5 cursor-pointer">
-                    <MapPin className="w-3.5 h-3.5 text-purple-400" />
-                    Pin Location on Map
-                  </button>
-                </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-zinc-400">City</label>
+                      <input 
+                        type="text" 
+                        placeholder="City"
+                        value={city}
+                        onChange={(e) => setCity(e.target.value)}
+                        className="w-full bg-[#12101F] text-white placeholder-zinc-600 px-4 py-3.5 rounded-xl border border-zinc-800/80 focus:outline-none focus:border-purple-500 transition-colors text-sm"
+                      />
+                    </div>
 
-                {/* Age Restriction Toggle */}
-                <div className="flex justify-between items-center pt-2">
-                  <div className="space-y-0.5">
-                    <label className="text-xs font-semibold text-white">Age Restriction</label>
-                    <p className="text-[10px] text-zinc-400">Strictly 18+ only</p>
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-zinc-400">State</label>
+                      <input 
+                        type="text" 
+                        placeholder="State"
+                        value={state}
+                        onChange={(e) => setState(e.target.value)}
+                        className="w-full bg-[#12101F] text-white placeholder-zinc-600 px-4 py-3.5 rounded-xl border border-zinc-800/80 focus:outline-none focus:border-purple-500 transition-colors text-sm"
+                      />
+                    </div>
                   </div>
 
-                  <button 
-                    type="button"
-                    onClick={() => setAgeRestriction(!ageRestriction)}
-                    className={`w-10 h-5.5 rounded-full transition-all relative p-0.5 cursor-pointer ${ageRestriction ? 'bg-purple-600' : 'bg-zinc-800'}`}
-                  >
-                    <span className={`w-4.5 h-4.5 rounded-full bg-white transition-all block ${ageRestriction ? 'translate-x-4.5' : 'translate-x-0'}`} />
-                  </button>
+                  {/* Map preview box */}
+                  <div className="h-32 rounded-xl bg-zinc-800/30 border border-zinc-800/80 relative overflow-hidden flex items-center justify-center bg-[radial-gradient(#3f3f46_1px,transparent_1px)] [background-size:16px_16px]">
+                    <button type="button" className="px-4 py-2 bg-zinc-950/80 hover:bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-white rounded-lg text-xs font-bold transition-all shadow-lg flex items-center gap-1.5 cursor-pointer">
+                      <MapPin className="w-3.5 h-3.5 text-purple-400" />
+                      Pin Location on Map
+                    </button>
+                  </div>
+
+                  {/* Age Restriction Toggle */}
+                  <div className="flex justify-between items-center pt-2">
+                    <div className="space-y-0.5">
+                      <label className="text-xs font-semibold text-white">Age Restriction</label>
+                      <p className="text-[10px] text-zinc-400">Strictly 18+ only</p>
+                    </div>
+
+                    <button 
+                      type="button"
+                      onClick={() => setAgeRestriction(!ageRestriction)}
+                      className={`w-10 h-5.5 rounded-full transition-all relative p-0.5 cursor-pointer ${ageRestriction ? 'bg-purple-600' : 'bg-zinc-800'}`}
+                    >
+                      <span className={`w-4.5 h-4.5 rounded-full bg-white transition-all block ${ageRestriction ? 'translate-x-4.5' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Tickets block */}

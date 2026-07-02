@@ -63,6 +63,11 @@ const eventSchema = new mongoose.Schema({
     enum : ["In-person","Online"],
     required : requiredIfNotDraft
   },
+  onlineLink : {
+    type : String,
+    trim : true,
+    default : ""
+  },
   thumbnail : {
     type : fileSchema,
     required : requiredIfNotDraft

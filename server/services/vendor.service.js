@@ -112,6 +112,7 @@ export const createEventService = async(data)=>{
     vendorId : data.vendorId,
 
     eventType : data.eventType,
+    onlineLink : data.onlineLink || "",
     thumbnail : data.thumbnail,
     images : data.images,
 
@@ -195,6 +196,7 @@ export const updateEventService = async (eventId, vendorId, data) => {
     description: data.description,
     category: data.category,
     eventType: data.eventType,
+    onlineLink: data.onlineLink,
     
     schedule: {
       date: data.date,

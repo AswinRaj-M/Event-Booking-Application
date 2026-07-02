@@ -477,39 +477,88 @@ const UserEventDetails = () => {
             <div className="space-y-5">
               <div className="flex items-center gap-3">
                 <div className="w-1.5 h-8 bg-purple-600 rounded-full" />
-                <h2 className="text-2xl font-bold tracking-tight">Venue & Location</h2>
+                <h2 className="text-2xl font-bold tracking-tight">
+                  {event.eventType === 'Online' ? 'Online Event Access' : 'Venue & Location'}
+                </h2>
               </div>
 
-              {/* Map Canvas Mock */}
-              <MapMockup 
-                venue={event.venue} 
-                address={event.address} 
-                city={event.city} 
-              />
+              {event.eventType === 'Online' ? (
+                <div className="bg-[#0b0914]/65 border border-purple-500/10 hover:border-purple-500/20 rounded-3xl p-6 flex flex-col gap-4 transition-colors">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-purple-950/50 border border-purple-500/20 flex items-center justify-center text-purple-400 shrink-0 shadow-lg">
+                      <Sparkles className="w-6 h-6" />
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className="font-bold text-white text-base tracking-tight">Conducted Online</h4>
+                      <p className="text-zinc-400 text-xs leading-relaxed">
+                        This is an online event. The meeting link or platform link to connect is provided below.
+                      </p>
+                    </div>
+                  </div>
 
-              {/* Venue Info Box */}
-              <div className="bg-[#0b0914]/65 border border-purple-500/10 hover:border-purple-500/20 rounded-3xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-purple-950/50 border border-purple-500/20 flex items-center justify-center text-purple-400 shrink-0 shadow-lg">
-                    <MapPin className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-white text-base tracking-tight">{event.venue}</h4>
-                    <p className="text-zinc-400 text-xs mt-1 leading-relaxed">
-                      {event.address ? `${event.address}, ` : ''}{event.city || "TBA"}, {event.state || "TBA"}
-                    </p>
-                  </div>
+                  {event.onlineLink ? (
+                    <div className="mt-2 pt-2 border-t border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="min-w-0">
+                        <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-semibold block">Meeting Link</span>
+                        <a 
+                          href={event.onlineLink} 
+                          target="_blank" 
+                          rel="noreferrer" 
+                          className="text-purple-400 hover:text-purple-300 text-sm font-bold truncate block max-w-md underline"
+                        >
+                          {event.onlineLink}
+                        </a>
+                      </div>
+                      <a
+                        href={event.onlineLink}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white px-5 py-3 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow-md text-center"
+                      >
+                        Join Event
+                      </a>
+                    </div>
+                  ) : (
+                    <div className="bg-purple-950/20 border border-purple-500/20 rounded-xl p-4 flex gap-3 items-center text-xs text-purple-300">
+                      <Info className="w-4 h-4 shrink-0 text-purple-400" />
+                      <span>The online access link will be updated by the organizer closer to the event time.</span>
+                    </div>
+                  )}
                 </div>
+              ) : (
+                <>
+                  {/* Map Canvas Mock */}
+                  <MapMockup 
+                    venue={event.venue} 
+                    address={event.address} 
+                    city={event.city} 
+                  />
 
-                <button
-                  type="button"
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#1b1437]/80 hover:bg-[#251b4c] border border-purple-500/20 text-purple-300 hover:text-white px-5 py-3 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow-sm shrink-0"
-                  onClick={() => toast.info(`Directions placeholder for ${event.venue || "Zenith Arena"}`)}
-                >
-                  <Navigation className="w-4 h-4" />
-                  Get Directions
-                </button>
-              </div>
+                  {/* Venue Info Box */}
+                  <div className="bg-[#0b0914]/65 border border-purple-500/10 hover:border-purple-500/20 rounded-3xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-2xl bg-purple-950/50 border border-purple-500/20 flex items-center justify-center text-purple-400 shrink-0 shadow-lg">
+                        <MapPin className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-white text-base tracking-tight">{event.venue}</h4>
+                        <p className="text-zinc-400 text-xs mt-1 leading-relaxed">
+                          {event.address ? `${event.address}, ` : ''}{event.city || "TBA"}, {event.state || "TBA"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#1b1437]/80 hover:bg-[#251b4c] border border-purple-500/20 text-purple-300 hover:text-white px-5 py-3 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow-sm shrink-0"
+                      onClick={() => toast.info(`Directions placeholder for ${event.venue || "Zenith Arena"}`)}
+                    >
+                      <Navigation className="w-4 h-4" />
+                      Get Directions
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Organizer Block */}

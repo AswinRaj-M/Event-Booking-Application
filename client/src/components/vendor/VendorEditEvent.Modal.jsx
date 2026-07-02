@@ -18,6 +18,7 @@ const VendorEditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
   const [eventTitle, setEventTitle] = useState('');
   const [eventCategory, setEventCategory] = useState('');
   const [eventType, setEventType] = useState('in-person');
+  const [onlineLink, setOnlineLink] = useState('');
   const [shortDescription, setShortDescription] = useState('');
   
   const [date, setDate] = useState('');
@@ -75,6 +76,7 @@ const VendorEditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
       setShortDescription(raw.description || '');
       setEventCategory(raw.category?._id || raw.category || '');
       setEventType(raw.eventType === 'Online' ? 'online' : 'in-person');
+      setOnlineLink(raw.onlineLink || '');
       
       setDate(formatDateForInput(raw.schedule?.date));
       setStartTime(raw.schedule?.startTime || '07:00 PM');
@@ -122,21 +124,34 @@ const VendorEditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
       toast.error('Event date is required');
       return;
     }
-    if (!venueName.trim()) {
-      toast.error('Venue name is required');
-      return;
-    }
-    if (!address.trim()) {
-      toast.error('Address is required');
-      return;
-    }
-    if (!city.trim()) {
-      toast.error('City is required');
-      return;
-    }
-    if (!state.trim()) {
-      toast.error('State is required');
-      return;
+    if (eventType === 'online') {
+      if (!onlineLink.trim()) {
+        toast.error('Google Meet / Online Link is required');
+        return;
+      }
+      try {
+        new URL(onlineLink.trim());
+      } catch (_) {
+        toast.error('Please enter a valid Google Meet or Online Link URL');
+        return;
+      }
+    } else {
+      if (!venueName.trim()) {
+        toast.error('Venue name is required');
+        return;
+      }
+      if (!address.trim()) {
+        toast.error('Address is required');
+        return;
+      }
+      if (!city.trim()) {
+        toast.error('City is required');
+        return;
+      }
+      if (!state.trim()) {
+        toast.error('State is required');
+        return;
+      }
     }
     if (!totalSeats) {
       toast.error('Total seats limit is required');
@@ -155,10 +170,19 @@ const VendorEditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
     formData.append('date', date);
     formData.append('startTime', startTime);
     formData.append('endTime', endTime);
-    formData.append('venue', venueName);
-    formData.append('address', address);
-    formData.append('city', city);
-    formData.append('state', state);
+    if (eventType === 'online') {
+      formData.append('onlineLink', onlineLink.trim());
+      formData.append('venue', 'Online');
+      formData.append('address', 'Online');
+      formData.append('city', 'Online');
+      formData.append('state', 'Online');
+    } else {
+      formData.append('venue', venueName);
+      formData.append('address', address);
+      formData.append('city', city);
+      formData.append('state', state);
+      formData.append('onlineLink', '');
+    }
     formData.append('ticketType', ticketType === 'paid' ? 'Paid' : 'Free');
     formData.append('ticketPrice', ticketType === 'paid' ? price : '0');
     formData.append('totalTickets', totalSeats);
@@ -461,54 +485,67 @@ const VendorEditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
               <div className="space-y-4">
                 <div className="flex items-center gap-2 text-xs font-bold text-purple-400 uppercase tracking-wider">
                   <MapPin className="w-4 h-4" />
-                  <span>Location</span>
+                  <span>{eventType === 'online' ? 'Online Details' : 'Location'}</span>
                 </div>
-                <div className="space-y-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-semibold text-zinc-400">Venue Name</label>
-                      <input 
-                        type="text"
-                        value={venueName}
-                        onChange={(e) => setVenueName(e.target.value)}
-                        placeholder="Venue"
-                        className="w-full bg-[#12101F] text-white px-4 py-2.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-purple-500 text-xs"
-                      />
+                {eventType === 'online' ? (
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-semibold text-zinc-400">Google Meet / Online Link</label>
+                    <input 
+                      type="url"
+                      value={onlineLink}
+                      onChange={(e) => setOnlineLink(e.target.value)}
+                      placeholder="e.g. https://meet.google.com/abc-defg-hij"
+                      className="w-full bg-[#12101F] text-white px-4 py-2.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-purple-500 text-xs"
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-semibold text-zinc-400">Venue Name</label>
+                        <input 
+                          type="text"
+                          value={venueName}
+                          onChange={(e) => setVenueName(e.target.value)}
+                          placeholder="Venue"
+                          className="w-full bg-[#12101F] text-white px-4 py-2.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-purple-500 text-xs"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-semibold text-zinc-400">Address</label>
+                        <input 
+                          type="text"
+                          value={address}
+                          onChange={(e) => setAddress(e.target.value)}
+                          placeholder="Street Address"
+                          className="w-full bg-[#12101F] text-white px-4 py-2.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-purple-500 text-xs"
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-semibold text-zinc-400">Address</label>
-                      <input 
-                        type="text"
-                        value={address}
-                        onChange={(e) => setAddress(e.target.value)}
-                        placeholder="Street Address"
-                        className="w-full bg-[#12101F] text-white px-4 py-2.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-purple-500 text-xs"
-                      />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-semibold text-zinc-400">City</label>
+                        <input 
+                          type="text"
+                          value={city}
+                          onChange={(e) => setCity(e.target.value)}
+                          placeholder="City"
+                          className="w-full bg-[#12101F] text-white px-4 py-2.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-purple-500 text-xs"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-semibold text-zinc-400">State</label>
+                        <input 
+                          type="text"
+                          value={state}
+                          onChange={(e) => setState(e.target.value)}
+                          placeholder="State"
+                          className="w-full bg-[#12101F] text-white px-4 py-2.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-purple-500 text-xs"
+                        />
+                      </div>
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-semibold text-zinc-400">City</label>
-                      <input 
-                        type="text"
-                        value={city}
-                        onChange={(e) => setCity(e.target.value)}
-                        placeholder="City"
-                        className="w-full bg-[#12101F] text-white px-4 py-2.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-purple-500 text-xs"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-semibold text-zinc-400">State</label>
-                      <input 
-                        type="text"
-                        value={state}
-                        onChange={(e) => setState(e.target.value)}
-                        placeholder="State"
-                        className="w-full bg-[#12101F] text-white px-4 py-2.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-purple-500 text-xs"
-                      />
-                    </div>
-                  </div>
-                </div>
+                )}
               </div>
 
               {/* Tickets */}
