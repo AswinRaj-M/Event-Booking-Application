@@ -8,6 +8,7 @@ import { updateUserData } from "../../features/user.slice";
 import { getUserProfile, updateUserProfile, updateUserProfilePicture, sendEmailUpdateOtp, verifyEmailUpdateOtp, resendEmailUpdateOtp } from "../../services/user.api";
 import { toast } from "sonner";
 import avatarImg from "../../assets/vendor/common_avatar.png";
+import Loader from "../../components/common/Loader";
 
 const UserProfile = () => {
   const dispatch = useDispatch();
@@ -16,6 +17,7 @@ const UserProfile = () => {
 
   const fileInputRef = useRef(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Edit details states
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -29,6 +31,7 @@ const UserProfile = () => {
   // Fetch real profile details on load
   useEffect(() => {
     const fetchProfile = async () => {
+      setLoading(true);
       try {
         const response = await getUserProfile();
         if (response.data?.success) {
@@ -36,6 +39,8 @@ const UserProfile = () => {
         }
       } catch (error) {
         toast.error("Failed to load user profile");
+      } finally {
+        setLoading(false);
       }
     };
     fetchProfile();
@@ -130,6 +135,10 @@ const UserProfile = () => {
     } catch (error) {
       
     }
+  }
+
+  if (loading || isSaving || isUploading) {
+    return <Loader />;
   }
 
   // Format user ID to look like: usr-XXXXXX-x
