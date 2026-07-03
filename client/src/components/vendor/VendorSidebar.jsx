@@ -61,7 +61,7 @@ const VendorSidebar = () => {
                         if (link.primary) {
                             return (
                                 <Link
-                                    key={link.path}
+                                    key={link.label}
                                     to={link.path}
                                     className="flex items-center gap-3 px-3 py-2.5 mt-2 mb-2 bg-[#2D1B69] hover:bg-[#382282] text-white rounded-xl transition-all shadow-[0_4px_15px_rgba(45,27,105,0.4)] group"
                                 >
@@ -73,7 +73,7 @@ const VendorSidebar = () => {
 
                         return (
                             <Link
-                                key={link.path}
+                                key={link.label}
                                 to={link.path}
                                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${isActive
                                     ? "bg-white/5 text-white"
@@ -99,7 +99,7 @@ const VendorSidebar = () => {
 
                             return (
                                 <Link
-                                    key={link.path}
+                                    key={link.label}
                                     to={link.path}
                                     className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${isActive
                                         ? "bg-white/5 text-white"
