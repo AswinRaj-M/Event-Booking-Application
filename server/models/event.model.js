@@ -2,25 +2,33 @@ import mongoose from "mongoose";
 import fileSchema from "./file.schema.js";
 
 const requiredIfNotDraft = function() {
-  return this.eventStatus !== "draft";
+  const doc = typeof this.ownerDocument === 'function' ? this.ownerDocument() : this;
+  return doc.eventStatus !== "draft";
 };
 
 
 const ticketTierSchema = new mongoose.Schema({
   name : {
     type : String,
-    required : true,
+    required : requiredIfNotDraft,
     trim : true
   },
   price : {
     type  : Number,
-    required : true,
+    required : requiredIfNotDraft,
     min : 0
   },
   capacity : {
     type : Number,
-    required : true,
-    min : 1
+    required : requiredIfNotDraft,
+    validate: {
+      validator: function(val) {
+        const doc = typeof this.ownerDocument === 'function' ? this.ownerDocument() : this;
+        if (doc.eventStatus === 'draft') return true;
+        return val !== undefined && val !== null && val >= 1;
+      },
+      message: 'Capacity must be at least 1'
+    }
   },
   sold : {
     type : Number,
@@ -140,7 +148,7 @@ const eventSchema = new mongoose.Schema({
 
     validate :{
       validator : function (tiers) {
-        if(this.ticketType === "Free"){
+        if(this.eventStatus === "draft" || this.ticketType === "Free"){
           return true
         }
 

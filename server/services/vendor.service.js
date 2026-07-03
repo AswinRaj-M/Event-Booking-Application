@@ -104,22 +104,33 @@ export const vendorLogoutService = async (token) => {
 };
 
 export const createEventService = async(data)=>{
+  let ticketTiers = data.ticketTiers;
+  if (Array.isArray(ticketTiers)) {
+    ticketTiers = ticketTiers.filter(tier => {
+      const hasName = tier.name && tier.name.trim() !== '';
+      const hasPrice = tier.price !== undefined && tier.price !== null && tier.price !== 0;
+      const hasCapacity = tier.capacity !== undefined && tier.capacity !== null && tier.capacity !== 0;
+      const hasBenefits = Array.isArray(tier.benefits) && tier.benefits.length > 0;
+      return hasName || hasPrice || hasCapacity || hasBenefits;
+    });
+  }
+
   const event = await createEventRepo({
     title : data.title,
     description : data.description,
-    category : data.category,
+    category : data.category || undefined,
     
     vendorId : data.vendorId,
 
-    eventType : data.eventType,
+    eventType : data.eventType || undefined,
     onlineLink : data.onlineLink || "",
     thumbnail : data.thumbnail,
     images : data.images,
 
     schedule : {
-      date : data.date,
-      startTime : data.startTime,
-      endTime : data.endTime
+      date : data.date || undefined,
+      startTime : data.startTime || undefined,
+      endTime : data.endTime || undefined
     },
 
     venue : data.venue,
@@ -138,7 +149,7 @@ export const createEventService = async(data)=>{
     },
 
     ticketType : data.ticketType,
-    ticketTiers : data.ticketTiers,
+    ticketTiers : ticketTiers,
     maxTicketPerPerson : Number(data.maxTicketPerPerson) || undefined,
     eventStatus : data.eventStatus || "pending",
 
@@ -147,8 +158,8 @@ export const createEventService = async(data)=>{
       enabled  : data.offerEnabled === "true" || data.offerEnabled === true,
       discountValue : Number(data.discountValue) || 0 ,
       minTicketsRequired : Number(data.minTicketsRequired) || 0,
-      validFrom : data.validFrom || null,
-      validUntil : data.validUntil || null
+      validFrom : data.validFrom || undefined,
+      validUntil : data.validUntil || undefined
     }
   })
 
@@ -191,17 +202,28 @@ export const cancelEventService = async (eventId, vendorId) => {
 };
 
 export const updateEventService = async (eventId, vendorId, data) => {
+  let ticketTiers = data.ticketTiers;
+  if (Array.isArray(ticketTiers)) {
+    ticketTiers = ticketTiers.filter(tier => {
+      const hasName = tier.name && tier.name.trim() !== '';
+      const hasPrice = tier.price !== undefined && tier.price !== null && tier.price !== 0;
+      const hasCapacity = tier.capacity !== undefined && tier.capacity !== null && tier.capacity !== 0;
+      const hasBenefits = Array.isArray(tier.benefits) && tier.benefits.length > 0;
+      return hasName || hasPrice || hasCapacity || hasBenefits;
+    });
+  }
+
   const updateData = {
     title: data.title,
     description: data.description,
-    category: data.category,
-    eventType: data.eventType,
+    category: data.category || undefined,
+    eventType: data.eventType || undefined,
     onlineLink: data.onlineLink,
     
     schedule: {
-      date: data.date,
-      startTime: data.startTime,
-      endTime: data.endTime
+      date: data.date || undefined,
+      startTime: data.startTime || undefined,
+      endTime: data.endTime || undefined
     },
 
     venue: data.venue,
@@ -220,7 +242,7 @@ export const updateEventService = async (eventId, vendorId, data) => {
     },
 
     ticketType: data.ticketType,
-    ticketTiers: data.ticketTiers,
+    ticketTiers: ticketTiers,
     maxTicketPerPerson: Number(data.maxTicketPerPerson) || undefined,
   };
 
