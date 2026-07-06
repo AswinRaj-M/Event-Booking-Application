@@ -3,6 +3,7 @@ import { hashToken } from "../utils/hashToken.js";
 import { AppError } from "../utils/AppError.js";
 import Vendor from "../models/vendor.model.js";
 import User from "../models/user.model.js";
+import Event from "../models/event.model.js";
 
 import {
   findUserByEmail,
@@ -17,6 +18,7 @@ import {
   updatePassword,
   updateUser,
   getExploreEventsRepo,
+  findEventById,
 } from "../repository/user.repo.js";
 import { generateResetToken } from "../utils/generateToken.js";
 
@@ -271,4 +273,98 @@ export const resendEmailUpdateOtpService = async (userId, otp) => {
   await upsertOtp(userId, otp, { tempEmail: otpDoc.tempEmail });
 
   return otpDoc.tempEmail;
+};
+
+export const getEventByIdService = async (id) => {
+  return await findEventById(id);
+};
+
+export const bookEventTicketsService = async (userId, eventId, { tierIndex, quantity, couponCode }) => {
+  const event = await findEventById(eventId);
+  if (!event) {
+    throw new AppError("Event not found", 404);
+  }
+  if (event.eventStatus === "cancelled" || event.isBlocked || event.isDeleted) {
+    throw new AppError("This event is not available for booking", 400);
+  }
+
+  const user = await findUserById(userId);
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  const isFree = event.ticketType === "Free";
+  let tier;
+  if (isFree) {
+    if (!event.ticketTiers || event.ticketTiers.length === 0) {
+      event.ticketTiers = [{
+        name: "General Admission",
+        price: 0,
+        capacity: Number(event.totalTickets) || 100,
+        sold: 0,
+        benefits: ["General Entry"]
+      }];
+    }
+    tier = event.ticketTiers[0];
+  } else {
+    const idx = parseInt(tierIndex, 10);
+    if (isNaN(idx) || idx < 0 || idx >= event.ticketTiers.length) {
+      throw new AppError("Invalid ticket tier selected", 400);
+    }
+    tier = event.ticketTiers[idx];
+  }
+
+  const availableSeats = tier.capacity - (tier.sold || 0);
+  const reqQty = parseInt(quantity, 10);
+  if (isNaN(reqQty) || reqQty <= 0) {
+    throw new AppError("Invalid quantity requested", 400);
+  }
+
+  const maxQty = event.maxTicketPerPerson || 5;
+  if (reqQty > maxQty) {
+    throw new AppError(`You can book a maximum of ${maxQty} tickets per person`, 400);
+  }
+
+  if (reqQty > availableSeats) {
+    throw new AppError(`Not enough seats available. Only ${availableSeats} tickets left for this tier`, 400);
+  }
+
+  const ticketPrice = tier.price || 0;
+  const subtotal = isFree ? 0 : ticketPrice * reqQty;
+
+  let discountPercent = 0;
+  if (couponCode === "WELCOME10") discountPercent = 10;
+  else if (couponCode === "FESTIVE15") discountPercent = 15;
+  else if (event.offer?.enabled && reqQty >= (event.offer.minTicketsRequired || 0)) {
+    const now = new Date();
+    let valid = true;
+    if (event.offer.validFrom && new Date(event.offer.validFrom) > now) valid = false;
+    if (event.offer.validUntil && new Date(event.offer.validUntil) < now) valid = false;
+    if (valid) {
+      discountPercent = event.offer.discountValue || 0;
+    }
+  }
+
+  const discountAmount = (subtotal * discountPercent) / 100;
+  const serviceFee = isFree ? 0 : 14.90;
+  const totalAmount = isFree ? 0 : subtotal - discountAmount + serviceFee;
+
+  if (!isFree && totalAmount > 0) {
+    if (user.walletBalance < totalAmount) {
+      throw new AppError(`Insufficient wallet balance. You need $${totalAmount.toFixed(2)} to complete this booking. Your current balance is $${user.walletBalance.toFixed(2)}.`, 400);
+    }
+    user.walletBalance -= totalAmount;
+    await user.save();
+  }
+
+  tier.sold = (tier.sold || 0) + reqQty;
+  event.markModified('ticketTiers');
+  await event.save();
+
+  const updatedEvent = await findEventById(eventId);
+
+  return {
+    event: updatedEvent,
+    user
+  };
 };

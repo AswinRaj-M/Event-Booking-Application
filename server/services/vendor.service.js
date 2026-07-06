@@ -3,6 +3,7 @@ import { hashToken } from "../utils/hashToken.js";
 import { AppError } from "../utils/AppError.js";
 import Otp from "../models/user.otp.model.js";
 import Vendor from "../models/vendor.model.js";
+import Event from "../models/event.model.js";
 
 import {
   createVendor,
@@ -105,10 +106,26 @@ export const vendorLogoutService = async (token) => {
 
 export const createEventService = async(data)=>{
   let ticketTiers = data.ticketTiers;
-  if (Array.isArray(ticketTiers)) {
+  if (data.ticketType === "Free") {
+    ticketTiers = [{
+      name: "General Admission",
+      price: 0,
+      capacity: Number(data.totalTickets) || 100,
+      sold: 0,
+      benefits: ["General Entry"]
+    }];
+  } else if (data.ticketType === "Paid" && (!ticketTiers || !Array.isArray(ticketTiers) || ticketTiers.length === 0)) {
+    ticketTiers = [{
+      name: "General Admission",
+      price: Number(data.ticketPrice) || 0,
+      capacity: Number(data.totalTickets) || 100,
+      sold: 0,
+      benefits: ["General Admission Entry"]
+    }];
+  } else if (Array.isArray(ticketTiers)) {
     ticketTiers = ticketTiers.filter(tier => {
       const hasName = tier.name && tier.name.trim() !== '';
-      const hasPrice = tier.price !== undefined && tier.price !== null && tier.price !== 0;
+      const hasPrice = tier.price !== undefined && tier.price !== null;
       const hasCapacity = tier.capacity !== undefined && tier.capacity !== null && tier.capacity !== 0;
       const hasBenefits = Array.isArray(tier.benefits) && tier.benefits.length > 0;
       return hasName || hasPrice || hasCapacity || hasBenefits;
@@ -202,15 +219,55 @@ export const cancelEventService = async (eventId, vendorId) => {
 };
 
 export const updateEventService = async (eventId, vendorId, data) => {
+  const existingEvent = await Event.findOne({ _id: eventId, vendorId });
   let ticketTiers = data.ticketTiers;
-  if (Array.isArray(ticketTiers)) {
+
+  if (data.ticketType === "Free") {
+    let soldVal = 0;
+    if (existingEvent && existingEvent.ticketTiers && existingEvent.ticketTiers.length > 0) {
+      soldVal = existingEvent.ticketTiers[0].sold || 0;
+    }
+    ticketTiers = [{
+      name: "General Admission",
+      price: 0,
+      capacity: Number(data.totalTickets) || 100,
+      sold: soldVal,
+      benefits: ["General Entry"]
+    }];
+  } else if (data.ticketType === "Paid" && (!ticketTiers || !Array.isArray(ticketTiers) || ticketTiers.length === 0)) {
+    let soldVal = 0;
+    if (existingEvent && existingEvent.ticketTiers && existingEvent.ticketTiers.length > 0) {
+      soldVal = existingEvent.ticketTiers[0].sold || 0;
+    }
+    ticketTiers = [{
+      name: "General Admission",
+      price: Number(data.ticketPrice) || 0,
+      capacity: Number(data.totalTickets) || 100,
+      sold: soldVal,
+      benefits: ["General Admission Entry"]
+    }];
+  } else if (Array.isArray(ticketTiers)) {
     ticketTiers = ticketTiers.filter(tier => {
       const hasName = tier.name && tier.name.trim() !== '';
-      const hasPrice = tier.price !== undefined && tier.price !== null && tier.price !== 0;
+      const hasPrice = tier.price !== undefined && tier.price !== null;
       const hasCapacity = tier.capacity !== undefined && tier.capacity !== null && tier.capacity !== 0;
       const hasBenefits = Array.isArray(tier.benefits) && tier.benefits.length > 0;
       return hasName || hasPrice || hasCapacity || hasBenefits;
     });
+
+    if (existingEvent && existingEvent.ticketTiers && existingEvent.ticketTiers.length > 0) {
+      ticketTiers = ticketTiers.map((tier, idx) => {
+        let soldVal = 0;
+        const oldTier = existingEvent.ticketTiers[idx] || existingEvent.ticketTiers.find(t => t.name === tier.name);
+        if (oldTier) {
+          soldVal = oldTier.sold || 0;
+        }
+        return {
+          ...tier,
+          sold: soldVal
+        };
+      });
+    }
   }
 
   const updateData = {

@@ -143,3 +143,7 @@ export const getExploreEventsRepo = async (filters = {}) => {
     currentPage: page
   };
 };
+
+export const findEventById = async (id) => {
+  return await Event.findById(id).populate("category").populate("vendorId");
+};

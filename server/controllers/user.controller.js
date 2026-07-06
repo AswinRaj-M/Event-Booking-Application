@@ -23,6 +23,8 @@ import {
   sendEmailUpdateOtpService,
   verifyEmailUpdateOtpService,
   resendEmailUpdateOtpService,
+  getEventByIdService,
+  bookEventTicketsService,
 } from "../services/user.service.js";
 import { AppError } from "../utils/AppError.js";
 
@@ -156,11 +158,11 @@ export const googleCallback = async (req, res) => {
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
 
-    // store refresh token (optional but recommended)
+ 
     user.refreshToken = refreshToken;
     await user.save();
 
-    // send cookie
+
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -492,5 +494,41 @@ export const getExploreEvents = async (req, res) => {
   return res.status(200).json({
     success: true,
     ...result
+  });
+};
+
+export const getEventById = async (req, res) => {
+  const { id } = req.params;
+  const event = await getEventByIdService(id);
+  if (!event) {
+    throw new AppError("Event not found", 404);
+  }
+  return res.status(200).json({
+    success: true,
+    event
+  });
+};
+
+export const bookEventTickets = async (req, res) => {
+  const { id } = req.params;
+  const { tierIndex, quantity, couponCode } = req.body;
+  const userId = req.user._id;
+
+  const result = await bookEventTicketsService(userId, id, { tierIndex, quantity, couponCode });
+
+  return res.status(200).json({
+    success: true,
+    message: "Tickets booked successfully!",
+    event: result.event,
+    user: {
+      id: result.user._id,
+      fullName: result.user.fullName,
+      email: result.user.email,
+      phoneNumber: result.user.phoneNumber,
+      walletBalance: result.user.walletBalance,
+      role: result.user.role,
+      profilePicture: result.user.profilePicture,
+      createdAt: result.user.createdAt,
+    }
   });
 };

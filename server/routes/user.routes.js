@@ -15,7 +15,9 @@ import {
   getExploreEvents,
   sendEmailUpdateOtp,
   verifyEmailUpdateOtp,
-  resendEmailUpdateOtp
+  resendEmailUpdateOtp,
+  getEventById,
+  bookEventTickets
 } from "../controllers/user.controller.js"
 import passport from "passport"
 import upload from "../middleware/upload.js"
@@ -55,6 +57,8 @@ router.get('/refresh-token', asyncHandler(refreshAccessToken))
 router.post('/logout', protect, requireRole("user"), asyncHandler(logoutUser))
 
 router.get('/explore-events', protect, requireRole("user"), asyncHandler(getExploreEvents))
+router.get('/events/:id', protect, requireRole("user"), asyncHandler(getEventById))
+router.post('/events/:id/book', protect, requireRole("user"), asyncHandler(bookEventTickets))
 
 router.get('/profile', protect, requireRole("user"), asyncHandler(getUserProfile))
 router.put('/update-profile', protect, requireRole("user"), asyncHandler(updateUserProfile))
