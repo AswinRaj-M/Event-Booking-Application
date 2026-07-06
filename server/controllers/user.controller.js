@@ -487,9 +487,10 @@ export const updateUserProfilePicture = async (req, res) => {
 };
 
 export const getExploreEvents = async (req, res) => {
-  const events = await getExploreEventsService();
+  const { search, category, date, page, limit } = req.query;
+  const result = await getExploreEventsService({ search, category, date, page, limit });
   return res.status(200).json({
     success: true,
-    events,
+    ...result
   });
 };

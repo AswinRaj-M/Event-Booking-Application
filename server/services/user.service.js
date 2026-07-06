@@ -206,8 +206,8 @@ export const logoutUserService = async (token) => {
   }
 };
 
-export const getExploreEventsService = async () => {
-  return await getExploreEventsRepo();
+export const getExploreEventsService = async (filters) => {
+  return await getExploreEventsRepo(filters);
 };
 
 export const sendEmailUpdateOtpService = async (userId, newEmail, otp) => {
