@@ -428,8 +428,13 @@ const VendorCreateEvent = () => {
     try {
       const response = await createEventApi(formData);
       if (response.data && response.data.success) {
-        toast.success('Event created successfully!');
-        navigate('/vendor/events');
+        if (status === 'draft') {
+          toast.success('Event saved as draft successfully!');
+          navigate('/vendor/events/drafts');
+        } else {
+          toast.success('Event created successfully!');
+          navigate('/vendor/events');
+        }
       } else {
         toast.error(response.data?.message || 'Failed to create event');
       }
