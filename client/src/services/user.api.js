@@ -64,3 +64,11 @@ export const verifyEmailUpdateOtp = (data) => {
 export const resendEmailUpdateOtp = () => {
   return axiosInstance.post("/users/resend-email-update-otp");
 }
+
+export const getEventById = (id) => {
+  return axiosInstance.get(`/users/events/${id}`);
+};
+
+export const bookEventTickets = (id, bookingData) => {
+  return axiosInstance.post(`/users/events/${id}/book`, bookingData);
+};

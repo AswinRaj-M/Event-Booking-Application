@@ -27,7 +27,7 @@ import {
 import { toast } from "sonner";
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
-import { getExploreEvents } from "../../services/user.api.js";
+import { getEventById, bookEventTickets, getExploreEvents } from "../../services/user.api.js";
 
 // Style config matching categories to color codes
 const categoryBadgeStyles = {
@@ -115,27 +115,25 @@ const UserEventDetails = () => {
     const fetchEventData = async () => {
       try {
         setLoading(true);
-        const response = await getExploreEvents();
-        if (response.data?.success) {
-          const eventsList = response.data.events || [];
-          setAllEvents(eventsList);
+        const eventRes = await getEventById(id);
+        if (eventRes.data?.success) {
+          const foundEvent = eventRes.data.event;
+          setEvent(foundEvent);
           
-          const foundEvent = eventsList.find(e => e._id === id);
-          if (foundEvent) {
-            setEvent(foundEvent);
-            // Default selected date to event schedule date
-            if (foundEvent.schedule?.date) {
-              // Date is saved on the event schema
+          try {
+            const exploreRes = await getExploreEvents({ limit: 9 });
+            if (exploreRes.data?.success) {
+              setAllEvents(exploreRes.data.events || []);
             }
-          } else {
-            setError("Event not found or has been removed.");
+          } catch (exploreErr) {
+            console.error("Failed to load similar events", exploreErr);
           }
         } else {
-          setError("Failed to fetch events details.");
+          setError("Event not found or has been removed.");
         }
       } catch (err) {
         console.error("Event Details fetch error:", err);
-        setError("Something went wrong while retrieving event details.");
+        setError(err.response?.data?.message || "Something went wrong while retrieving event details.");
       } finally {
         setLoading(false);
       }
@@ -182,14 +180,43 @@ const UserEventDetails = () => {
   }, [event]);
 
   // Coupon and Pricing Calculations
+  const isFree = event?.ticketType === "Free";
+
   const ticketPrice = useMemo(() => {
     if (event?.ticketTiers && event.ticketTiers.length > 0) {
       return event.ticketTiers[selectedTierIndex]?.price || 0;
     }
     return event?.ticketPrice || 0;
   }, [event, selectedTierIndex]);
-  const isFree = event?.ticketType === "Free";
-  const maxQuantity = event?.maxTicketPerPerson || 5;
+
+  const availableSeats = useMemo(() => {
+    if (!event) return 0;
+    if (isFree) {
+      if (event.ticketTiers && event.ticketTiers.length > 0) {
+        const tier = event.ticketTiers[0];
+        return Math.max(0, tier.capacity - (tier.sold || 0));
+      }
+      return Math.max(0, (event.totalTickets || 100) - (event.soldTickets || 0));
+    }
+    if (event.ticketTiers && event.ticketTiers.length > 0) {
+      const tier = event.ticketTiers[selectedTierIndex];
+      return Math.max(0, (tier?.capacity || 0) - (tier?.sold || 0));
+    }
+    return 0;
+  }, [event, selectedTierIndex, isFree]);
+
+  const maxQuantity = useMemo(() => {
+    const defaultMax = event?.maxTicketPerPerson || 5;
+    return Math.min(defaultMax, availableSeats);
+  }, [event?.maxTicketPerPerson, availableSeats]);
+
+  useEffect(() => {
+    if (availableSeats <= 0) {
+      setQuantity(0);
+    } else {
+      setQuantity(1);
+    }
+  }, [selectedTierIndex, availableSeats]);
 
   // Standard Mock Service Fee matches photo ($14.90 for standard booking, or $0 if free)
   const serviceFee = isFree ? 0 : 14.90;
@@ -218,12 +245,41 @@ const UserEventDetails = () => {
   const discountAmount = (subtotal * discountPercent) / 100;
   const totalAmount = isFree ? 0 : subtotal - discountAmount + serviceFee;
 
-  const handleBookTickets = () => {
-    setIsBooking(true);
-    // Simulate booking loading
-    setTimeout(() => {
+  const handleBookTickets = async () => {
+    if (quantity <= 0) {
+      toast.error("Please select at least 1 ticket to book.");
+      return;
+    }
+    if (quantity > availableSeats) {
+      toast.error(`Only ${availableSeats} tickets left for this tier.`);
+      return;
+    }
+
+    try {
+      setIsBooking(true);
+      const response = await bookEventTickets(id, {
+        tierIndex: isFree ? 0 : selectedTierIndex,
+        quantity,
+        couponCode
+      });
+
+      if (response.data?.success) {
+        toast.success("Tickets booked successfully!");
+        setEvent(response.data.event);
+        if (response.data.event.ticketTiers && response.data.event.ticketTiers[selectedTierIndex]?.capacity - (response.data.event.ticketTiers[selectedTierIndex]?.sold || 0) <= 0) {
+          setQuantity(0);
+        } else {
+          setQuantity(1);
+        }
+      } else {
+        toast.error(response.data?.message || "Failed to book tickets.");
+      }
+    } catch (err) {
+      console.error("Booking error:", err);
+      toast.error(err.response?.data?.message || "An error occurred during booking. Please try again.");
+    } finally {
       setIsBooking(false);
-    }, 1000);
+    }
   };
 
   const handleShare = (platform) => {
@@ -649,7 +705,7 @@ const UserEventDetails = () => {
                   <div>
                     <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Ticket Tier</span>
                     <h3 className="font-bold text-white text-base mt-0.5">
-                      {isFree ? "General Admission" : "Early Bird Ticket"}
+                      {isFree ? "General Admission" : (event.ticketTiers?.[selectedTierIndex]?.name || "Standard Ticket")}
                     </h3>
                   </div>
                 </div>
@@ -676,11 +732,14 @@ const UserEventDetails = () => {
                         onChange={(e) => setSelectedTierIndex(Number(e.target.value))}
                         className="w-full bg-[#120f26] border border-purple-900/35 rounded-xl py-3 pl-11 pr-4 text-white text-sm focus:outline-none focus:border-purple-500/50 appearance-none cursor-pointer transition-colors"
                       >
-                        {event.ticketTiers.map((tier, idx) => (
-                          <option key={idx} value={idx}>
-                            {tier.name} (${tier.price} - {tier.capacity - (tier.sold || 0)} left)
-                          </option>
-                        ))}
+                        {event.ticketTiers.map((tier, idx) => {
+                          const left = tier.capacity - (tier.sold || 0);
+                          return (
+                            <option key={idx} value={idx}>
+                              {tier.name} (${tier.price} - {left > 0 ? `${left} left` : "Sold Out"})
+                            </option>
+                          );
+                        })}
                       </select>
                       <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500 text-[10px]">▼</div>
                     </div>
@@ -732,8 +791,8 @@ const UserEventDetails = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <span className="text-white text-sm font-bold tracking-tight">Quantity</span>
-                      <span className="text-[10px] text-purple-400 font-semibold block mt-0.5">
-                        {event.totalTickets - event.soldTickets || 14} tickets left
+                      <span className={`${availableSeats > 0 ? "text-purple-400" : "text-rose-500"} text-[10px] font-semibold block mt-0.5`}>
+                        {availableSeats > 0 ? `${availableSeats} tickets left` : "Sold Out"}
                       </span>
                     </div>
 
@@ -752,7 +811,7 @@ const UserEventDetails = () => {
                       
                       <button
                         onClick={() => setQuantity(q => Math.min(maxQuantity, q + 1))}
-                        disabled={quantity >= maxQuantity}
+                        disabled={quantity >= maxQuantity || availableSeats <= 0}
                         className="w-8 h-8 rounded-lg bg-[#1a1437]/80 hover:bg-[#251b4c] border border-purple-500/20 text-purple-300 hover:text-white flex items-center justify-center transition-all cursor-pointer disabled:opacity-40 disabled:pointer-events-none"
                       >
                         <Plus className="w-3.5 h-3.5" />
@@ -795,11 +854,11 @@ const UserEventDetails = () => {
                 {/* Book Button */}
                 <button
                   onClick={handleBookTickets}
-                  disabled={isBooking}
+                  disabled={isBooking || availableSeats <= 0}
                   className="w-full py-4 bg-gradient-to-r from-purple-600 via-indigo-600 to-fuchsia-600 hover:from-purple-500 hover:via-indigo-500 hover:to-fuchsia-500 text-white font-extrabold rounded-xl shadow-[0_0_20px_rgba(139,92,246,0.35)] hover:shadow-[0_0_25px_rgba(139,92,246,0.55)] transition-all cursor-pointer flex items-center justify-center gap-2 transform active:scale-98 disabled:opacity-60 disabled:pointer-events-none"
                 >
                   <Ticket className="w-5 h-5 shrink-0" />
-                  {isBooking ? "Confirming Spot..." : "Book Tickets"}
+                  {isBooking ? "Confirming Spot..." : (availableSeats <= 0 ? "Sold Out" : "Book Tickets")}
                 </button>
 
                 {/* Secure checkout assurances */}
