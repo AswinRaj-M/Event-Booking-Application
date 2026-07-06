@@ -2,17 +2,13 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
-import { Search, MapPin, Calendar, Music, RotateCcw, ArrowRight } from 'lucide-react';
+import { Search, MapPin, Calendar, Music, RotateCcw, ArrowRight, Users } from 'lucide-react';
 import { getExploreEvents } from '../../services/user.api.js';
 import { getAllCategories } from '../../services/common.api.js';
 
 
 
-const mockAvatars = [
-  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=60",
-  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=60",
-  "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=60"
-];
+
 
 const formatEventDate = (dateString, startTime) => {
   if (!dateString) return "Date TBA";
@@ -323,17 +319,8 @@ const UserExploreEvent = () => {
                     <div>
                       {/* Render attendee avatars or skip depending on description visibility */}
                       {!hasDescription && (
-                        <div className="flex items-center gap-2 mb-6">
-                          <div className="flex -space-x-2.5 overflow-hidden">
-                            {mockAvatars.map((avatar, idx) => (
-                              <img
-                                key={idx}
-                                src={avatar}
-                                alt="Attendee"
-                                className="inline-block h-6.5 w-6.5 rounded-full ring-2 ring-[#0b0914] object-cover"
-                              />
-                            ))}
-                          </div>
+                        <div className="flex items-center gap-1.5 mb-6">
+                          <Users className="w-3.5 h-3.5 text-purple-400/60" />
                           <span className="text-zinc-500 text-xs font-medium">
                             {formattedAttending}
                           </span>
