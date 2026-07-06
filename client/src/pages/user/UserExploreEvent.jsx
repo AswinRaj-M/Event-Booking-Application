@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
-import { Search, MapPin, Calendar, Music, RotateCcw, ArrowRight, Users } from 'lucide-react';
+import { Search, MapPin, Calendar, Music, RotateCcw, ArrowRight, Users, ArrowUpDown } from 'lucide-react';
 import { getExploreEvents } from '../../services/user.api.js';
 import { getAllCategories } from '../../services/common.api.js';
 
@@ -36,8 +36,9 @@ const UserExploreEvent = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalResults, setTotalResults] = useState(0);
   const [categoriesList, setCategoriesList] = useState([]);
+  const [sortBy, setSortBy] = useState("newest");
 
-  // Fetch all categories on mount
+  
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -52,7 +53,7 @@ const UserExploreEvent = () => {
     fetchCategories();
   }, []);
 
-  // Debounce search query
+  
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery);
@@ -61,7 +62,7 @@ const UserExploreEvent = () => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Fetch paginated events from backend
+
   useEffect(() => {
     const fetchEvents = async () => {
       try {
@@ -71,7 +72,8 @@ const UserExploreEvent = () => {
           category: selectedCategory,
           date: selectedDate,
           page: currentPage,
-          limit: 9
+          limit: 9,
+          sortBy
         });
         if (response.data?.success) {
           setEvents(response.data.events || []);
@@ -88,7 +90,7 @@ const UserExploreEvent = () => {
       }
     };
     fetchEvents();
-  }, [debouncedSearch, selectedCategory, selectedDate, currentPage]);
+  }, [debouncedSearch, selectedCategory, selectedDate, currentPage, sortBy]);
 
   const categories = useMemo(() => {
     return categoriesList.map(c => c.name);
@@ -100,6 +102,7 @@ const UserExploreEvent = () => {
     setSearchQuery("");
     setSelectedCategory("");
     setSelectedDate("");
+    setSortBy("newest");
     setCurrentPage(1);
   };
 
@@ -110,6 +113,11 @@ const UserExploreEvent = () => {
 
   const handleDateChange = (e) => {
     setSelectedDate(e.target.value);
+    setCurrentPage(1);
+  };
+
+  const handleSortChange = (e) => {
+    setSortBy(e.target.value);
     setCurrentPage(1);
   };
 
@@ -138,7 +146,7 @@ const UserExploreEvent = () => {
           <div className="bg-[#0b0914]/80 border border-purple-500/15 backdrop-blur-md rounded-2xl p-4 md:p-5 shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5 items-center">
               {/* Search */}
-              <div className="lg:col-span-6 relative">
+              <div className="lg:col-span-5 relative">
                 <Search className="w-4 h-4 text-zinc-500 absolute left-4 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
@@ -150,7 +158,7 @@ const UserExploreEvent = () => {
               </div>
 
               {/* Categories */}
-              <div className="lg:col-span-3 relative">
+              <div className="lg:col-span-2 relative">
                 <Music className="w-4 h-4 text-zinc-500 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <select
                   value={selectedCategory}
@@ -166,7 +174,7 @@ const UserExploreEvent = () => {
               </div>
 
               {/* Date Select (Calendar) */}
-              <div className="lg:col-span-3 relative">
+              <div className="lg:col-span-2 relative">
                 <Calendar className="w-4 h-4 text-zinc-500 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none z-10" />
                 <input
                   type="date"
@@ -175,6 +183,21 @@ const UserExploreEvent = () => {
                   style={{ colorScheme: 'dark' }}
                   className="w-full bg-[#110d21]/80 border border-purple-900/30 rounded-xl py-3 pl-11 pr-4 text-white text-sm focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20 transition-colors cursor-pointer select-none"
                 />
+              </div>
+
+              {/* Sort By */}
+              <div className="lg:col-span-3 relative">
+                <ArrowUpDown className="w-4 h-4 text-zinc-500 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <select
+                  value={sortBy}
+                  onChange={handleSortChange}
+                  className="w-full bg-[#110d21]/80 border border-purple-900/30 rounded-xl py-3 pl-11 pr-4 text-white text-sm focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20 appearance-none cursor-pointer transition-colors"
+                >
+                  <option value="newest">Sort By: Newest</option>
+                  <option value="price_asc">Price: Low to High</option>
+                  <option value="price_desc">Price: High to Low</option>
+                </select>
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500 text-[10px]">▼</div>
               </div>
             </div>
 
