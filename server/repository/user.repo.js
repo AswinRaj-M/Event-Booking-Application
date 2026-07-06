@@ -79,7 +79,7 @@ export const deleteOtpByUserId = async (userId) => {
 };
 
 export const getExploreEventsRepo = async (filters = {}) => {
-  const { search, category, date } = filters;
+  const { search, category, date, sortBy } = filters;
   const page = parseInt(filters.page, 10) || 1;
   const limit = parseInt(filters.limit, 10) || 9;
   const skip = (page - 1) * limit;
@@ -119,11 +119,20 @@ export const getExploreEventsRepo = async (filters = {}) => {
     query.category = catId;
   }
 
+  const sortObj = {};
+  if (sortBy === "price_asc") {
+    sortObj["ticketTiers.price"] = 1;
+  } else if (sortBy === "price_desc") {
+    sortObj["ticketTiers.price"] = -1;
+  } else {
+    sortObj["createdAt"] = -1;
+  }
+
   const totalEvents = await Event.countDocuments(query);
   const events = await Event.find(query)
     .populate("category")
     .populate("vendorId")
-    .sort({ createdAt: -1 })
+    .sort(sortObj)
     .skip(skip)
     .limit(limit);
 
