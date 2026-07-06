@@ -4,15 +4,9 @@ import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import { Search, MapPin, Calendar, Music, RotateCcw, ArrowRight } from 'lucide-react';
 import { getExploreEvents } from '../../services/user.api.js';
+import { getAllCategories } from '../../services/common.api.js';
 
-const categoryBadgeStyles = {
-  "Music": "bg-purple-950/65 text-purple-300 border border-purple-500/20",
-  "Technology": "bg-blue-950/65 text-blue-300 border border-blue-500/20",
-  "Networking": "bg-emerald-950/65 text-emerald-300 border border-emerald-500/20",
-  "Art & Culture": "bg-rose-950/65 text-rose-300 border border-rose-500/20",
-  "Sports": "bg-amber-950/65 text-amber-300 border border-amber-500/20",
-  "Food & Drink": "bg-orange-950/65 text-orange-300 border border-orange-500/20"
-};
+
 
 const mockAvatars = [
   "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=60",
@@ -38,16 +32,55 @@ const UserExploreEvent = () => {
   const [error, setError] = useState(null);
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalResults, setTotalResults] = useState(0);
+  const [categoriesList, setCategoriesList] = useState([]);
+
+  // Fetch all categories on mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await getAllCategories();
+        if (response.data?.success) {
+          setCategoriesList(response.data.data || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch categories:", err);
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setCurrentPage(1);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Fetch paginated events from backend
   useEffect(() => {
     const fetchEvents = async () => {
       try {
         setLoading(true);
-        const response = await getExploreEvents();
+        const response = await getExploreEvents({
+          search: debouncedSearch,
+          category: selectedCategory,
+          date: selectedDate,
+          page: currentPage,
+          limit: 9
+        });
         if (response.data?.success) {
           setEvents(response.data.events || []);
+          setTotalPages(response.data.totalPages || 1);
+          setTotalResults(response.data.totalEvents || 0);
         } else {
           setError("Failed to fetch events data.");
         }
@@ -59,48 +92,29 @@ const UserExploreEvent = () => {
       }
     };
     fetchEvents();
-  }, []);
-
+  }, [debouncedSearch, selectedCategory, selectedDate, currentPage]);
 
   const categories = useMemo(() => {
-    const set = new Set();
-    events.forEach(e => {
-      const name = e.category?.name || (typeof e.category === 'string' ? e.category : '');
-      if (name) set.add(name);
-    });
-    return Array.from(set);
-  }, [events]);
+    return categoriesList.map(c => c.name);
+  }, [categoriesList]);
 
-  const filteredEvents = useMemo(() => {
-    return events.filter(event => {
-      const title = event.title || "";
-      const venue = event.venue || "";
-      const city = event.city || "";
-      const matchesSearch = searchQuery === "" || 
-        title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        venue.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        city.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      const catName = event.category?.name || (typeof event.category === 'string' ? event.category : "");
-      const matchesCategory = selectedCategory === "" || 
-        catName.toLowerCase() === selectedCategory.toLowerCase();
-
-      let matchesDate = selectedDate === "";
-      if (!matchesDate && event.schedule?.date) {
-        try {
-          const eventDateStr = new Date(event.schedule.date).toISOString().split('T')[0];
-          matchesDate = eventDateStr === selectedDate;
-        } catch (_) {}
-      }
-
-      return matchesSearch && matchesCategory && matchesDate;
-    });
-  }, [events, searchQuery, selectedCategory, selectedDate]);
+  const filteredEvents = events;
 
   const handleResetFilters = () => {
     setSearchQuery("");
     setSelectedCategory("");
     setSelectedDate("");
+    setCurrentPage(1);
+  };
+
+  const handleCategoryChange = (e) => {
+    setSelectedCategory(e.target.value);
+    setCurrentPage(1);
+  };
+
+  const handleDateChange = (e) => {
+    setSelectedDate(e.target.value);
+    setCurrentPage(1);
   };
 
   return (
@@ -144,7 +158,7 @@ const UserExploreEvent = () => {
                 <Music className="w-4 h-4 text-zinc-500 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <select
                   value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  onChange={handleCategoryChange}
                   className="w-full bg-[#110d21]/80 border border-purple-900/30 rounded-xl py-3 pl-11 pr-4 text-white text-sm focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20 appearance-none cursor-pointer transition-colors"
                 >
                   <option value="">All Categories</option>
@@ -161,7 +175,7 @@ const UserExploreEvent = () => {
                 <input
                   type="date"
                   value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
+                  onChange={handleDateChange}
                   style={{ colorScheme: 'dark' }}
                   className="w-full bg-[#110d21]/80 border border-purple-900/30 rounded-xl py-3 pl-11 pr-4 text-white text-sm focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20 transition-colors cursor-pointer select-none"
                 />
@@ -171,7 +185,7 @@ const UserExploreEvent = () => {
             {/* Filter Meta Info */}
             <div className="flex justify-between items-center mt-4 pt-4 border-t border-purple-950/40 text-xs md:text-sm text-zinc-400">
               <div>
-                Showing <span className="text-purple-400 font-semibold">{filteredEvents.length}</span> results
+                Showing <span className="text-purple-400 font-semibold">{totalResults}</span> results
               </div>
               <button
                 onClick={handleResetFilters}
@@ -347,6 +361,41 @@ const UserExploreEvent = () => {
                 </Link>
               );
             })}
+          </div>
+        )}
+
+        {/* Pagination Controls */}
+        {!loading && !error && totalPages > 1 && (
+          <div className="flex justify-center items-center gap-2 mt-12 relative z-10">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="px-4 py-2 bg-[#0b0914] border border-purple-500/15 text-zinc-400 hover:text-white disabled:opacity-50 disabled:hover:text-zinc-400 rounded-xl transition-all cursor-pointer disabled:cursor-not-allowed text-sm font-semibold flex items-center gap-1"
+            >
+              ◀ Prev
+            </button>
+            
+            {Array.from({ length: totalPages }, (_, idx) => idx + 1).map((p) => (
+              <button
+                key={p}
+                onClick={() => setCurrentPage(p)}
+                className={`w-10 h-10 rounded-xl text-sm font-bold transition-all cursor-pointer flex items-center justify-center ${
+                  currentPage === p
+                    ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-[0_0_15px_rgba(139,92,246,0.4)] border border-purple-500/35'
+                    : 'bg-[#0b0914] border border-purple-500/15 text-zinc-400 hover:text-white'
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="px-4 py-2 bg-[#0b0914] border border-purple-500/15 text-zinc-400 hover:text-white disabled:opacity-50 disabled:hover:text-zinc-400 rounded-xl transition-all cursor-pointer disabled:cursor-not-allowed text-sm font-semibold flex items-center gap-1"
+            >
+              Next ▶
+            </button>
           </div>
         )}
       </main>

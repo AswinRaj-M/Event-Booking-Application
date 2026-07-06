@@ -49,9 +49,9 @@ export const updateUserProfilePicture = (formData) => {
   })
 }
 
-export const getExploreEvents = () => {
-  return axiosInstance.get("/users/explore-events");
-}
+export const getExploreEvents = (params) => {
+  return axiosInstance.get("/users/explore-events", { params });
+};
 
 export const sendEmailUpdateOtp = (newEmail) => {
   return axiosInstance.post("/users/send-email-update-otp", { newEmail });
