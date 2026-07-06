@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactCrop, { centerCrop, makeAspectCrop } from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
 import { 
   Calendar, 
   Clock, 
@@ -137,6 +139,30 @@ const VendorCreateEvent = () => {
   const thumbnailInputRef = useRef(null);
   const galleryInputRef = useRef(null);
 
+  // Cropping states
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState('');
+  const [crop, setCrop] = useState();
+  const [completedCrop, setCompletedCrop] = useState(null);
+  const [currentFile, setCurrentFile] = useState(null);
+  const imgRef = useRef(null);
+
+  const centerAspectCrop = (mediaWidth, mediaHeight, aspect) => {
+    return centerCrop(
+      makeAspectCrop(
+        {
+          unit: '%',
+          width: 90,
+        },
+        aspect,
+        mediaWidth,
+        mediaHeight
+      ),
+      mediaWidth,
+      mediaHeight
+    );
+  };
+
   useEffect(() => {
     const getCategories = async () => {
       try {
@@ -154,8 +180,95 @@ const VendorCreateEvent = () => {
   const handleThumbnailChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setThumbnail(file);
-      setThumbnailPreview(URL.createObjectURL(file));
+      setCurrentFile(file);
+      const reader = new FileReader();
+      reader.addEventListener('load', () => {
+        setCropImageSrc(reader.result?.toString() || '');
+        setCrop({
+          unit: '%',
+          width: 90,
+          aspect: 16 / 9
+        });
+        setShowCropModal(true);
+      });
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const onImageLoad = (e) => {
+    const { width, height } = e.currentTarget;
+    setCrop(centerAspectCrop(width, height, 16 / 9));
+  };
+
+  const handleSaveCrop = async () => {
+    if (!imgRef.current || !completedCrop) {
+      toast.error('Please select a crop area');
+      return;
+    }
+
+    try {
+      const image = imgRef.current;
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        throw new Error('No 2d context');
+      }
+
+      const scaleX = image.naturalWidth / image.width;
+      const scaleY = image.naturalHeight / image.height;
+
+      const cropX = completedCrop.x * scaleX;
+      const cropY = completedCrop.y * scaleY;
+      const cropWidth = completedCrop.width * scaleX;
+      const cropHeight = completedCrop.height * scaleY;
+
+      canvas.width = cropWidth;
+      canvas.height = cropHeight;
+
+      ctx.drawImage(
+        image,
+        cropX,
+        cropY,
+        cropWidth,
+        cropHeight,
+        0,
+        0,
+        cropWidth,
+        cropHeight
+      );
+
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          toast.error('Canvas is empty');
+          return;
+        }
+
+        const croppedFile = new File(
+          [blob],
+          currentFile ? `cropped-${currentFile.name}` : 'cropped-cover.jpg',
+          { type: 'image/jpeg' }
+        );
+
+        setThumbnail(croppedFile);
+        setThumbnailPreview(URL.createObjectURL(croppedFile));
+        setShowCropModal(false);
+        setCropImageSrc('');
+        setCurrentFile(null);
+        toast.success('Cover image cropped successfully!');
+      }, 'image/jpeg', 0.95);
+
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to crop image');
+    }
+  };
+
+  const handleCancelCrop = () => {
+    setShowCropModal(false);
+    setCropImageSrc('');
+    setCurrentFile(null);
+    if (thumbnailInputRef.current) {
+      thumbnailInputRef.current.value = '';
     }
   };
 
@@ -1163,6 +1276,64 @@ const VendorCreateEvent = () => {
           </div>
         </div>
       </main>
+
+      {/* Crop Modal */}
+      {showCropModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#0B0A11] border border-white/10 rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-[#12101F]/50">
+              <h3 className="text-lg font-bold text-white tracking-wide">Crop Cover Image</h3>
+              <button 
+                type="button"
+                onClick={handleCancelCrop}
+                className="p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            {/* Modal Workspace */}
+            <div className="p-6 overflow-auto flex-1 flex justify-center items-center bg-[#070514]">
+              {cropImageSrc && (
+                <ReactCrop
+                  crop={crop}
+                  onChange={(c) => setCrop(c)}
+                  onComplete={(c) => setCompletedCrop(c)}
+                  aspect={16 / 9}
+                  className="max-h-[50vh]"
+                >
+                  <img
+                    ref={imgRef}
+                    alt="Crop workspace"
+                    src={cropImageSrc}
+                    onLoad={onImageLoad}
+                    className="max-h-[50vh] object-contain"
+                  />
+                </ReactCrop>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-white/5 flex justify-end gap-3 bg-[#12101F]/50">
+              <button
+                type="button"
+                onClick={handleCancelCrop}
+                className="px-5 py-2.5 bg-[#1C1A30] hover:bg-[#252245] border border-purple-500/20 text-purple-300 hover:text-purple-200 text-sm font-semibold rounded-xl transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveCrop}
+                className="px-5 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white text-sm font-semibold rounded-xl transition-all shadow-[0_0_15px_rgba(139,92,246,0.3)] cursor-pointer"
+              >
+                Save Crop
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
