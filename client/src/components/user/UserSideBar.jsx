@@ -32,14 +32,14 @@ const UserSideBar = () => {
 
   const platformLinks = [
     { path: USER_ROUTES.HOME, icon: LayoutDashboard, label: "Dashboard" },
-    { path: USER_ROUTES.BOOKINGS, icon: Ticket, label: "My Bookings" },
-    { path: USER_ROUTES.PROFILE + "#wallet", icon: Wallet, label: "Wallet" }
+    { path: "#", icon: Ticket, label: "My Bookings" },
+    { path: "#", icon: Wallet, label: "Wallet" }
   ];
 
   const accountLinks = [
     { path: USER_ROUTES.PROFILE, icon: User, label: "Profile" },
-    { path: USER_ROUTES.SETTINGS, icon: Settings, label: "Settings" },
-    { path: USER_ROUTES.SUPPORT, icon: HelpCircle, label: "Help & Support" }
+    { path : "#", icon: Settings, label: "Settings" },
+    { path: "#", icon: HelpCircle, label: "Help & Support" }
   ];
 
   return (

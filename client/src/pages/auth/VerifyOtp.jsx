@@ -107,7 +107,7 @@ const VerifyOtp = () => {
             toast.success("Profile and email updated successfully!");
             const vendor = response.data.vendor;
             dispatch(setVendorData(vendor));
-            navigate(VENDOR_ROUTES.PROFILE, { replace: true });
+            navigate(-1);
           }
         } else {
           const response = await verifyVendorOTP({ vendorId: userId, otp: finalOtp });
@@ -143,7 +143,7 @@ const VerifyOtp = () => {
           if (response.data?.success) {
             toast.success("Profile and email updated successfully!");
             dispatch(updateUserData(response.data.user));
-            navigate(USER_ROUTES.PROFILE, { replace: true });
+            navigate(-1);
           }
         } catch (err) {
           console.error("User OTP verify error:", err);
