@@ -62,12 +62,14 @@ export const createCategory = async(data) =>{
   return await Category.create(data)
 }
 
-export const getAllCategories = async() =>{
-  return await Category.find({
-    isDeleted : false,
-  }).sort({
-    createdAt : -1
-  })
+export const getAllCategories = async (filter = {}, sort = { createdAt: -1 }, skip = 0, limit = 0) => {
+  let query = Category.find({ ...filter, isDeleted: false }).sort(sort);
+  if (limit > 0) {
+    query = query.skip(skip).limit(limit);
+  }
+  const categories = await query;
+  const total = await Category.countDocuments({ ...filter, isDeleted: false });
+  return { categories, total };
 }
 
 

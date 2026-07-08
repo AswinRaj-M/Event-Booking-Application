@@ -39,7 +39,7 @@ const categoryBadgeStyles = {
   "Food & Drink": "bg-orange-950/65 text-orange-300 border border-orange-500/20"
 };
 
-// Map Mockup styling
+
 const MapMockup = ({ venue, address, city }) => {
   return (
     <div className="relative w-full h-[260px] md:h-[300px] rounded-3xl overflow-hidden border border-purple-500/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] bg-[#090810]">
@@ -141,31 +141,31 @@ const UserEventDetails = () => {
     fetchEventData();
   }, [id]);
 
-  // Scroll to top when event ID changes
+  
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [id]);
 
-  // Derived similar events
+  
   const similarEvents = useMemo(() => {
     if (!event) return [];
     const eventCategoryName = event.category?.name || (typeof event.category === 'string' ? event.category : '');
     
-    // Filter by same category, excluding current event
+ 
     let filtered = allEvents.filter(e => {
       if (e._id === event._id) return false;
       const catName = e.category?.name || (typeof e.category === 'string' ? e.category : '');
       return catName.toLowerCase() === eventCategoryName.toLowerCase();
     });
 
-    // Fallback if no events match category
+   
     if (filtered.length === 0) {
       filtered = allEvents.filter(e => e._id !== event._id);
     }
     return filtered.slice(0, 8);
   }, [event, allEvents]);
 
-  // Formatting dates
+  
   const formattedDates = useMemo(() => {
     if (!event?.schedule?.date) return { short: "Date TBA", full: "Date TBA", monthDay: "Date TBA" };
     try {
@@ -179,7 +179,7 @@ const UserEventDetails = () => {
     }
   }, [event]);
 
-  // Coupon and Pricing Calculations
+ 
   const isFree = event?.ticketType === "Free";
 
   const ticketPrice = useMemo(() => {

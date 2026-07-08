@@ -11,6 +11,7 @@ import {
   googleCallback,
   getUserProfile,
   updateUserProfile,
+  changePassword,
   updateUserProfilePicture,
   getExploreEvents,
   sendEmailUpdateOtp,
@@ -28,7 +29,8 @@ import { validate } from "../middleware/validate.middleware.js"
 import { 
   registerValidation, 
   loginValidation, 
-  verifyOTPValidation 
+  verifyOTPValidation,
+  changePasswordValidation
 } from "../validations/user.validation.js"
 
 const router = express.Router()
@@ -62,6 +64,7 @@ router.post('/events/:id/book', protect, requireRole("user"), asyncHandler(bookE
 
 router.get('/profile', protect, requireRole("user"), asyncHandler(getUserProfile))
 router.put('/update-profile', protect, requireRole("user"), asyncHandler(updateUserProfile))
+router.put('/change-password', protect, requireRole("user"), changePasswordValidation, validate, asyncHandler(changePassword))
 router.post('/send-email-update-otp', protect, requireRole("user"), asyncHandler(sendEmailUpdateOtp))
 router.post('/verify-email-update-otp', protect, requireRole("user"), asyncHandler(verifyEmailUpdateOtp))
 router.post('/resend-email-update-otp', protect, requireRole("user"), asyncHandler(resendEmailUpdateOtp))

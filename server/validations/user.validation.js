@@ -79,3 +79,33 @@ export const verifyOTPValidation = [
     .isNumeric()
     .withMessage("OTP must contain only numbers")
 ]
+
+export const changePasswordValidation = [
+  body("currentPassword")
+    .notEmpty()
+    .withMessage("Current password is required"),
+
+  body("newPassword")
+    .notEmpty()
+    .withMessage("New password is required")
+    .isLength({ min: 6 })
+    .withMessage("Password must be at least 6 characters")
+    .matches(/[A-Z]/)
+    .withMessage("Password must contain at least one uppercase letter")
+    .matches(/[a-z]/)
+    .withMessage("Password must contain at least one lowercase letter")
+    .matches(/[0-9]/)
+    .withMessage("Password must contain at least one number")
+    .matches(/[!@#$%^&*]/)
+    .withMessage("Password must contain at least one special character"),
+
+  body("confirmNewPassword")
+    .notEmpty()
+    .withMessage("Confirm new password is required")
+    .custom((value, { req }) => {
+      if (value !== req.body.newPassword) {
+        throw new Error("Passwords do not match")
+      }
+      return true
+    })
+]

@@ -184,8 +184,44 @@ export const createCategoryService = async(name,description,icon) =>{
 }
 
 
-export const getAllCategoriesService = async() =>{
-  return await getAllCategories()
+export const getAllCategoriesService = async (query = {}) => {
+  const { page, limit, search, status, sortBy } = query;
+  
+  let filter = {};
+  if (search) {
+    filter.$or = [
+      { name: { $regex: search, $options: "i" } },
+      { description: { $regex: search, $options: "i" } }
+    ];
+  }
+  
+  if (status && status !== "all") {
+    filter.isActive = status === "active";
+  }
+  
+  let sort = { createdAt: -1 };
+  if (sortBy === "name") {
+    sort = { name: 1 };
+  } else if (sortBy === "newest") {
+    sort = { createdAt: -1 };
+  }
+  
+  if (page && limit) {
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 10;
+    const skip = (pageNum - 1) * limitNum;
+    
+    const { categories, total } = await getAllCategories(filter, sort, skip, limitNum);
+    return {
+      categories,
+      total,
+      totalPages: Math.ceil(total / limitNum),
+      currentPage: pageNum
+    };
+  } else {
+    const { categories } = await getAllCategories(filter, sort, 0, 0);
+    return categories;
+  }
 }
 
 

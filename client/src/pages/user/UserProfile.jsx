@@ -129,13 +129,9 @@ const UserProfile = () => {
     }
   };
 
-  const handleChangePassword = async() =>{
-    try {
-      
-    } catch (error) {
-      
-    }
-  }
+  const handleChangePassword = () => {
+    navigate("/user/change-password");
+  };
 
   if (loading || isSaving || isUploading) {
     return <Loader />;

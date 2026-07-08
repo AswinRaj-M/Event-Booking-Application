@@ -17,6 +17,7 @@ import {
   resendOtpService,
   forgotPasswordService,
   resetPasswordService,
+  changePasswordService,
   getUserProfileService,
   updateUserProfileService,
   getExploreEventsService,
@@ -380,6 +381,22 @@ export const updateUserProfile = async (req, res) => {
       profilePicture: updatedUser.profilePicture,
       createdAt: updatedUser.createdAt,
     },
+  });
+};
+
+export const changePassword = async (req, res) => {
+  const userId = req.user._id;
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword) {
+    throw new AppError("Current and new password are required", 400);
+  }
+
+  await changePasswordService(userId, currentPassword, newPassword);
+
+  return res.status(200).json({
+    success: true,
+    message: "Password changed successfully",
   });
 };
 

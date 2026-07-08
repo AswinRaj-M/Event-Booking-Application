@@ -5,6 +5,7 @@ import Signup from '../pages/auth/Signup.jsx';
 import VerifyOtp from '../pages/auth/VerifyOtp.jsx';
 import Home from '../pages/user/Home.jsx'
 import UserProfile from '../pages/user/UserProfile.jsx';
+import ChangePassword from '../pages/auth/ChangePassword.jsx';
 import { ProtectedRoute, PublicRoute } from '../auth/ProtectedRoute.jsx';
 import Loader from '../components/common/Loader.jsx';
 import ForgotPassword from '../pages/auth/ForgotPassword.jsx';
@@ -25,6 +26,11 @@ const AppRoutes = () => {
             <Route path='/user/profile' element={
                 <ProtectedRoute role="user">
                     <UserProfile />
+                </ProtectedRoute>
+            } />
+            <Route path='/user/change-password' element={
+                <ProtectedRoute role="user">
+                    <ChangePassword />
                 </ProtectedRoute>
             } />
             <Route path='/user/explore' element={

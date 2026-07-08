@@ -35,17 +35,31 @@ function AdminCategoryManagement() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
 
+ 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCategories, setTotalCategories] = useState(0);
+  const limit = 6; 
+
   const handleEditClick = (category) => {
     setSelectedCategory(category);
     setIsEditModalOpen(true);
   };
 
-  const fetchCategories = async () => {
+  const fetchCategories = async (page = currentPage) => {
     try {
       setLoading(true);
-      const response = await getAllCategories();
+      const response = await getAllCategories({
+        page,
+        limit,
+        search: searchQuery,
+        status: statusFilter,
+        sortBy
+      });
       if (response.data && response.data.success) {
         setCategories(response.data.data);
+        setTotalPages(response.data.totalPages || 1);
+        setTotalCategories(response.data.total || 0);
       }
     } catch (error) {
       console.error("Failed to fetch categories:", error);
@@ -55,9 +69,19 @@ function AdminCategoryManagement() {
     }
   };
 
+  // Reset page to 1 on filter/search change
   useEffect(() => {
-    fetchCategories();
-  }, []);
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+    } else {
+      fetchCategories(1);
+    }
+  }, [searchQuery, statusFilter, sortBy]);
+
+  // Fetch when page changes
+  useEffect(() => {
+    fetchCategories(currentPage);
+  }, [currentPage]);
 
 const handleCreateCategorySubmit = async (categoryData) => {
   const nameExists = categories.some(
@@ -172,26 +196,7 @@ const handleEditCategory = async (categoryData) => {
 };
 
 
-  const filteredCategories = categories
-    .filter((cat) => {
-      const matchesSearch =
-        cat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        cat.description.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesStatus =
-        statusFilter === "all" ||
-        (statusFilter === "active" && cat.isActive) ||
-        (statusFilter === "inactive" && !cat.isActive);
-      return matchesSearch && matchesStatus;
-    })
-    .sort((a, b) => {
-      if (sortBy === "name") {
-        return a.name.localeCompare(b.name);
-      }
-      if (sortBy === "most-used") {
-        return (b.events || 0) - (a.events || 0);
-      }
-      return new Date(b.createdAt) - new Date(a.createdAt);
-    });
+  const displayedCategories = categories;
 
   return (
     <div className="flex h-screen bg-[#0B0914] text-white font-sans overflow-hidden">
@@ -293,7 +298,7 @@ const handleEditCategory = async (categoryData) => {
                 <p className="text-gray-400 text-sm">Loading categories...</p>
               </div>
             </div>
-          ) : filteredCategories.length === 0 ? (
+          ) : displayedCategories.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center min-h-[300px] bg-[#151221] border border-gray-800/80 rounded-2xl p-8 text-center">
               <div className="w-16 h-16 rounded-2xl bg-purple-900/20 border border-purple-800/30 flex items-center justify-center mb-4 text-purple-400">
                 <Filter className="w-8 h-8" />
@@ -316,7 +321,7 @@ const handleEditCategory = async (categoryData) => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-8">
-              {filteredCategories.map((category) => {
+              {displayedCategories.map((category) => {
                 const categoryIconUrl = category.categoryIcon?.fileUrl;
 
                 return (
@@ -406,6 +411,47 @@ const handleEditCategory = async (categoryData) => {
                   </div>
                 );
               })}
+            </div>
+          )}
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="mt-auto shrink-0 flex items-center justify-between border-t border-gray-800/80 pt-6 pb-4">
+              <p className="text-xs text-gray-500">
+                Showing page <span className="font-semibold text-gray-300">{currentPage}</span> of <span className="font-semibold text-gray-300">{totalPages}</span> ({totalCategories} total categories)
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  className="px-3.5 py-1.5 bg-[#151221] border border-gray-855 hover:bg-gray-800/40 rounded-lg text-xs font-semibold text-gray-400 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
+                >
+                  Previous
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setCurrentPage(p)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      currentPage === p
+                        ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-900/20"
+                        : "bg-[#151221] border border-gray-855 text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  className="px-3.5 py-1.5 bg-[#151221] border border-gray-855 hover:bg-gray-800/40 rounded-lg text-xs font-semibold text-gray-400 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
+                >
+                  Next
+                </button>
+              </div>
             </div>
           )}
         </div>

@@ -52,6 +52,12 @@ export const PublicRoute = ({ children }) => {
     return children
   }
 
+  // Allow access to forgot and reset password pages even if logged in
+  const isPasswordPage = location.pathname.startsWith("/forgot-password") || location.pathname.startsWith("/reset-password");
+  if (isPasswordPage) {
+    return children
+  }
+
   if (admin && location.pathname.startsWith("/admin")) {
     return <Navigate to="/admin/dashboard" replace />
   } else if (vendor) {

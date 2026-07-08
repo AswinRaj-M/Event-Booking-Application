@@ -111,6 +111,27 @@ export const resetPasswordService = async(userId,password) =>{
   return true
 }
 
+export const changePasswordService = async (userId, currentPassword, newPassword) => {
+  const user = await findUserById(userId);
+  if (!user) throw new AppError("User not found!", 404);
+
+  if (user.googleId && !user.password) {
+    throw new AppError(
+      "Accounts registered via Google OAuth cannot change passwords directly. Please use Google Login.",
+      400
+    );
+  }
+
+  const isMatch = await bcrypt.compare(currentPassword, user.password);
+  if (!isMatch) {
+    throw new AppError("Incorrect current password", 400);
+  }
+
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+  await updatePassword(userId, hashedPassword);
+  return true;
+};
+
 export const createOtpService = async (userId, otp) => {
   return await upsertOtp(userId, otp);
 };

@@ -1,9 +1,81 @@
 import React, { useState } from "react";
+import { changePassword } from "../../services/user.api";
+import { toast } from "sonner";
+import { useNavigate, Link } from "react-router-dom";
 
 export default function ChangePassword() {
-  const [currentPassword, setCurrentPassword] = useState("••••••••••••");
+  const navigate = useNavigate();
+  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("••••••••••••");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showSecurityTip, setShowSecurityTip] = useState(true);
+
+  // Password dynamic validation checks
+  const isLengthValid = newPassword.length >= 8;
+  const hasNumber = /[0-9]/.test(newPassword);
+  const hasUppercase = /[A-Z]/.test(newPassword);
+  const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(newPassword);
+
+  // Calculate strength score (0 to 4)
+  const score = [isLengthValid, hasNumber, hasUppercase, hasSpecial].filter(Boolean).length;
+
+  const getStrengthText = () => {
+    if (newPassword.length === 0) return "Empty";
+    if (score <= 1) return "Weak";
+    if (score === 2) return "Fair";
+    if (score === 3) return "Good";
+    return "Strong";
+  };
+
+  const getStrengthColor = () => {
+    if (newPassword.length === 0) return "#8b8ba7";
+    if (score <= 1) return "#ef4444"; // red
+    if (score === 2) return "#f59e0b"; // orange/yellow
+    if (score === 3) return "#3b82f6"; // blue
+    return "#10b981"; // green
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!currentPassword.trim()) {
+      toast.error("Current password is required");
+      return;
+    }
+    if (!newPassword.trim()) {
+      toast.error("New password is required");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("New password and confirmation do not match");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast.error("Password must be at least 6 characters long");
+      return;
+    }
+
+    setIsSubmitting(true);
+    const toastId = toast.loading("Updating password...");
+    try {
+      const response = await changePassword({
+        currentPassword,
+        newPassword,
+        confirmNewPassword: confirmPassword,
+      });
+      if (response.data?.success) {
+        toast.success("Password changed successfully", { id: toastId });
+        navigate("/user/profile");
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to change password", { id: toastId });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <>
@@ -362,7 +434,7 @@ export default function ChangePassword() {
           <h1 className="cp-title">Change Password</h1>
           <p className="cp-subtitle">Update your password to keep your account secure</p>
 
-          <form onSubmit={(e) => e.preventDefault()}>
+          <form onSubmit={handleSubmit}>
             <div className="cp-form-group">
               <label className="cp-label">Current Password</label>
               <div className="cp-input-wrap">
@@ -371,6 +443,7 @@ export default function ChangePassword() {
                   className="cp-input"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Enter current password"
                 />
               </div>
             </div>
@@ -379,43 +452,50 @@ export default function ChangePassword() {
               <label className="cp-label">New Password</label>
               <div className="cp-input-wrap">
                 <input
-                  type="password"
+                  type={showNewPassword ? "text" : "password"}
                   className="cp-input"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Enter new password"
                   style={{ paddingRight: "40px" }}
                 />
-                <button type="button" className="cp-toggle-btn">
-                  <div className="cp-toggle-dot"></div>
+                <button 
+                  type="button" 
+                  className="cp-toggle-btn"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                >
+                  <div className="cp-toggle-dot" style={{ opacity: showNewPassword ? 1 : 0.4 }}></div>
                 </button>
               </div>
             </div>
 
             <div className="cp-strength-header">
               <span>Password strength</span>
-              <span className="cp-strength-text">Strong</span>
+              <span className="cp-strength-text" style={{ color: getStrengthColor() }}>
+                {getStrengthText()}
+              </span>
             </div>
             <div className="cp-strength-bars">
-              <div className="cp-strength-bar active"></div>
-              <div className="cp-strength-bar active"></div>
-              <div className="cp-strength-bar active"></div>
-              <div className="cp-strength-bar"></div>
+              <div className={`cp-strength-bar ${score >= 1 ? "active" : ""}`} style={{ backgroundColor: score >= 1 ? getStrengthColor() : undefined }}></div>
+              <div className={`cp-strength-bar ${score >= 2 ? "active" : ""}`} style={{ backgroundColor: score >= 2 ? getStrengthColor() : undefined }}></div>
+              <div className={`cp-strength-bar ${score >= 3 ? "active" : ""}`} style={{ backgroundColor: score >= 3 ? getStrengthColor() : undefined }}></div>
+              <div className={`cp-strength-bar ${score >= 4 ? "active" : ""}`} style={{ backgroundColor: score >= 4 ? getStrengthColor() : undefined }}></div>
             </div>
 
             <div className="cp-req-box">
               <div className="cp-req-title">Password Requirements</div>
               <div className="cp-req-list">
-                <div className="cp-req-item valid">
-                  <div className="cp-req-dot valid"></div> At least 8 characters long
+                <div className={`cp-req-item ${isLengthValid ? "valid" : ""}`}>
+                  <div className={`cp-req-dot ${isLengthValid ? "valid" : ""}`}></div> At least 8 characters long
                 </div>
-                <div className="cp-req-item valid">
-                  <div className="cp-req-dot valid"></div> Contains at least one number
+                <div className={`cp-req-item ${hasNumber ? "valid" : ""}`}>
+                  <div className={`cp-req-dot ${hasNumber ? "valid" : ""}`}></div> Contains at least one number
                 </div>
-                <div className="cp-req-item valid">
-                  <div className="cp-req-dot valid"></div> Contains at least one uppercase letter
+                <div className={`cp-req-item ${hasUppercase ? "valid" : ""}`}>
+                  <div className={`cp-req-dot ${hasUppercase ? "valid" : ""}`}></div> Contains at least one uppercase letter
                 </div>
-                <div className="cp-req-item">
-                  <div className="cp-req-dot"></div> Contains special character (!@#$%)
+                <div className={`cp-req-item ${hasSpecial ? "valid" : ""}`}>
+                  <div className={`cp-req-dot ${hasSpecial ? "valid" : ""}`}></div> Contains special character (!@#$%)
                 </div>
               </div>
             </div>
@@ -424,27 +504,34 @@ export default function ChangePassword() {
               <label className="cp-label">Confirm New Password</label>
               <div className="cp-input-wrap">
                 <input
-                  type="password"
+                  type={showConfirmPassword ? "text" : "password"}
                   className="cp-input"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm new password"
                   style={{ paddingRight: "40px" }}
                 />
-                <button type="button" className="cp-toggle-btn">
-                  <div className="cp-toggle-dot"></div>
+                <button 
+                  type="button" 
+                  className="cp-toggle-btn"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  <div className="cp-toggle-dot" style={{ opacity: showConfirmPassword ? 1 : 0.4 }}></div>
                 </button>
               </div>
             </div>
 
-            <button type="submit" className="cp-btn">
-              Update Password
-              <svg className="cp-btn-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M5 12h14M12 5l7 7-7 7" />
-              </svg>
+            <button type="submit" className="cp-btn" disabled={isSubmitting}>
+              {isSubmitting ? "Updating..." : "Update Password"}
+              {!isSubmitting && (
+                <svg className="cp-btn-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              )}
             </button>
 
             <div className="cp-forgot-link">
-              <a href="#">Forgot current password?</a>
+              <Link to="/forgot-password">Forgot current password?</Link>
             </div>
           </form>
         </div>
@@ -458,24 +545,31 @@ export default function ChangePassword() {
         </div>
 
         {/* Security Tip Toast */}
-        <div className="cp-toast">
-          <div className="cp-toast-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-            </svg>
+        {showSecurityTip && (
+          <div className="cp-toast">
+            <div className="cp-toast-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+            </div>
+            <div className="cp-toast-content">
+              <div className="cp-toast-title">Security Tip</div>
+              <div className="cp-toast-desc">Enable 2FA for an extra layer of protection on your event bookings.</div>
+            </div>
+            <button 
+              type="button"
+              className="cp-toast-close" 
+              title="Close"
+              onClick={() => setShowSecurityTip(false)}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="15" y1="9" x2="9" y2="15" />
+                <line x1="9" y1="9" x2="15" y2="15" />
+              </svg>
+            </button>
           </div>
-          <div className="cp-toast-content">
-            <div className="cp-toast-title">Security Tip</div>
-            <div className="cp-toast-desc">Enable 2FA for an extra layer of protection on your event bookings.</div>
-          </div>
-          <button className="cp-toast-close" title="Close">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <line x1="15" y1="9" x2="9" y2="15" />
-              <line x1="9" y1="9" x2="15" y2="15" />
-            </svg>
-          </button>
-        </div>
+        )}
       </div>
     </>
   );
