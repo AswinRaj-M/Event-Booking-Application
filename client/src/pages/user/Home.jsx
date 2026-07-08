@@ -5,6 +5,7 @@ import Footer from '../../components/layout/Footer';
 import { Search, MapPin, Calendar, Clock, ArrowRight, Ticket, Star, Users } from 'lucide-react';
 import { VENDOR_ROUTES, USER_ROUTES } from '../../constants/Routes';
 import { getExploreEvents } from '../../services/user.api.js';
+import { getAllCategories } from '../../services/common.api.js';
 
 const formatEventDate = (dateString, startTime) => {
   if (!dateString) return "Date TBA";
@@ -18,28 +19,56 @@ const formatEventDate = (dateString, startTime) => {
   }
 };
 
+const CATEGORY_STYLES = [
+  { color: "bg-purple-500", shadow: "shadow-purple-500/20" },
+  { color: "bg-blue-500", shadow: "shadow-blue-500/20" },
+  { color: "bg-green-500", shadow: "shadow-green-500/20" },
+  { color: "bg-pink-500", shadow: "shadow-pink-500/20" },
+  { color: "bg-yellow-500", shadow: "shadow-yellow-500/20" },
+  { color: "bg-cyan-500", shadow: "shadow-cyan-500/20" },
+];
+
 const Home = () => {
   const [upcomingEvents, setUpcomingEvents] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchUpcomingEvents = async () => {
+    const fetchHomeData = async () => {
       try {
         setLoading(true);
-        const response = await getExploreEvents({ limit: 4 });
-        if (response.data && response.data.success) {
-          setUpcomingEvents(response.data.events || []);
+        const [eventsRes, catsRes] = await Promise.all([
+          getExploreEvents({ limit: 4 }),
+          getAllCategories()
+        ]);
+
+        if (eventsRes.data && eventsRes.data.success) {
+          setUpcomingEvents(eventsRes.data.events || []);
+        }
+
+        if (catsRes.data && catsRes.data.success) {
+          const uniqueCats = [];
+          const seenNames = new Set();
+          const rawCats = catsRes.data.data || [];
+          for (const cat of rawCats) {
+            const nameLower = cat.name?.trim().toLowerCase();
+            if (nameLower && !seenNames.has(nameLower)) {
+              seenNames.add(nameLower);
+              uniqueCats.push(cat);
+            }
+          }
+          setCategories(uniqueCats);
         }
       } catch (err) {
-        console.error("Error fetching upcoming events:", err);
-        setError(err.response?.data?.message || "Failed to load events");
+        console.error("Error fetching home data:", err);
+        setError(err.response?.data?.message || "Failed to load home data");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchUpcomingEvents();
+    fetchHomeData();
   }, []);
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-purple-500/30 w-full overflow-hidden">
@@ -109,19 +138,24 @@ const Home = () => {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {[
-              { name: "Music", color: "bg-purple-500", shadow: "shadow-purple-500/20" },
-              { name: "Tech", color: "bg-blue-500", shadow: "shadow-blue-500/20" },
-              { name: "Sports", color: "bg-green-500", shadow: "shadow-green-500/20" },
-              { name: "Arts", color: "bg-pink-500", shadow: "shadow-pink-500/20" },
-              { name: "Party", color: "bg-yellow-500", shadow: "shadow-yellow-500/20" },
-              { name: "Culture", color: "bg-cyan-500", shadow: "shadow-cyan-500/20" },
-            ].map((cat, i) => (
-              <div key={i} className="bg-[#111] hover:bg-[#1a1a1a] border border-white/5 rounded-2xl p-6 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all hover:border-white/20 hover:-translate-y-1 shadow-lg">
-                <div className={`w-3 h-3 rounded-full ${cat.color} mb-1 shadow-[0_0_10px_currentColor] ${cat.shadow}`} />
-                <span className="font-medium text-sm text-gray-300">{cat.name}</span>
-              </div>
-            ))}
+            {categories.length > 0 ? (
+              categories.map((cat, i) => {
+                const style = CATEGORY_STYLES[i % CATEGORY_STYLES.length];
+                return (
+                  <div key={cat._id || i} className="bg-[#111] hover:bg-[#1a1a1a] border border-white/5 rounded-2xl p-6 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all hover:border-white/20 hover:-translate-y-1 shadow-lg">
+                    <div className={`w-3 h-3 rounded-full ${style.color} mb-1 shadow-[0_0_10px_currentColor] ${style.shadow}`} />
+                    <span className="font-medium text-sm text-gray-300">{cat.name}</span>
+                  </div>
+                );
+              })
+            ) : (
+              [1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="bg-[#111] border border-white/5 rounded-2xl p-6 flex flex-col items-center justify-center gap-3 animate-pulse h-[100px]">
+                  <div className="w-3 h-3 rounded-full bg-zinc-800" />
+                  <div className="h-4 bg-zinc-800 w-16 rounded" />
+                </div>
+              ))
+            )}
           </div>
         </section>
 
