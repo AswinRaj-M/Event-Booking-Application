@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { resetPassword } from "../../services/user.api";
 import { toast } from "sonner";
+import { COMMON_ROUTES } from "../../constants/Routes";
 
 function calcStrength(pwd) {
   let score = 0;
@@ -481,7 +482,7 @@ export default function ResetPassword() {
 
                 <p className="rp-footer-link">
                   Remember your password?{" "}
-                  <a href="#" onClick={(e) => { e.preventDefault(); navigate("/login"); }}>Log in</a>
+                  <a href="#" onClick={(e) => { e.preventDefault(); navigate(COMMON_ROUTES.LOGIN); }}>Log in</a>
                 </p>
               </form>
             </>
@@ -495,7 +496,7 @@ export default function ResetPassword() {
               </div>
               <h3>Password Updated!</h3>
               <p>Your password has been reset successfully.<br />You can now log in with your new password.</p>
-              <button className="rp-btn" onClick={() => navigate("/login")}>
+              <button className="rp-btn" onClick={() => navigate(COMMON_ROUTES.LOGIN)}>
                 Go to Login
                 <svg className="rp-btn-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M5 12h14M12 5l7 7-7 7" />

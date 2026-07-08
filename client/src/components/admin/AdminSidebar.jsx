@@ -2,6 +2,7 @@ import React from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { logoutAdminThunk } from '../../features/admin.slice'
+import { ADMIN_ROUTES } from '../../constants/Routes'
 import {
     LayoutDashboard,
     Users,
@@ -25,7 +26,7 @@ function AdminSidebar() {
 
     const handleLogout = () => {
         dispatch(logoutAdminThunk())
-        navigate("/admin/login")
+        navigate(ADMIN_ROUTES.LOGIN)
     }
 
     const isActive = (path) => location.pathname === path
@@ -45,20 +46,20 @@ function AdminSidebar() {
                 <div className="px-4 mb-6">
                     <p className="px-4 text-[11px] font-semibold text-gray-500 mb-2 uppercase">Platform</p>
                     <nav className="space-y-1">
-                        <Link to="/admin/dashboard" className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive('/admin/dashboard') ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
-                            <LayoutDashboard className={`mr-3 h-5 w-5 ${isActive('/admin/dashboard') ? 'text-purple-400' : 'text-gray-500'}`} />
+                        <Link to={ADMIN_ROUTES.DASHBOARD} className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive(ADMIN_ROUTES.DASHBOARD) ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
+                            <LayoutDashboard className={`mr-3 h-5 w-5 ${isActive(ADMIN_ROUTES.DASHBOARD) ? 'text-purple-400' : 'text-gray-500'}`} />
                             Dashboard
                         </Link>
-                        <Link to="/admin/users" className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive('/admin/users') ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
-                            <Users className={`mr-3 h-5 w-5 ${isActive('/admin/users') ? 'text-purple-400' : 'text-gray-500'}`} />
+                        <Link to={ADMIN_ROUTES.USERS} className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive(ADMIN_ROUTES.USERS) ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
+                            <Users className={`mr-3 h-5 w-5 ${isActive(ADMIN_ROUTES.USERS) ? 'text-purple-400' : 'text-gray-500'}`} />
                             Users
                         </Link>
-                        <Link to="/admin/vendors" className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive('/admin/vendors') ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
-                            <Store className={`mr-3 h-5 w-5 ${isActive('/admin/vendors') ? 'text-purple-400' : 'text-gray-500'}`} />
+                        <Link to={ADMIN_ROUTES.VENDORS} className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive(ADMIN_ROUTES.VENDORS) ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
+                            <Store className={`mr-3 h-5 w-5 ${isActive(ADMIN_ROUTES.VENDORS) ? 'text-purple-400' : 'text-gray-500'}`} />
                             Vendors
                         </Link>
-                        <Link to="/admin/events" className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive('/admin/events') ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
-                            <Calendar className={`mr-3 h-5 w-5 ${isActive('/admin/events') ? 'text-purple-400' : 'text-gray-500'}`} />
+                        <Link to={ADMIN_ROUTES.EVENTS} className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive(ADMIN_ROUTES.EVENTS) ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
+                            <Calendar className={`mr-3 h-5 w-5 ${isActive(ADMIN_ROUTES.EVENTS) ? 'text-purple-400' : 'text-gray-500'}`} />
                             Events
                         </Link>
                     </nav>
@@ -71,8 +72,8 @@ function AdminSidebar() {
                             <Ticket className={`mr-3 h-5 w-5 ${isActive('/admin/bookings') ? 'text-purple-400' : 'text-gray-500'}`} />
                             Bookings
                         </Link>
-                        <Link to="/admin/categories" className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive('/admin/categories') ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
-                            <Layers className={`mr-3 h-5 w-5 ${isActive('/admin/categories') ? 'text-purple-400' : 'text-gray-500'}`} />
+                        <Link to={ADMIN_ROUTES.CATEGORIES} className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive(ADMIN_ROUTES.CATEGORIES) ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
+                            <Layers className={`mr-3 h-5 w-5 ${isActive(ADMIN_ROUTES.CATEGORIES) ? 'text-purple-400' : 'text-gray-500'}`} />
                             Categories
                         </Link>
                         <Link to="#" className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive('/admin/payments') ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>

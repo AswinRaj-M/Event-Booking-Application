@@ -18,6 +18,7 @@ import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { toast } from 'sonner';
 import VendorSidebar from '../../components/vendor/VendorSidebar';
+import { VENDOR_ROUTES } from '../../constants/Routes';
 
 
 import avatarImg from '../../assets/vendor/common_avatar.png';
@@ -453,10 +454,10 @@ const VendorCreateEvent = () => {
       if (response.data && response.data.success) {
         if (status === 'draft') {
           toast.success('Event saved as draft successfully!');
-          navigate('/vendor/events/drafts');
+          navigate(VENDOR_ROUTES.DRAFTS);
         } else {
           toast.success('Event created successfully!');
-          navigate('/vendor/events');
+          navigate(VENDOR_ROUTES.EVENTS);
         }
       } else {
         toast.error(response.data?.message || 'Failed to create event');

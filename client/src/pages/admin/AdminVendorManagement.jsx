@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import AdminSidebar from "../../components/admin/AdminSidebar";
+import { ADMIN_ROUTES } from "../../constants/Routes";
 import {
   Search,
   Bell,
@@ -338,7 +339,7 @@ function AdminVendorManagement() {
                         </td>
                         <td className="px-6 text-right">
                           <Link
-                            to={`/admin/vendor-application/${vendor._id}`}
+                            to={ADMIN_ROUTES.VENDOR_APPLICATION.replace(':id', vendor._id)}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#2A204C] text-purple-300 hover:text-white rounded-lg text-xs font-medium transition-colors"
                           >
                             View Details

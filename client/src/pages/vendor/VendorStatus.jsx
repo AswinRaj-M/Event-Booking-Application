@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { vendorLogoutState } from '../../features/vendorSlice';
 import logo from '../../assets/logo.jpeg';
 import { CheckCircle2, Clock, XCircle, RefreshCw, LogOut } from 'lucide-react';
+import { COMMON_ROUTES, VENDOR_ROUTES } from '../../constants/Routes';
 
 const VendorStatus = () => {
     const location = useLocation()
@@ -16,13 +17,13 @@ const VendorStatus = () => {
 
     useEffect(() => {
         if (status === 'approved') {
-            navigate('/vendor/dashboard', { replace: true });
+            navigate(VENDOR_ROUTES.DASHBOARD, { replace: true });
         }
     }, [status, navigate]);
 
     const handleLogout = () => {
         dispatch(vendorLogoutState());
-        navigate('/login', { replace: true });
+        navigate(COMMON_ROUTES.LOGIN, { replace: true });
     };
 
     const renderStatusContent = () => {
@@ -64,7 +65,7 @@ const VendorStatus = () => {
                                 <p className="text-gray-400 max-w-md leading-relaxed mb-8">
                                     We couldn't verify your business details/document. Please ensure the uploaded files are clear and valid, then try applying again.
                                 </p>
-                                <Link to="/vendor-application" className="bg-[#1a1a1a] hover:bg-[#222] border border-white/10 text-white font-medium px-8 py-3.5 rounded-xl transition-all flex items-center gap-2 group">
+                                <Link to={VENDOR_ROUTES.APPLICATION} className="bg-[#1a1a1a] hover:bg-[#222] border border-white/10 text-white font-medium px-8 py-3.5 rounded-xl transition-all flex items-center gap-2 group">
                                     <RefreshCw size={16} className="group-hover:rotate-180 transition-transform duration-500" />
                                     Review & Reapply
                                 </Link>

@@ -20,6 +20,7 @@ import {
 import VendorSidebar from '../../components/vendor/VendorSidebar';
 import { getVendorEventsApi, deleteEventApi, updateEventApi } from '../../services/vendor.api';
 import VendorEditEventModal from '../../components/vendor/VendorEditEvent.Modal';
+import { VENDOR_ROUTES } from '../../constants/Routes';
 import avatarImg from '../../assets/vendor/common_avatar.png';
 
 const VendorDraft = () => {
@@ -202,7 +203,7 @@ const VendorDraft = () => {
             <h1 className="text-3xl font-extrabold tracking-tight text-white mb-2">Draft Events</h1>
             <p className="text-sm text-zinc-400">Manage your unpublished events before they go live.</p>
           </div>
-          <Link to="/vendor/create-event">
+          <Link to={VENDOR_ROUTES.CREATE_EVENT}>
             <button className="flex items-center gap-2 px-5 py-3 bg-[#8B5CF6] hover:bg-[#7C3AED] text-white text-sm font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(139,92,246,0.35)] cursor-pointer">
               <PlusCircle className="w-4.5 h-4.5" />
               Create New Event
@@ -376,7 +377,7 @@ const VendorDraft = () => {
                 Any events you save as draft during the event creation process will show up here.
               </p>
             </div>
-            <Link to="/vendor/create-event" className="mt-2">
+            <Link to={VENDOR_ROUTES.CREATE_EVENT} className="mt-2">
               <button className="flex items-center gap-2 px-5 py-2.5 bg-[#1C1A30] hover:bg-[#252245] text-white text-xs font-bold rounded-xl border border-purple-500/20 transition-all cursor-pointer">
                 Create New Event
               </button>

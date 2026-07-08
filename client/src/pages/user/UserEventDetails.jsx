@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
+import { USER_ROUTES } from "../../constants/Routes";
 import { 
   MapPin, 
   Calendar, 
@@ -335,7 +336,7 @@ const UserEventDetails = () => {
           </p>
           <div className="flex gap-4">
             <Link
-              to="/user/explore"
+              to={USER_ROUTES.EXPLORE}
               className="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-sm font-semibold tracking-wide transition-all shadow-[0_0_15px_rgba(168,85,247,0.3)] cursor-pointer"
             >
               Browse Events
@@ -371,7 +372,7 @@ const UserEventDetails = () => {
         {/* Dynamic Back Navigation */}
         <div className="mb-6">
           <Link 
-            to="/user/explore" 
+            to={USER_ROUTES.EXPLORE} 
             className="inline-flex items-center gap-2 text-zinc-400 hover:text-purple-400 text-xs font-semibold uppercase tracking-wider transition-colors group cursor-pointer"
           >
             <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
@@ -915,7 +916,7 @@ const UserEventDetails = () => {
                         </div>
                         
                         <Link
-                          to={`/user/event/${simEvent._id}`}
+                          to={USER_ROUTES.EVENT_DETAILS.replace(':id', simEvent._id)}
                           className="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white rounded-xl px-3.5 py-2 text-xs font-bold tracking-wide transition-all"
                         >
                           View Event

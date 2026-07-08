@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import AdminSidebar from '../../components/admin/AdminSidebar'
 import Loader from '../../components/common/Loader'
+import { ADMIN_ROUTES } from '../../constants/Routes'
 import { fetchAllUsers, getAllVendors, fetchAllEventsAdmin } from '../../services/admin.api'
 
 function AdminDashboard() {
@@ -345,7 +346,7 @@ function AdminDashboard() {
                   <p className="text-xs text-gray-400 mt-1">Latest registrations and events.</p>
                 </div>
                 <button 
-                  onClick={() => navigate('/admin/users')}
+                  onClick={() => navigate(ADMIN_ROUTES.USERS)}
                   className="text-xs text-gray-300 hover:text-white bg-gray-800/30 hover:bg-gray-700/50 px-3 py-1.5 rounded-md border border-gray-700 transition-colors flex items-center gap-1"
                 >
                   View All <ArrowUpRight className="w-3 h-3" />
@@ -419,7 +420,7 @@ function AdminDashboard() {
 
                 <div className="space-y-3 overflow-y-auto scrollbar-hide pb-2 flex-1">
                   <button 
-                    onClick={() => navigate('/admin/vendors')}
+                    onClick={() => navigate(ADMIN_ROUTES.VENDORS)}
                     className="w-full bg-gradient-to-r from-[#9333ea] to-[#4f46e5] hover:opacity-90 text-white rounded-lg p-3 flex border border-purple-500/20 items-center justify-between transition-all shadow-md shadow-purple-900/10 cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
@@ -432,7 +433,7 @@ function AdminDashboard() {
                   </button>
 
                   <button 
-                    onClick={() => navigate('/admin/events')}
+                    onClick={() => navigate(ADMIN_ROUTES.EVENTS)}
                     className="w-full bg-black/20 hover:bg-white/5 border border-transparent rounded-lg p-3 flex items-center justify-between group transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
@@ -445,7 +446,7 @@ function AdminDashboard() {
                   </button>
 
                   <button 
-                    onClick={() => navigate('/admin/users')}
+                    onClick={() => navigate(ADMIN_ROUTES.USERS)}
                     className="w-full bg-black/20 hover:bg-white/5 border border-transparent rounded-lg p-3 flex items-center justify-between group transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
@@ -458,7 +459,7 @@ function AdminDashboard() {
                   </button>
 
                   <button 
-                    onClick={() => navigate('/admin/categories')}
+                    onClick={() => navigate(ADMIN_ROUTES.CATEGORIES)}
                     className="w-full bg-black/20 hover:bg-white/5 border border-transparent rounded-lg p-3 flex items-center justify-between group transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-3">

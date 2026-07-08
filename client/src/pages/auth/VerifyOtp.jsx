@@ -7,6 +7,7 @@ import { verifyVendorOTP, resendVendorOtp, verifyVendorEmailUpdateOtp, resendVen
 import { setVendorData } from '../../features/vendorSlice';
 import { toast } from 'sonner';
 import Loader from '../../components/common/Loader';
+import { COMMON_ROUTES, USER_ROUTES, VENDOR_ROUTES } from '../../constants/Routes';
 
 const VerifyOtp = () => {
   const dispatch = useDispatch();
@@ -27,7 +28,7 @@ const VerifyOtp = () => {
 
   useEffect(() => {
     if (!userId) {
-      navigate('/login', { replace: true });
+      navigate(COMMON_ROUTES.LOGIN, { replace: true });
     }
   }, [userId, navigate]);
 
@@ -41,7 +42,7 @@ const VerifyOtp = () => {
 
   useEffect(() => {
     if (!isVendor && success && !location.state?.isEmailUpdate) {
-      navigate('/user/home', { replace: true });
+      navigate(USER_ROUTES.HOME, { replace: true });
     }
   }, [success, isVendor, navigate, location.state?.isEmailUpdate]);
 
@@ -106,7 +107,7 @@ const VerifyOtp = () => {
             toast.success("Profile and email updated successfully!");
             const vendor = response.data.vendor;
             dispatch(setVendorData(vendor));
-            navigate("/vendor/profile", { replace: true });
+            navigate(VENDOR_ROUTES.PROFILE, { replace: true });
           }
         } else {
           const response = await verifyVendorOTP({ vendorId: userId, otp: finalOtp });
@@ -115,12 +116,12 @@ const VerifyOtp = () => {
             const vendor = response.data.vendor;
             dispatch(setVendorData(vendor));
             if (vendor.applicationStatus === "pending" || vendor.applicationStatus === "rejected") {
-              navigate("/vendor/status", {
+              navigate(VENDOR_ROUTES.STATUS, {
                 replace: true,
                 state: { businessName: vendor.businessName }
               });
             } else {
-              navigate("/vendor/dashboard", { replace: true });
+              navigate(VENDOR_ROUTES.DASHBOARD, { replace: true });
             }
           }
         }
@@ -142,7 +143,7 @@ const VerifyOtp = () => {
           if (response.data?.success) {
             toast.success("Profile and email updated successfully!");
             dispatch(updateUserData(response.data.user));
-            navigate("/user/profile", { replace: true });
+            navigate(USER_ROUTES.PROFILE, { replace: true });
           }
         } catch (err) {
           console.error("User OTP verify error:", err);
@@ -272,13 +273,13 @@ const VerifyOtp = () => {
         <div className="mt-6 text-center">
           <p className="text-xs text-gray-500">
             {location.state?.isEmailUpdate ? (
-              <Link to={isVendor ? "/vendor/profile" : "/user/profile"} className="text-purple-400 hover:text-purple-300 transition-colors">
+              <Link to={isVendor ? VENDOR_ROUTES.PROFILE : USER_ROUTES.PROFILE} className="text-purple-400 hover:text-purple-300 transition-colors">
                 Cancel & Go Back
               </Link>
             ) : (
               <>
                 Entered the wrong email?{' '}
-                <Link to={isVendor ? "/vendor/application" : "/signup"} className="text-purple-400 hover:text-purple-300 transition-colors">
+                <Link to={isVendor ? VENDOR_ROUTES.APPLICATION : COMMON_ROUTES.SIGNUP} className="text-purple-400 hover:text-purple-300 transition-colors">
                   Change details
                 </Link>
               </>

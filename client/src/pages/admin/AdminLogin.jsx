@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { adminClearMessages, adminLoginThunk } from "../../features/admin.slice";
 import {toast} from 'sonner'
+import { ADMIN_ROUTES } from "../../constants/Routes";
 
 
 const AdminLogin = () => {
@@ -32,7 +33,7 @@ const AdminLogin = () => {
     useEffect(()=>{
         if(success){
             dispatch(adminClearMessages())
-            navigate("/admin/dashboard")
+            navigate(ADMIN_ROUTES.DASHBOARD)
         }
     },[success,navigate,dispatch])
     return (

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { forgotPassword } from "../../services/user.api";
 import { toast } from "sonner";
+import { COMMON_ROUTES } from "../../constants/Routes";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -366,7 +367,7 @@ export default function ForgotPassword() {
                   href="#"
                   onClick={(e) => {
                     e.preventDefault();
-                    navigate("/login");
+                    navigate(COMMON_ROUTES.LOGIN);
                   }}
                 >
                   Login

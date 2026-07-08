@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { vendorLogoutThunk, vendorLogoutState } from "../../features/vendorSlice";
 import { toast } from "sonner";
+import { COMMON_ROUTES, VENDOR_ROUTES } from "../../constants/Routes";
 
 const VendorSidebar = () => {
     const location = useLocation();
@@ -25,7 +26,7 @@ const VendorSidebar = () => {
             await dispatch(vendorLogoutThunk()).unwrap();
             dispatch(vendorLogoutState());
             toast.success("Logged out successfully");
-            navigate("/login");
+            navigate(COMMON_ROUTES.LOGIN);
         } catch (error) {
             toast.error("Logout failed. Please try again.");
         }
@@ -33,16 +34,16 @@ const VendorSidebar = () => {
 
     // Navigation Links Data
     const mainLinks = [
-        { path: "/vendor/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-        { path: "/vendor/events", icon: CalendarDays, label: "My Events" },
-        { path: "/vendor/events/drafts", icon: FileEdit, label: "Draft Events" },
-        { path: "/vendor/create-event", icon: PlusCircle, label: "Create Event" },
+        { path: VENDOR_ROUTES.DASHBOARD, icon: LayoutDashboard, label: "Dashboard" },
+        { path: VENDOR_ROUTES.EVENTS, icon: CalendarDays, label: "My Events" },
+        { path: VENDOR_ROUTES.DRAFTS, icon: FileEdit, label: "Draft Events" },
+        { path: VENDOR_ROUTES.CREATE_EVENT, icon: PlusCircle, label: "Create Event" },
         { path: "#", icon: Ticket, label: "Bookings" },
         { path: "#", icon: Wallet, label: "Earnings" },
     ];
 
     const accountLinks = [
-        { path: "/vendor/profile", icon: UserCircle, label: "Vendor Profile" },
+        { path: VENDOR_ROUTES.PROFILE, icon: UserCircle, label: "Vendor Profile" },
         { path: "#", icon: Settings, label: "Settings" },
     ];
 
@@ -126,7 +127,7 @@ const VendorSidebar = () => {
 
             {/* User Profile Footer (Sticky bottom) */}
             <div className="p-4 border-t border-white/5 bg-[#0B091A]">
-                <Link to="/vendor/profile" className="flex items-center gap-3 group">
+                <Link to={VENDOR_ROUTES.PROFILE} className="flex items-center gap-3 group">
                     <div className="w-10 h-10 rounded-full bg-gray-700/50 flex items-center justify-center border border-white/10 overflow-hidden cursor-pointer group-hover:border-purple-500 transition-colors">
                         <UserCircle className="w-6 h-6 text-gray-400 group-hover:text-purple-400 transition-colors" />
                     </div>

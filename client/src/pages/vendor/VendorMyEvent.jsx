@@ -18,6 +18,7 @@ import {
 import VendorSidebar from '../../components/vendor/VendorSidebar';
 import { getVendorEventsApi, cancelEventApi, fetchCategories, deleteEventApi } from '../../services/vendor.api';
 import VendorEditEventModal from '../../components/vendor/VendorEditEvent.Modal';
+import { VENDOR_ROUTES } from '../../constants/Routes';
 
 import portfolio3 from '../../assets/vendor/portfolio_3.png';
 import avatarImg from '../../assets/vendor/common_avatar.png';
@@ -322,7 +323,7 @@ const VendorMyEvent = () => {
             <h1 className="text-3xl font-extrabold tracking-tight text-white mb-2">Manage Events</h1>
             <p className="text-sm text-zinc-400">View and manage your published events.</p>
           </div>
-          <Link to="/vendor/create-event">
+          <Link to={VENDOR_ROUTES.CREATE_EVENT}>
             <button className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white text-sm font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(139,92,246,0.35)] cursor-pointer">
               <Plus className="w-4.5 h-4.5" />
               Create New Event

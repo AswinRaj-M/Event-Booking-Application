@@ -10,6 +10,7 @@
     vendorLoginThunk,
   } from "../../features/vendorSlice";
 import Loader from "../../components/common/Loader";
+import { COMMON_ROUTES, USER_ROUTES, VENDOR_ROUTES } from "../../constants/Routes";
 
   const Login = () => {
     const navigate = useNavigate();
@@ -46,7 +47,7 @@ import Loader from "../../components/common/Loader";
           ).unwrap();
 
           if (data.unverified) {
-            navigate("/verify-otp", {
+            navigate(COMMON_ROUTES.VERIFY_OTP, {
               state: {
                 userId: data.vendorId,
                 email: data.email,
@@ -70,7 +71,7 @@ import Loader from "../../components/common/Loader";
     useEffect(() => {
       if (isLogin && userState.success) {
         if (userState.unverified) {
-          navigate("/verify-otp", {
+          navigate(COMMON_ROUTES.VERIFY_OTP, {
             state: {
               userId: userState.userId,
               email: userState.tempEmail
@@ -79,7 +80,7 @@ import Loader from "../../components/common/Loader";
           toast.warning("Account is not verified. verify to login")
         } else {
           dispatch(clearMessages());
-          navigate("/user/home", { replace: true });
+          navigate(USER_ROUTES.HOME, { replace: true });
         }
       }
 
@@ -91,14 +92,14 @@ import Loader from "../../components/common/Loader";
             vendorState.vendor?.applicationStatus === "pending" ||
             vendorState.vendor?.applicationStatus === "rejected"
           ) {
-            navigate("/vendor/status", {
+            navigate(VENDOR_ROUTES.STATUS, {
               replace: true,
               state: {
                 businessName: vendorState.vendor?.businessName,
               },
             });
           } else {
-            navigate("/vendor/dashboard", { replace: true });
+            navigate(VENDOR_ROUTES.DASHBOARD, { replace: true });
           }
         }
       }
@@ -375,7 +376,7 @@ import Loader from "../../components/common/Loader";
                   </div>
                   <div className="flex justify-center">
                     <Link
-                      to="/forgot-password"
+                      to={COMMON_ROUTES.FORGOT_PASSWORD}
                       className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
                     >
                       Forgot password?
@@ -442,14 +443,14 @@ import Loader from "../../components/common/Loader";
                     Don't have an account?{" "}
                     {isLogin ? (
                       <Link
-                        to="/signup"
+                        to={COMMON_ROUTES.SIGNUP}
                         className=" text-purple-500 hover:text-purple-400  text-primary hover:text-primary/80 transition-colors font-medium"
                       >
                         Sign up
                       </Link>
                     ) : (
                       <Link
-                        to="/vendor/application"
+                        to={VENDOR_ROUTES.APPLICATION}
                         className=" text-purple-500 hover:text-purple-400  text-primary hover:text-primary/80 transition-colors font-medium"
                       >
                         Appply as a Vendor

@@ -5,6 +5,8 @@ import Footer from '../../components/layout/Footer';
 import { Search, MapPin, Calendar, Music, RotateCcw, ArrowRight, Users, ArrowUpDown } from 'lucide-react';
 import { getExploreEvents } from '../../services/user.api.js';
 import { getAllCategories } from '../../services/common.api.js';
+import { USER_ROUTES } from '../../constants/Routes';
+
 
 
 
@@ -291,7 +293,7 @@ const UserExploreEvent = () => {
               return (
                 <Link
                   key={event._id}
-                  to={`/user/event/${event._id}`}
+                  to={USER_ROUTES.EVENT_DETAILS.replace(':id', event._id)}
                   className="group bg-[#0b0914]/60 hover:bg-[#0c0a1c]/90 border border-white/5 hover:border-purple-500/20 rounded-3xl overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.3)] hover:shadow-[0_20px_40px_rgba(139,92,246,0.12)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col h-full text-left"
                 >
                   {/* Event Image */}

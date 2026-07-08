@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { logoutUserThunk, logoutUserState } from "../../features/user.slice";
 import { toast } from "sonner";
+import { COMMON_ROUTES, USER_ROUTES } from "../../constants/Routes";
 
 const UserSideBar = () => {
   const location = useLocation();
@@ -23,22 +24,22 @@ const UserSideBar = () => {
       await dispatch(logoutUserThunk()).unwrap();
       dispatch(logoutUserState());
       toast.success("Logged out successfully");
-      navigate("/login");
+      navigate(COMMON_ROUTES.LOGIN);
     } catch (error) {
       toast.error("Logout failed. Please try again.");
     }
   };
 
   const platformLinks = [
-    { path: "/user/home", icon: LayoutDashboard, label: "Dashboard" },
-    { path: "/user/bookings", icon: Ticket, label: "My Bookings" },
-    { path: "/user/profile#wallet", icon: Wallet, label: "Wallet" }
+    { path: USER_ROUTES.HOME, icon: LayoutDashboard, label: "Dashboard" },
+    { path: USER_ROUTES.BOOKINGS, icon: Ticket, label: "My Bookings" },
+    { path: USER_ROUTES.PROFILE + "#wallet", icon: Wallet, label: "Wallet" }
   ];
 
   const accountLinks = [
-    { path: "/user/profile", icon: User, label: "Profile" },
-    { path: "/user/settings", icon: Settings, label: "Settings" },
-    { path: "/user/support", icon: HelpCircle, label: "Help & Support" }
+    { path: USER_ROUTES.PROFILE, icon: User, label: "Profile" },
+    { path: USER_ROUTES.SETTINGS, icon: Settings, label: "Settings" },
+    { path: USER_ROUTES.SUPPORT, icon: HelpCircle, label: "Help & Support" }
   ];
 
   return (

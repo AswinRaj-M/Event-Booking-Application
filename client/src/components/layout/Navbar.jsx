@@ -2,14 +2,15 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Bell, Menu, ArrowRight } from "lucide-react";
 import logo from "../../assets/logo.jpeg";
+import { USER_ROUTES } from "../../constants/Routes";
 
 const Navbar = () => {
     const [activeMenu, setActiveMenu] = useState(() => {
         const path = window.location.pathname;
         const hash = window.location.hash;
-        if (path.includes("/profile")) return "Profile";
-        if (path.includes("/home")) return "Home";
-        if (path.includes("/explore")) return "Browse Events";
+        if (path === USER_ROUTES.PROFILE) return "Profile";
+        if (path === USER_ROUTES.HOME) return "Home";
+        if (path === USER_ROUTES.EXPLORE) return "Browse Events";
         if (hash.includes("bookings")) return "My Bookings";
         if (hash.includes("browse")) return "Browse Events";
         if (hash.includes("about")) return "About Us";
@@ -17,10 +18,10 @@ const Navbar = () => {
     });
 
     const menuItems = [
-        { name: "Browse Events", path: "/user/explore" },
+        { name: "Browse Events", path: USER_ROUTES.EXPLORE },
         { name: "My Bookings", path: "#My Bookings" },
-        { name: "Home", path: "/user/home" },
-        { name: "Profile", path: "/user/profile" },
+        { name: "Home", path: USER_ROUTES.HOME },
+        { name: "Profile", path: USER_ROUTES.PROFILE },
         { name: "About Us", path: "#about" }
     ];
 

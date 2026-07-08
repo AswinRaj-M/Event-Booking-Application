@@ -10,6 +10,7 @@ import { useEffect } from 'react';
 import Loader from '../../components/common/Loader';
 import { toast } from 'sonner';
 import { getAllCategories } from '../../services/common.api';
+import { COMMON_ROUTES } from '../../constants/Routes';
 
 const VendorApplication = () => {
 
@@ -92,7 +93,7 @@ const VendorApplication = () => {
             const data = await dispatch(vendorApplicationThunk(formData)).unwrap();
             dispatch(vendorLogoutState());
             dispatch(logoutUserState());
-            navigate("/verify-otp", {
+            navigate(COMMON_ROUTES.VERIFY_OTP, {
                 state: {
                     userId: data.vendorId,
                     email: data.email,
@@ -143,7 +144,7 @@ const VendorApplication = () => {
                     {/* Right Links */}
                     <div className="hidden md:flex items-center gap-4">
                         <span className="text-gray-400 text-sm">Already a vendor?</span>
-                        <Link to="/login" className="text-white hover:text-violet-400 transition text-sm font-medium">Login</Link>
+                        <Link to={COMMON_ROUTES.LOGIN} className="text-white hover:text-violet-400 transition text-sm font-medium">Login</Link>
                     </div>
                 </div>
             </nav>

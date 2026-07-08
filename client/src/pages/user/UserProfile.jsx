@@ -9,6 +9,7 @@ import { getUserProfile, updateUserProfile, updateUserProfilePicture, sendEmailU
 import { toast } from "sonner";
 import avatarImg from "../../assets/vendor/common_avatar.png";
 import Loader from "../../components/common/Loader";
+import { COMMON_ROUTES, USER_ROUTES } from "../../constants/Routes";
 
 const UserProfile = () => {
   const dispatch = useDispatch();
@@ -100,7 +101,7 @@ const UserProfile = () => {
         if (response.data?.success) {
           toast.success("Verification code sent to your new email");
           setIsSaving(false);
-          navigate("/verify-otp", {
+          navigate(COMMON_ROUTES.VERIFY_OTP, {
             state: {
               email: email.trim(),
               userId: user?.id || user?._id,
@@ -130,7 +131,7 @@ const UserProfile = () => {
   };
 
   const handleChangePassword = () => {
-    navigate("/user/change-password");
+    navigate(USER_ROUTES.CHANGE_PASSWORD);
   };
 
   if (loading || isSaving || isUploading) {

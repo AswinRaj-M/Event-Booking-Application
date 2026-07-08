@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { setGoogleAuthData } from "../../features/user.slice";
 import Loader from "../../components/common/Loader";
+import { COMMON_ROUTES, USER_ROUTES } from "../../constants/Routes";
 
 const GoogleAuthSuccess = () => {
   const [searchParams] = useSearchParams();
@@ -16,13 +17,13 @@ const GoogleAuthSuccess = () => {
       try {
         const user = JSON.parse(decodeURIComponent(userStr));
         dispatch(setGoogleAuthData({ user }));
-        navigate("/user/home", { replace: true });
+        navigate(USER_ROUTES.HOME, { replace: true });
       } catch (error) {
         console.error("Error parsing Google user data:", error);
-        navigate("/login", { replace: true });
+        navigate(COMMON_ROUTES.LOGIN, { replace: true });
       }
     } else {
-      navigate("/login", { replace: true });
+      navigate(COMMON_ROUTES.LOGIN, { replace: true });
     }
   }, [searchParams, dispatch, navigate]);
 

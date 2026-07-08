@@ -13,71 +13,72 @@ import ResetPassword from '../pages/auth/ResetPassword.jsx';
 import GoogleAuthSuccess from '../pages/auth/GoogleAuthSuccess.jsx';
 import UserExploreEvent from '../pages/user/UserExploreEvent.jsx';
 import UserEventDetails from '../pages/user/UserEventDetails.jsx';
+import { COMMON_ROUTES, USER_ROUTES } from '../constants/Routes';
 
 const AppRoutes = () => {
     return (
         <Routes>
 
-            <Route path='/user/home' element={
+            <Route path={USER_ROUTES.HOME} element={
                 <ProtectedRoute role="user">
                     <Home />
                 </ProtectedRoute>
             } />
-            <Route path='/user/profile' element={
+            <Route path={USER_ROUTES.PROFILE} element={
                 <ProtectedRoute role="user">
                     <UserProfile />
                 </ProtectedRoute>
             } />
-            <Route path='/user/change-password' element={
+            <Route path={USER_ROUTES.CHANGE_PASSWORD} element={
                 <ProtectedRoute role="user">
                     <ChangePassword />
                 </ProtectedRoute>
             } />
-            <Route path='/user/explore' element={
+            <Route path={USER_ROUTES.EXPLORE} element={
                 <ProtectedRoute role="user">
                     <UserExploreEvent />
                 </ProtectedRoute>
             } />
-            <Route path='/user/event/:id' element={
+            <Route path={USER_ROUTES.EVENT_DETAILS} element={
                 <ProtectedRoute role="user">
                     <UserEventDetails />
                 </ProtectedRoute>
             } />
-            <Route path="/" element={
+            <Route path={COMMON_ROUTES.LANDING} element={
                 <PublicRoute>
                     <Landing />
                 </PublicRoute>
             } />
 
-            <Route path="/forgot-password" element={
+            <Route path={COMMON_ROUTES.FORGOT_PASSWORD} element={
                 <PublicRoute>
                     <ForgotPassword />
                 </PublicRoute>
             } />
-            <Route path="/reset-password/:resetToken" element={
+            <Route path={COMMON_ROUTES.RESET_PASSWORD} element={
                 <PublicRoute>
                     <ResetPassword/>
                 </PublicRoute>
             } />
 
-            <Route path="/login" element={
+            <Route path={COMMON_ROUTES.LOGIN} element={
                 <PublicRoute>
                     <Login />
                 </PublicRoute>
             } />
-            <Route path="/signup" element={
+            <Route path={COMMON_ROUTES.SIGNUP} element={
                 <PublicRoute>
                     <Signup />
                 </PublicRoute>
             } />
-            <Route path="/verify-otp" element={
+            <Route path={COMMON_ROUTES.VERIFY_OTP} element={
                 <PublicRoute>
                     <VerifyOtp />
                 </PublicRoute>
             } />
-            <Route path="/auth/success" element={<GoogleAuthSuccess />} />
+            <Route path={COMMON_ROUTES.AUTH_SUCCESS} element={<GoogleAuthSuccess />} />
 
-            <Route path="/spinner" element={<Loader />} />
+            <Route path={COMMON_ROUTES.SPINNER} element={<Loader />} />
         </Routes>
     );
 };
