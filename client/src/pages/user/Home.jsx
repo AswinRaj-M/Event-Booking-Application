@@ -1,11 +1,46 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
-import { Search, MapPin, Calendar, Clock, ArrowRight, Ticket, Star } from 'lucide-react';
-import { VENDOR_ROUTES } from '../../constants/Routes';
+import { Search, MapPin, Calendar, Clock, ArrowRight, Ticket, Star, Users } from 'lucide-react';
+import { VENDOR_ROUTES, USER_ROUTES } from '../../constants/Routes';
+import { getExploreEvents } from '../../services/user.api.js';
+
+const formatEventDate = (dateString, startTime) => {
+  if (!dateString) return "Date TBA";
+  try {
+    const d = new Date(dateString);
+    const options = { weekday: 'short', month: 'short', day: 'numeric' };
+    const dateFormatted = d.toLocaleDateString('en-US', options);
+    return startTime ? `${dateFormatted} • ${startTime}` : dateFormatted;
+  } catch (error) {
+    return "Date TBA";
+  }
+};
 
 const Home = () => {
+  const [upcomingEvents, setUpcomingEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchUpcomingEvents = async () => {
+      try {
+        setLoading(true);
+        const response = await getExploreEvents({ limit: 4 });
+        if (response.data && response.data.success) {
+          setUpcomingEvents(response.data.events || []);
+        }
+      } catch (err) {
+        console.error("Error fetching upcoming events:", err);
+        setError(err.response?.data?.message || "Failed to load events");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUpcomingEvents();
+  }, []);
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-purple-500/30 w-full overflow-hidden">
       <Navbar />
@@ -97,54 +132,107 @@ const Home = () => {
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3/4 h-3/4 bg-purple-900/10 rounded-full blur-[120px] -z-10 pointer-events-none" />
 
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-3 drop-shadow-sm">Featured Events</h2>
+            <h2 className="text-3xl font-bold mb-3 drop-shadow-sm">Upcoming Events</h2>
             <p className="text-gray-400 max-w-2xl mx-auto font-light">Hand-picked experiences we think you'll love. Don't miss out on these trending events.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Empty event cards (4)
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="bg-[#0A0A0A] border border-white/10 rounded-2xl overflow-hidden hover:border-white/20 transition-all group flex flex-col h-full shadow-2xl hover:-translate-y-1">
-                <div className="relative h-48 bg-gradient-to-br from-gray-900 to-black w-full overflow-hidden flex items-center justify-center">
-                  <div className="absolute inset-0 bg-black/40 z-10 transition-opacity group-hover:bg-black/20" />
-                  <span className="text-gray-700 font-medium z-0">Image TBA</span>
-                  <div className="absolute top-3 right-3 z-20 bg-black/80 backdrop-blur-md px-2.5 py-1 rounded-md text-xs font-bold border border-white/10 shadow-lg text-white">
-                    $0.00
-                  </div>
-                  <div className="absolute bottom-3 left-3 z-20">
-                    <span className="bg-purple-600 shadow-[0_0_10px_rgba(147,51,234,0.5)] text-white text-[10px] font-bold px-2 py-1 rounded-[4px] uppercase tracking-wider">
-                      Upcoming
-                    </span>
+          {loading && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="bg-[#0A0A0A] border border-white/5 rounded-2xl overflow-hidden animate-pulse flex flex-col h-[380px]">
+                  <div className="h-48 bg-zinc-900 w-full" />
+                  <div className="p-5 flex-1 flex flex-col gap-3">
+                    <div className="h-4 bg-zinc-950 w-1/3 rounded" />
+                    <div className="h-6 bg-zinc-950 w-3/4 rounded" />
+                    <div className="h-4 bg-zinc-950 w-full rounded mt-2" />
+                    <div className="h-10 bg-zinc-950 w-full rounded-xl mt-auto" />
                   </div>
                 </div>
-                <div className="p-5 flex-1 flex flex-col z-20 bg-[#0A0A0A]">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-bold text-lg text-white group-hover:text-purple-400 transition-colors line-clamp-1">Event Title TBA</h3>
-                    <span className="flex items-center gap-1 text-xs text-gray-400 whitespace-nowrap bg-white/5 px-1.5 py-0.5 rounded-md border border-white/5">
-                      <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
-                      0.0
-                    </span>
-                  </div>
-                  <p className="text-gray-500 text-sm mb-4 line-clamp-2 leading-relaxed font-light">Event details will be updated soon. Stay tuned for an unforgettable experience.</p>
+              ))}
+            </div>
+          )}
 
-                  <div className="mt-auto space-y-2.5 text-xs text-gray-400 mb-5 font-medium">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-gray-500" />
-                      <span>Date TBA</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-gray-500" />
-                      <span>Location TBA</span>
-                    </div>
-                  </div>
+          {!loading && error && (
+            <div className="text-center py-10">
+              <p className="text-red-400 text-sm mb-4">{error}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="bg-purple-600 hover:bg-purple-500 text-white px-6 py-2 rounded-xl text-xs font-semibold transition-all"
+              >
+                Retry
+              </button>
+            </div>
+          )}
 
-                  <button className="w-full py-3 bg-white/5 hover:bg-white/15 text-white text-sm font-semibold rounded-xl transition-colors mt-auto border border-white/10 shadow-sm">
-                    View Details
-                  </button>
-                </div>
-              </div>
-            ))} */}
-          </div>
+          {!loading && !error && upcomingEvents.length === 0 && (
+            <div className="text-center py-10 bg-[#0A0A0A] border border-white/5 rounded-2xl p-6 max-w-md mx-auto">
+              <p className="text-zinc-500 text-sm">No upcoming events found.</p>
+            </div>
+          )}
+
+          {!loading && !error && upcomingEvents.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {upcomingEvents.map((event) => {
+                const categoryName = event.category?.name || (typeof event.category === 'string' ? event.category : 'General');
+                const imageSrc = event.thumbnail?.fileUrl || "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=600&auto=format&fit=crop";
+                const priceVal = event.ticketType === "Free" || !event.ticketTiers || event.ticketTiers.length === 0
+                  ? "Free"
+                  : `$${Math.min(...event.ticketTiers.map(t => t.price || 0))}`;
+
+                return (
+                  <Link
+                    key={event._id}
+                    to={USER_ROUTES.EVENT_DETAILS.replace(':id', event._id)}
+                    className="bg-[#0A0A0A] border border-white/5 rounded-2xl overflow-hidden hover:border-purple-500/20 transition-all group flex flex-col h-full shadow-2xl hover:-translate-y-1 text-left"
+                  >
+                    <div className="relative h-48 bg-gradient-to-br from-gray-900 to-black w-full overflow-hidden">
+                      <img
+                        src={imageSrc}
+                        alt={event.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        loading="lazy"
+                      />
+                      <div className="absolute top-3 right-3 z-20 bg-black/80 backdrop-blur-md px-2.5 py-1 rounded-md text-xs font-bold border border-white/10 shadow-lg text-white">
+                        {priceVal}
+                      </div>
+                      <div className="absolute bottom-3 left-3 z-20">
+                        <span className="bg-purple-600/85 backdrop-blur-md shadow-[0_0_10px_rgba(147,51,234,0.5)] text-white text-[10px] font-bold px-2 py-1 rounded-[4px] uppercase tracking-wider">
+                          {categoryName}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="p-5 flex-1 flex flex-col bg-[#0A0A0A]">
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="font-bold text-base text-white group-hover:text-purple-400 transition-colors line-clamp-1">
+                          {event.title}
+                        </h3>
+                      </div>
+                      {event.description && (
+                        <p className="text-zinc-400 text-xs mb-4 line-clamp-2 leading-relaxed font-light">
+                          {event.description}
+                        </p>
+                      )}
+
+                      <div className="mt-auto space-y-2 text-xs text-zinc-400 mb-5 font-medium">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-3.5 h-3.5 text-purple-400" />
+                          <span>{formatEventDate(event.schedule?.date, event.schedule?.startTime)}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="w-3.5 h-3.5 text-purple-400" />
+                          <span className="line-clamp-1">{event.venue}, {event.city}</span>
+                        </div>
+                      </div>
+
+                      <button className="w-full py-2.5 bg-white/5 group-hover:bg-purple-600 text-white text-xs font-bold rounded-xl border border-white/10 group-hover:border-transparent transition-all shadow-sm">
+                        View Details
+                      </button>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </section>
 
         {/* How It Works */}
