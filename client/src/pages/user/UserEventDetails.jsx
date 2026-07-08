@@ -27,7 +27,7 @@ import {
 import { toast } from "sonner";
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
-import { getEventById, bookEventTickets, getExploreEvents } from "../../services/user.api.js";
+import { getEventById, getExploreEvents } from "../../services/user.api.js";
 
 // Style config matching categories to color codes
 const categoryBadgeStyles = {
@@ -99,18 +99,17 @@ const UserEventDetails = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Booking states
+
   const [quantity, setQuantity] = useState(1);
   const [selectedTierIndex, setSelectedTierIndex] = useState(0);
-  const [couponCode, setCouponCode] = useState("");
   const [isBooking, setIsBooking] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [activeImage, setActiveImage] = useState(null);
 
-  // Ref for similar events scrolling
+
   const similarContainerRef = useRef(null);
 
-  // Fetch events on mount
+  
   useEffect(() => {
     const fetchEventData = async () => {
       try {
@@ -221,11 +220,8 @@ const UserEventDetails = () => {
   // Standard Mock Service Fee matches photo ($14.90 for standard booking, or $0 if free)
   const serviceFee = isFree ? 0 : 14.90;
 
-  // Active coupon discount percent
+  // Active discount percent from event offer schema
   const discountPercent = useMemo(() => {
-    if (couponCode === "WELCOME10") return 10;
-    if (couponCode === "FESTIVE15") return 15;
-    
     // Auto discount from event schema if available
     if (event?.offer?.enabled && quantity >= (event.offer.minTicketsRequired || 0)) {
       // Check if offer is within valid date range
@@ -239,47 +235,14 @@ const UserEventDetails = () => {
       }
     }
     return 0;
-  }, [couponCode, event?.offer, quantity]);
+  }, [event?.offer, quantity]);
 
   const subtotal = isFree ? 0 : ticketPrice * quantity;
   const discountAmount = (subtotal * discountPercent) / 100;
   const totalAmount = isFree ? 0 : subtotal - discountAmount + serviceFee;
 
-  const handleBookTickets = async () => {
-    if (quantity <= 0) {
-      toast.error("Please select at least 1 ticket to book.");
-      return;
-    }
-    if (quantity > availableSeats) {
-      toast.error(`Only ${availableSeats} tickets left for this tier.`);
-      return;
-    }
-
-    try {
-      setIsBooking(true);
-      const response = await bookEventTickets(id, {
-        tierIndex: isFree ? 0 : selectedTierIndex,
-        quantity,
-        couponCode
-      });
-
-      if (response.data?.success) {
-        toast.success("Tickets booked successfully!");
-        setEvent(response.data.event);
-        if (response.data.event.ticketTiers && response.data.event.ticketTiers[selectedTierIndex]?.capacity - (response.data.event.ticketTiers[selectedTierIndex]?.sold || 0) <= 0) {
-          setQuantity(0);
-        } else {
-          setQuantity(1);
-        }
-      } else {
-        toast.error(response.data?.message || "Failed to book tickets.");
-      }
-    } catch (err) {
-      console.error("Booking error:", err);
-      toast.error(err.response?.data?.message || "An error occurred during booking. Please try again.");
-    } finally {
-      setIsBooking(false);
-    }
+  const handleBookTickets = () => {
+    toast.info("Currently Not Available !");
   };
 
   const handleShare = (platform) => {
@@ -321,7 +284,7 @@ const UserEventDetails = () => {
     }
   };
 
-  // Loading Skeleton
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#05050C] text-white font-sans w-full overflow-hidden flex flex-col">
@@ -761,30 +724,7 @@ const UserEventDetails = () => {
                   </div>
                 )}
 
-                {/* Coupon Selection Option */}
-                {!isFree && (
-                  <div className="mb-6">
-                    <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold block mb-2">Apply Coupon</label>
-                    <div className="relative">
-                      <Sparkles className="w-4 h-4 text-purple-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      <select
-                        value={couponCode}
-                        onChange={(e) => setCouponCode(e.target.value)}
-                        className="w-full bg-[#120f26] border border-purple-900/35 rounded-xl py-3 pl-11 pr-4 text-white text-sm focus:outline-none focus:border-purple-500/50 appearance-none cursor-pointer transition-colors"
-                      >
-                        <option value="">No Coupon Applied</option>
-                        {event.offer?.enabled && (
-                          <option value="AUTO_OFFER">
-                            Auto {event.offer.discountValue}% discount (Min {event.offer.minTicketsRequired} tkt)
-                          </option>
-                        )}
-                        <option value="WELCOME10">WELCOME10 - 10% Off</option>
-                        <option value="FESTIVE15">FESTIVE15 - 15% Off</option>
-                      </select>
-                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500 text-[10px]">▼</div>
-                    </div>
-                  </div>
-                )}
+
 
                 {/* Quantity Control Stepper */}
                 <div className="mb-6 bg-[#120f26]/60 border border-purple-900/10 rounded-2xl p-4">

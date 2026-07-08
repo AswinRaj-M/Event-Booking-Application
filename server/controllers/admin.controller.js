@@ -4,6 +4,7 @@ import {
 } from "../utils/generateToken.js";
 import { hashToken } from "../utils/hashToken.js";
 import { sendMail } from "../utils/sendMail.js";
+import { HTTP_STATUS } from "../utils/enums/http.status.enum.js";
 import {
   adminLoginService,
   logoutAdminService,
@@ -56,7 +57,7 @@ export const AdminLogin = async (req, res) => {
     path: "/",
   });
 
-  res.status(200).json({
+  res.status(HTTP_STATUS.OK).json({
     message: "Admin Logged In Successfully",
     admin: {
       id: admin._id,
@@ -87,7 +88,7 @@ export const logoutAdmin = async (req, res) => {
     path: "/",
   });
 
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     message: "Admin Logged Out Successfully",
   });
 };
@@ -98,7 +99,7 @@ export const getAllVendors = async (req, res) => {
 
   const result = await getAllVendorsService(status, page, limit, search, category)
 
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     success: true,
     ...result,
   });
@@ -110,7 +111,7 @@ export const getVendorById = async (req, res) => {
 
   const vendor = await getVendorByIdService(id);
 
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     success: true,
     data: vendor,
   });
@@ -132,7 +133,7 @@ export const vendorApprove = async (req, res) => {
     console.error("Error sending approval email:", err.message);
   }
 
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     message: "Application Approved",
   });
 };
@@ -153,7 +154,7 @@ export const vendorReject = async (req, res) => {
     console.error("Error sending rejection email:", err.message);
   }
 
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     success : true,
     message: "Application Rejected!",
   });
@@ -174,7 +175,7 @@ export const vendorSuspend = async(req,res) =>{
     console.error("Error sending suspension email:", err.message);
   }
 
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     success : true,
     message : "Vendor suspended Successfully!"
   })
@@ -196,7 +197,7 @@ export const vendorUnsuspend = async(req,res) =>{
     console.error("Error sending unsuspension email:", err.message);
   }
 
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     success : true,
     message : "Vendor unsuspended Successfully!"
   })
@@ -215,7 +216,7 @@ export const VendorSendEmail = async (req, res) => {
     console.error("Error sending email to vendor:", err.message);
   }
 
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     message: "Message send Successfully"
   })
 }
@@ -234,7 +235,7 @@ export const createCategories = async (req, res) => {
     fileType: uploadIcon.resource_type,
   },)
 
-  return res.status(201).json({
+  return res.status(HTTP_STATUS.CREATED).json({
     success: true,
     message: "Category Created SuccessfUlly",
     data: category
@@ -248,7 +249,7 @@ export const getAllCategories = async (req, res) => {
   const result = await getAllCategoriesService({ page, limit, search, status, sortBy });
 
   if (page && limit) {
-    return res.status(200).json({
+    return res.status(HTTP_STATUS.OK).json({
       success: true,
       data: result.categories,
       totalPages: result.totalPages,
@@ -256,7 +257,7 @@ export const getAllCategories = async (req, res) => {
       total: result.total
     });
   } else {
-    return res.status(200).json({
+    return res.status(HTTP_STATUS.OK).json({
       success: true,
       data: result
     });
@@ -283,7 +284,7 @@ export const updateCategory = async (req, res) => {
 
   const category = await updateCategoryService(id, name, description, iconData);
 
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     success: true,
     message: "Category Updated Successfully",
     data: category
@@ -297,7 +298,7 @@ export const toggleCategoryStatus = async (req, res) => {
 
   const category = await toggleCategoryStatusService(id)
 
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     success: true,
     message: "Category Status Updated",
     data: category
@@ -311,7 +312,7 @@ export const deleteCategory = async (req, res) => {
 
   await deleteCategoryService(id)
 
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     success: true,
     message: "Category Deleted Successfully"
   })
@@ -320,7 +321,7 @@ export const deleteCategory = async (req, res) => {
 export const getAllUsers = async(req,res) =>{
   const users = await getAllUsersService()
   
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     success : true,
     message : "Users fetched Successfully",
     data : users
@@ -331,7 +332,7 @@ export const toggleUserBlock = async(req,res) => {
   const { id } = req.params
   const user = await toggleUserBlockService(id)
   
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     success : true,
     message : `User ${user.isBlocked ? 'Blocked' : 'Unblocked'} Successfully!`,
     data : user
@@ -340,7 +341,7 @@ export const toggleUserBlock = async(req,res) => {
 
 export const getAllEventsAdmin = async (req, res) => {
   const events = await getAllEventsService();
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     success: true,
     message: "Events fetched successfully",
     events
@@ -351,7 +352,7 @@ export const toggleBlockEvent = async (req, res) => {
   const { eventId } = req.params;
   const { reason } = req.body;
   const event = await toggleBlockEventService(eventId, reason);
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     success: true,
     message: `Event status updated successfully`,
     event

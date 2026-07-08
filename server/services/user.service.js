@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { hashToken } from "../utils/hashToken.js";
 import { AppError } from "../utils/AppError.js";
+import { HTTP_STATUS } from "../utils/enums/http.status.enum.js";
 import Vendor from "../models/vendor.model.js";
 import User from "../models/user.model.js";
 import Event from "../models/event.model.js";
@@ -24,13 +25,13 @@ import { generateResetToken } from "../utils/generateToken.js";
 
 export const getUserProfileService = async (userId) => {
   const user = await findUserById(userId);
-  if (!user) throw new AppError("User not found", 404);
+  if (!user) throw new AppError("User not found", HTTP_STATUS.NOT_FOUND);
   return user;
 };
 
 export const updateUserProfileService = async (userId, data) => {
   const user = await findUserById(userId);
-  if (!user) throw new AppError("User not found", 404);
+  if (!user) throw new AppError("User not found", HTTP_STATUS.NOT_FOUND);
   return await updateUser(userId, data);
 };
 
@@ -45,7 +46,7 @@ export const registerUserService = async (data) => {
   } = data;
 
   if (password !== confirmPassword) {
-    throw new AppError("Password do not match", 400);
+    throw new AppError("Password do not match", HTTP_STATUS.BAD_REQUEST);
   }
 
   if (
@@ -53,14 +54,14 @@ export const registerUserService = async (data) => {
     (agreeTermsAndConditions !== true &&
       agreeTermsAndConditions !== "true")
   ) {
-    throw new AppError("You must agree to the terms and conditions", 400);
+    throw new AppError("You must agree to the terms and conditions", HTTP_STATUS.BAD_REQUEST);
   }
 
   const existingUser = await findUserByEmail(email);
 
   if (existingUser) {
     if (existingUser.isVerified) {
-      throw new AppError("Email Already Registered", 400);
+      throw new AppError("Email Already Registered", HTTP_STATUS.BAD_REQUEST);
     } else {
       await deleteUserById(existingUser._id);
     }
@@ -78,13 +79,13 @@ export const registerUserService = async (data) => {
 };
 
 export const resendOtpService = async(userId,otp)=>{
-  if(!userId) throw new AppError("User id is required",400)
+  if(!userId) throw new AppError("User id is required",HTTP_STATUS.BAD_REQUEST)
 
   const user =  await findUserById(userId)
   
-  if(!user) throw new AppError("User not found",400)
+  if(!user) throw new AppError("User not found",HTTP_STATUS.BAD_REQUEST)
   
-  if(user.isVerified) throw new AppError("User already verified",400)
+  if(user.isVerified) throw new AppError("User already verified",HTTP_STATUS.BAD_REQUEST)
 
   await upsertOtp(user._id, otp)
 
@@ -94,7 +95,7 @@ export const resendOtpService = async(userId,otp)=>{
 export const forgotPasswordService = async(email)=>{
   const user = await findUserByEmail(email)
 
-  if(!user) throw new AppError("User not found!",400)
+  if(!user) throw new AppError("User not found!",HTTP_STATUS.BAD_REQUEST)
   
   const resetToken = generateResetToken(user)
 
@@ -103,7 +104,7 @@ export const forgotPasswordService = async(email)=>{
 
 export const resetPasswordService = async(userId,password) =>{
   const user = await findUserById(userId)
-  if(!user) throw new AppError("User not found!", 400)
+  if(!user) throw new AppError("User not found!", HTTP_STATUS.BAD_REQUEST)
   
   const hashedPassword = await bcrypt.hash(password,10)
 
@@ -113,18 +114,18 @@ export const resetPasswordService = async(userId,password) =>{
 
 export const changePasswordService = async (userId, currentPassword, newPassword) => {
   const user = await findUserById(userId);
-  if (!user) throw new AppError("User not found!", 404);
+  if (!user) throw new AppError("User not found!", HTTP_STATUS.NOT_FOUND);
 
   if (user.googleId && !user.password) {
     throw new AppError(
       "Accounts registered via Google OAuth cannot change passwords directly. Please use Google Login.",
-      400
+      HTTP_STATUS.BAD_REQUEST
     );
   }
 
   const isMatch = await bcrypt.compare(currentPassword, user.password);
   if (!isMatch) {
-    throw new AppError("Incorrect current password", 400);
+    throw new AppError("Incorrect current password", HTTP_STATUS.BAD_REQUEST);
   }
 
   const hashedPassword = await bcrypt.hash(newPassword, 10);
@@ -138,21 +139,21 @@ export const createOtpService = async (userId, otp) => {
 
 export const verifyOtpService = async (userId, otp) => {
   if (!userId || !otp) {
-    throw new AppError("OTP Required", 400);
+    throw new AppError("OTP Required", HTTP_STATUS.BAD_REQUEST);
   }
 
   const user = await findUserById(userId);
   if (!user) {
-    throw new AppError("User not found", 400);
+    throw new AppError("User not found", HTTP_STATUS.BAD_REQUEST);
   }
 
   const otpDoc = await findOtpByUserId(userId);
   if (!otpDoc) {
-    throw new AppError("Invalid or Expired OTP", 400);
+    throw new AppError("Invalid or Expired OTP", HTTP_STATUS.BAD_REQUEST);
   }
 
   if (otp !== otpDoc.otp) {
-    throw new AppError("Invalid OTP", 400);
+    throw new AppError("Invalid OTP", HTTP_STATUS.BAD_REQUEST);
   }
 
   user.isVerified = true;
@@ -167,15 +168,15 @@ export const loginUserService = async (email, password) => {
   const user = await findUserByEmail(email);
 
   if (!user) {
-    throw new AppError("Invalid Credentials", 400);
+    throw new AppError("Invalid Credentials", HTTP_STATUS.BAD_REQUEST);
   }
 
   const match = await bcrypt.compare(password, user.password);
   if (!match) {
-    throw new AppError("Password is Incorrect", 400);
+    throw new AppError("Password is Incorrect", HTTP_STATUS.BAD_REQUEST);
   }
   if (user.isBlocked){
-    throw new AppError("You have been blocked", 401);
+    throw new AppError("You have been blocked", HTTP_STATUS.UNAUTHORIZED);
   }
 
   if (!user.isVerified) {
@@ -204,11 +205,11 @@ export const refreshAccessTokenService = async (token, decoded) => {
   }
 
   if (!user || user.refreshToken !== hashToken(token)) {
-    throw new AppError("Invalid RefreshToken", 403);
+    throw new AppError("Invalid RefreshToken", HTTP_STATUS.FORBIDDEN);
   }
 
   if (user.isBlocked) {
-    throw new AppError("Your account has been suspended by the administrator.", 403);
+    throw new AppError("Your account has been suspended by the administrator.", HTTP_STATUS.FORBIDDEN);
   }
 
   return user;
@@ -235,11 +236,11 @@ export const getExploreEventsService = async (filters) => {
 
 export const sendEmailUpdateOtpService = async (userId, newEmail, otp) => {
   const user = await findUserById(userId);
-  if (!user) throw new AppError("User not found", 404);
+  if (!user) throw new AppError("User not found", HTTP_STATUS.NOT_FOUND);
 
   const existingUser = await findUserByEmail(newEmail);
   if (existingUser && existingUser._id.toString() !== userId.toString()) {
-    throw new AppError("Email already registered by another account", 400);
+    throw new AppError("Email already registered by another account", HTTP_STATUS.BAD_REQUEST);
   }
 
   await upsertOtp(userId, otp, { tempEmail: newEmail });
@@ -249,30 +250,30 @@ export const sendEmailUpdateOtpService = async (userId, newEmail, otp) => {
 
 export const verifyEmailUpdateOtpService = async (userId, otp, profileData) => {
   if (!userId || !otp) {
-    throw new AppError("OTP Required", 400);
+    throw new AppError("OTP Required", HTTP_STATUS.BAD_REQUEST);
   }
 
   const user = await findUserById(userId);
   if (!user) {
-    throw new AppError("User not found", 404);
+    throw new AppError("User not found", HTTP_STATUS.NOT_FOUND);
   }
 
   const otpDoc = await findOtpByUserId(userId);
   if (!otpDoc) {
-    throw new AppError("Invalid or Expired OTP", 400);
+    throw new AppError("Invalid or Expired OTP", HTTP_STATUS.BAD_REQUEST);
   }
 
   if (otp !== otpDoc.otp) {
-    throw new AppError("Invalid OTP", 400);
+    throw new AppError("Invalid OTP", HTTP_STATUS.BAD_REQUEST);
   }
 
   if (!otpDoc.tempEmail) {
-    throw new AppError("No pending email update found", 400);
+    throw new AppError("No pending email update found", HTTP_STATUS.BAD_REQUEST);
   }
 
   const existingUser = await findUserByEmail(otpDoc.tempEmail);
   if (existingUser && existingUser._id.toString() !== userId.toString()) {
-    throw new AppError("Email already registered by another account", 400);
+    throw new AppError("Email already registered by another account", HTTP_STATUS.BAD_REQUEST);
   }
 
   user.email = otpDoc.tempEmail;
@@ -288,7 +289,7 @@ export const verifyEmailUpdateOtpService = async (userId, otp, profileData) => {
 export const resendEmailUpdateOtpService = async (userId, otp) => {
   const otpDoc = await findOtpByUserId(userId);
   if (!otpDoc || !otpDoc.tempEmail) {
-    throw new AppError("No pending email update found", 400);
+    throw new AppError("No pending email update found", HTTP_STATUS.BAD_REQUEST);
   }
 
   await upsertOtp(userId, otp, { tempEmail: otpDoc.tempEmail });
@@ -298,94 +299,4 @@ export const resendEmailUpdateOtpService = async (userId, otp) => {
 
 export const getEventByIdService = async (id) => {
   return await findEventById(id);
-};
-
-export const bookEventTicketsService = async (userId, eventId, { tierIndex, quantity, couponCode }) => {
-  const event = await findEventById(eventId);
-  if (!event) {
-    throw new AppError("Event not found", 404);
-  }
-  if (event.eventStatus === "cancelled" || event.isBlocked || event.isDeleted) {
-    throw new AppError("This event is not available for booking", 400);
-  }
-
-  const user = await findUserById(userId);
-  if (!user) {
-    throw new AppError("User not found", 404);
-  }
-
-  const isFree = event.ticketType === "Free";
-  let tier;
-  if (isFree) {
-    if (!event.ticketTiers || event.ticketTiers.length === 0) {
-      event.ticketTiers = [{
-        name: "General Admission",
-        price: 0,
-        capacity: Number(event.totalTickets) || 100,
-        sold: 0,
-        benefits: ["General Entry"]
-      }];
-    }
-    tier = event.ticketTiers[0];
-  } else {
-    const idx = parseInt(tierIndex, 10);
-    if (isNaN(idx) || idx < 0 || idx >= event.ticketTiers.length) {
-      throw new AppError("Invalid ticket tier selected", 400);
-    }
-    tier = event.ticketTiers[idx];
-  }
-
-  const availableSeats = tier.capacity - (tier.sold || 0);
-  const reqQty = parseInt(quantity, 10);
-  if (isNaN(reqQty) || reqQty <= 0) {
-    throw new AppError("Invalid quantity requested", 400);
-  }
-
-  const maxQty = event.maxTicketPerPerson || 5;
-  if (reqQty > maxQty) {
-    throw new AppError(`You can book a maximum of ${maxQty} tickets per person`, 400);
-  }
-
-  if (reqQty > availableSeats) {
-    throw new AppError(`Not enough seats available. Only ${availableSeats} tickets left for this tier`, 400);
-  }
-
-  const ticketPrice = tier.price || 0;
-  const subtotal = isFree ? 0 : ticketPrice * reqQty;
-
-  let discountPercent = 0;
-  if (couponCode === "WELCOME10") discountPercent = 10;
-  else if (couponCode === "FESTIVE15") discountPercent = 15;
-  else if (event.offer?.enabled && reqQty >= (event.offer.minTicketsRequired || 0)) {
-    const now = new Date();
-    let valid = true;
-    if (event.offer.validFrom && new Date(event.offer.validFrom) > now) valid = false;
-    if (event.offer.validUntil && new Date(event.offer.validUntil) < now) valid = false;
-    if (valid) {
-      discountPercent = event.offer.discountValue || 0;
-    }
-  }
-
-  const discountAmount = (subtotal * discountPercent) / 100;
-  const serviceFee = isFree ? 0 : 14.90;
-  const totalAmount = isFree ? 0 : subtotal - discountAmount + serviceFee;
-
-  if (!isFree && totalAmount > 0) {
-    if (user.walletBalance < totalAmount) {
-      throw new AppError(`Insufficient wallet balance. You need $${totalAmount.toFixed(2)} to complete this booking. Your current balance is $${user.walletBalance.toFixed(2)}.`, 400);
-    }
-    user.walletBalance -= totalAmount;
-    await user.save();
-  }
-
-  tier.sold = (tier.sold || 0) + reqQty;
-  event.markModified('ticketTiers');
-  await event.save();
-
-  const updatedEvent = await findEventById(eventId);
-
-  return {
-    event: updatedEvent,
-    user
-  };
 };

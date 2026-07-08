@@ -69,10 +69,6 @@ export const getEventById = (id) => {
   return axiosInstance.get(`/users/events/${id}`);
 };
 
-export const bookEventTickets = (id, bookingData) => {
-  return axiosInstance.post(`/users/events/${id}/book`, bookingData);
-};
-
 export const changePassword = (data) => {
   return axiosInstance.put("/users/change-password", data);
 };

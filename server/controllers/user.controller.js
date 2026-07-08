@@ -6,6 +6,7 @@ import {
   generateRefreshToken,
 } from "../utils/generateToken.js";
 import { uploadToCloudinary } from "../utils/cloudinaryUpload.js";
+import { HTTP_STATUS } from "../utils/enums/http.status.enum.js";
 import {
   registerUserService,
   createOtpService,
@@ -25,7 +26,6 @@ import {
   verifyEmailUpdateOtpService,
   resendEmailUpdateOtpService,
   getEventByIdService,
-  bookEventTicketsService,
 } from "../services/user.service.js";
 import { AppError } from "../utils/AppError.js";
 
@@ -43,14 +43,14 @@ export const registerUser = async (req, res) => {
     console.error("Failed to send OTP:", mailError);
     throw new AppError(
       "User registered but failed to send verification email. Please try to login to resend OTP.",
-      500
+      HTTP_STATUS.INTERNAL_SERVER_ERROR
     );
   }
 
   console.log("otp is ", otp);
   console.log("OTP sent to", user.email);
 
-  return res.status(201).json({
+  return res.status(HTTP_STATUS.CREATED).json({
     message: "Otp Send To Email",
     userId: user._id,
     email: user.email,
@@ -84,7 +84,7 @@ export const verifyOTP = async (req, res) => {
     path: "/",
   });
 
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     user: {
       id: user._id,
       fullName: user.fullName,
@@ -107,11 +107,11 @@ export const loginUser = async (req, res) => {
       await sendOTP(user.email, otp);
     } catch (error) {
       console.error("Error from the login otp send : ", error);
-      throw new AppError("Failed to send otp, Try again later ", 500);
+      throw new AppError("Failed to send otp, Try again later ", HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
     console.log("Login OTP is : ", otp);
 
-    return res.status(200).json({
+    return res.status(HTTP_STATUS.OK).json({
       unverified: true,
       message: "Account not verified. OTP sent to your email.",
       userId: user._id,
@@ -208,10 +208,10 @@ export const resendOtp = async(req,res) =>{
     await sendOTP(user.email,otp)
   } catch (error) {
     console.error("Error from the resend otp : ",error)
-    throw new AppError("Failed to resend otp, Try again later ",500)
+    throw new AppError("Failed to resend otp, Try again later ",HTTP_STATUS.INTERNAL_SERVER_ERROR)
   }
   console.log("resend otp : ",otp)
-  res.status(200).json({
+  res.status(HTTP_STATUS.OK).json({
     succuss : true,
     message : "Otp resend Successfully"
   })
@@ -223,7 +223,7 @@ export const refreshAccessToken = async (req, res) => {
 
   if (!token) {
     console.warn(`[Token Refresh] Missing refresh token cookie in req.cookies`);
-    throw new AppError("No Refresh Token", 401);
+    throw new AppError("No Refresh Token", HTTP_STATUS.UNAUTHORIZED);
   }
 
   let decoded;
@@ -233,7 +233,7 @@ export const refreshAccessToken = async (req, res) => {
    
   } catch (error) {
     console.error(`[Token Refresh] JWT verification failed for refresh token:`, error.message);
-    throw new AppError("Invalid Refresh Token", 403);
+    throw new AppError("Invalid Refresh Token", HTTP_STATUS.FORBIDDEN);
   }
 
   try {
@@ -264,7 +264,7 @@ export const refreshAccessToken = async (req, res) => {
       path: "/",
     });
 
-    return res.status(error.statusCode || 403).json({
+    return res.status(error.statusCode || HTTP_STATUS.FORBIDDEN).json({
       message: error.message || "Forbidden"
     });
   }
@@ -281,11 +281,11 @@ export const forgotPassword = async(req,res) =>{
     await sendMail(email,resetUrl,"Reset link")
   } catch (error) {
     console.log("Error from send Reset link to email :",error)
-    throw new AppError("Something went Wrong",500)
+    throw new AppError("Something went Wrong",HTTP_STATUS.INTERNAL_SERVER_ERROR)
   }
   console.log("reset Url : ",resetUrl)
 
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     success : true,
     message : "Reset Link Send To Email"
   })
@@ -295,19 +295,19 @@ export const forgotPassword = async(req,res) =>{
 export const resetPassword = async(req,res) =>{
   const {resetToken,password} = req.body
 
-  if(!resetToken) throw new AppError("Token is required !",400)
+  if(!resetToken) throw new AppError("Token is required !",HTTP_STATUS.BAD_REQUEST)
   
   let decoded;
 
   try {
     decoded = jwt.verify(resetToken,process.env.JWT_RESET_SECRET)
   } catch (error) {
-    throw new AppError("Invalid or Expired Token",400)
+    throw new AppError("Invalid or Expired Token",HTTP_STATUS.BAD_REQUEST)
   }
 
   await resetPasswordService(decoded.id,password)
 
-  res.status(200).json({
+  res.status(HTTP_STATUS.OK).json({
     success : true,
     message : "Password reset Succesfully",
   })
@@ -336,7 +336,7 @@ export const logoutUser = async (req, res) => {
     path: "/",
   });
 
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     message: "Logged out Successfully",
   });
 };
@@ -344,7 +344,7 @@ export const logoutUser = async (req, res) => {
 export const getUserProfile = async (req, res) => {
   const userId = req.user._id;
   const user = await getUserProfileService(userId);
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     success: true,
     user: {
       id: user._id,
@@ -364,11 +364,11 @@ export const updateUserProfile = async (req, res) => {
   const { fullName, phoneNumber, email } = req.body;
 
   if (email && email !== req.user.email) {
-    throw new AppError("Email change requires verification. Please use OTP verification flow.", 400);
+    throw new AppError("Email change requires verification. Please use OTP verification flow.", HTTP_STATUS.BAD_REQUEST);
   }
 
   const updatedUser = await updateUserProfileService(userId, { fullName, phoneNumber });
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     success: true,
     message: "Profile updated successfully",
     user: {
@@ -389,12 +389,12 @@ export const changePassword = async (req, res) => {
   const { currentPassword, newPassword } = req.body;
 
   if (!currentPassword || !newPassword) {
-    throw new AppError("Current and new password are required", 400);
+    throw new AppError("Current and new password are required", HTTP_STATUS.BAD_REQUEST);
   }
 
   await changePasswordService(userId, currentPassword, newPassword);
 
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     success: true,
     message: "Password changed successfully",
   });
@@ -405,7 +405,7 @@ export const sendEmailUpdateOtp = async (req, res) => {
   const { newEmail } = req.body;
 
   if (!newEmail) {
-    throw new AppError("New email is required", 400);
+    throw new AppError("New email is required", HTTP_STATUS.BAD_REQUEST);
   }
 
   const otp = generateOTP();
@@ -415,12 +415,12 @@ export const sendEmailUpdateOtp = async (req, res) => {
     await sendOTP(newEmail, otp);
   } catch (mailError) {
     console.error("Failed to send OTP to new email:", mailError);
-    throw new AppError("Failed to send verification email. Please try again.", 500);
+    throw new AppError("Failed to send verification email. Please try again.", HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
 
   console.log("Email update OTP is:", otp);
 
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     success: true,
     message: "OTP sent to new email address",
   });
@@ -432,7 +432,7 @@ export const verifyEmailUpdateOtp = async (req, res) => {
 
   const updatedUser = await verifyEmailUpdateOtpService(userId, otp, { fullName, phoneNumber });
 
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     success: true,
     message: "Profile updated successfully",
     user: {
@@ -458,12 +458,12 @@ export const resendEmailUpdateOtp = async (req, res) => {
     await sendOTP(tempEmail, otp);
   } catch (mailError) {
     console.error("Failed to resend OTP to new email:", mailError);
-    throw new AppError("Failed to send verification email. Please try again.", 500);
+    throw new AppError("Failed to send verification email. Please try again.", HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
 
   console.log("Resent Email update OTP is:", otp);
 
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     success: true,
     message: "OTP resent to new email address",
   });
@@ -473,7 +473,7 @@ export const updateUserProfilePicture = async (req, res) => {
   const userId = req.user._id;
   
   if (!req.file) {
-    throw new AppError("Profile picture file required", 400);
+    throw new AppError("Profile picture file required", HTTP_STATUS.BAD_REQUEST);
   }
   
   const uploadResult = await uploadToCloudinary(
@@ -489,7 +489,7 @@ export const updateUserProfilePicture = async (req, res) => {
   
   const updatedUser = await updateUserProfileService(userId, { profilePicture });
   
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     success: true,
     message: "Profile picture updated successfully",
     user: {
@@ -508,7 +508,7 @@ export const updateUserProfilePicture = async (req, res) => {
 export const getExploreEvents = async (req, res) => {
   const { search, category, date, page, limit, sortBy } = req.query;
   const result = await getExploreEventsService({ search, category, date, page, limit, sortBy });
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     success: true,
     ...result
   });
@@ -518,34 +518,10 @@ export const getEventById = async (req, res) => {
   const { id } = req.params;
   const event = await getEventByIdService(id);
   if (!event) {
-    throw new AppError("Event not found", 404);
+    throw new AppError("Event not found", HTTP_STATUS.NOT_FOUND);
   }
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     success: true,
     event
   });
-};
-
-export const bookEventTickets = async (req, res) => {
-  const { id } = req.params;
-  const { tierIndex, quantity, couponCode } = req.body;
-  const userId = req.user._id;
-
-  const result = await bookEventTicketsService(userId, id, { tierIndex, quantity, couponCode });
-
-  return res.status(200).json({
-    success: true,
-    message: "Tickets booked successfully!",
-    event: result.event,
-    user: {
-      id: result.user._id,
-      fullName: result.user.fullName,
-      email: result.user.email,
-      phoneNumber: result.user.phoneNumber,
-      walletBalance: result.user.walletBalance,
-      role: result.user.role,
-      profilePicture: result.user.profilePicture,
-      createdAt: result.user.createdAt,
-    }
-  });
-};
+};

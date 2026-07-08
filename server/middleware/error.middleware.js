@@ -1,9 +1,10 @@
 import { AppError } from "../utils/AppError.js";
+import { HTTP_STATUS } from "../utils/enums/http.status.enum.js";
 
 
 export const globalErrorHandler = (err, req, res, next) => {
     console.error("ERROR :", err);
-  let statusCode = typeof err.statusCode === 'number' ? err.statusCode : 500;
+  let statusCode = typeof err.statusCode === 'number' ? err.statusCode : HTTP_STATUS.INTERNAL_SERVER_ERROR;
   let status = err.status || 'error';
 
 
@@ -19,7 +20,7 @@ export const globalErrorHandler = (err, req, res, next) => {
   if (err.code === 11000) {
     const field = Object.keys(err.keyValue)[0];
     const message = `${field.charAt(0).toUpperCase() + field.slice(1)} already exists.`;
-    return res.status(400).json({ status: 'fail', message });
+    return res.status(HTTP_STATUS.BAD_REQUEST).json({ status: 'fail', message });
   }
 
   const response = {

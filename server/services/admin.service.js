@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { hashToken } from "../utils/hashToken.js";
 import { AppError } from "../utils/AppError.js";
+import { HTTP_STATUS } from "../utils/enums/http.status.enum.js";
 import User from "../models/user.model.js";
 import { sendMail } from "../utils/sendMail.js";
 
@@ -26,23 +27,23 @@ import {
 
 export const adminLoginService = async (email, password) => {
   if (!email || !password) {
-    throw new AppError("Email and Password are Required", 400);
+    throw new AppError("Email and Password are Required", HTTP_STATUS.BAD_REQUEST);
   }
 
   const admin = await findAdminByEmail(email);
 
   if (!admin) {
-    throw new AppError("Invalid Credentials", 401);
+    throw new AppError("Invalid Credentials", HTTP_STATUS.UNAUTHORIZED);
   }
 
   if (admin.role !== "admin") {
-    throw new AppError("Access Denied. Not An Admin", 403);
+    throw new AppError("Access Denied. Not An Admin", HTTP_STATUS.FORBIDDEN);
   }
 
   const isMatch = await bcrypt.compare(password, admin.password);
 
   if (!isMatch) {
-    throw new AppError("Invalid Password", 401);
+    throw new AppError("Invalid Password", HTTP_STATUS.UNAUTHORIZED);
   }
 
   return admin;
@@ -98,7 +99,7 @@ export const getVendorByIdService = async (id) => {
   const vendor = await findVendorById(id);
 
   if (!vendor) {
-    throw new AppError("Vendor not Found", 404);
+    throw new AppError("Vendor not Found", HTTP_STATUS.NOT_FOUND);
   }
 
   return vendor;
@@ -108,7 +109,7 @@ export const vendorApproveService = async (id) => {
   const vendor = await findVendorByIdFull(id);
 
   if (!vendor) {
-    throw new AppError("Vendor not found", 404);
+    throw new AppError("Vendor not found", HTTP_STATUS.NOT_FOUND);
   }
 
   vendor.applicationStatus = "approved";
@@ -121,7 +122,7 @@ export const vendorRejectService = async (id, message) => {
   const vendor = await findVendorByIdFull(id);
 
   if (!vendor) {
-    throw new AppError("Vendor not found", 404);
+    throw new AppError("Vendor not found", HTTP_STATUS.NOT_FOUND);
   }
 
   vendor.applicationStatus = "rejected";
@@ -162,7 +163,7 @@ export const createCategoryService = async(name,description,icon) =>{
   if(!name||!description){
     throw new AppError(
       "Name and Description required",
-      400
+      HTTP_STATUS.BAD_REQUEST
     )
   }
 
@@ -171,7 +172,7 @@ export const createCategoryService = async(name,description,icon) =>{
   if(existingCategory){
     throw new AppError(
       "Category Already Exists",
-      400
+      HTTP_STATUS.BAD_REQUEST
     )
   }
 
@@ -232,7 +233,7 @@ export const getCategoryByIdService = async(id) =>{
   if(!category) {
     throw new AppError(
       "Category not found",
-    404
+      HTTP_STATUS.NOT_FOUND
     )
   }
 
@@ -246,7 +247,7 @@ export const updateCategoryService = async(id,name,description,icon) =>{
   if(!category){
     throw new AppError(
       "Category Not Found",
-      404
+      HTTP_STATUS.NOT_FOUND
     )
   }
 
@@ -255,7 +256,7 @@ export const updateCategoryService = async(id,name,description,icon) =>{
     if(existingCategory){
       throw new AppError(
         "Category Already Exists",
-        400
+        HTTP_STATUS.BAD_REQUEST
       )
     }
     category.name = name.trim()
@@ -281,7 +282,7 @@ export const toggleCategoryStatusService = async(id) =>{
   if(!category) {
     throw new AppError(
       "Category Not Found",
-      404
+      HTTP_STATUS.NOT_FOUND
     )
   }
 
@@ -298,7 +299,7 @@ export const deleteCategoryService = async(id) =>{
   if(!category){
     throw new AppError(
       "Category Not Found",
-      404
+      HTTP_STATUS.NOT_FOUND
     )
   }
 
@@ -315,7 +316,7 @@ export const getAllUsersService = async() =>{
 export const toggleUserBlockService = async(id) => {
   const user = await User.findById(id);
   if (!user) {
-    throw new AppError("User not found", 404);
+    throw new AppError("User not found", HTTP_STATUS.NOT_FOUND);
   }
   user.isBlocked = !user.isBlocked;
   if (user.isBlocked) {
@@ -332,7 +333,7 @@ export const getAllEventsService = async () => {
 export const toggleBlockEventService = async (eventId, reason) => {
   const event = await findEventById(eventId);
   if (!event) {
-    throw new AppError("Event not found", 404);
+    throw new AppError("Event not found", HTTP_STATUS.NOT_FOUND);
   }
   event.isBlocked = !event.isBlocked;
   if (event.isBlocked) {

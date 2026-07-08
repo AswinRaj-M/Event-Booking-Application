@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { hashToken } from "../utils/hashToken.js";
 import { AppError } from "../utils/AppError.js";
+import { HTTP_STATUS } from "../utils/enums/http.status.enum.js";
 import Otp from "../models/user.otp.model.js";
 import Vendor from "../models/vendor.model.js";
 import Event from "../models/event.model.js";
@@ -53,21 +54,21 @@ export const createVendorOtpService = async (vendorId, otp, extraData = {}) => {
 
 export const verifyVendorOtpService = async (vendorId, otp) => {
   if (!vendorId || !otp) {
-    throw new AppError("OTP Required", 400);
+    throw new AppError("OTP Required", HTTP_STATUS.BAD_REQUEST);
   }
 
   const vendor = await Vendor.findById(vendorId);
   if (!vendor) {
-    throw new AppError("Vendor not found", 404);
+    throw new AppError("Vendor not found", HTTP_STATUS.NOT_FOUND);
   }
 
   const otpDoc = await Otp.findOne({ userId: vendorId });
   if (!otpDoc) {
-    throw new AppError("Invalid or Expired OTP", 400);
+    throw new AppError("Invalid or Expired OTP", HTTP_STATUS.BAD_REQUEST);
   }
 
   if (otpDoc.otp !== otp) {
-    throw new AppError("Invalid OTP", 400);
+    throw new AppError("Invalid OTP", HTTP_STATUS.BAD_REQUEST);
   }
 
   vendor.emailVerify = true;
@@ -80,7 +81,7 @@ export const verifyVendorOtpService = async (vendorId, otp) => {
 
 export const vendorLoginService = async (vendor, refreshToken) => {
   if (!vendor) {
-    throw new AppError("Vendor not found", 404);
+    throw new AppError("Vendor not found", HTTP_STATUS.NOT_FOUND);
   }
 
   vendor.refreshToken = hashToken(refreshToken);
@@ -320,11 +321,11 @@ export const deleteEventService = async (eventId, vendorId) => {
 
 export const sendVendorEmailUpdateOtpService = async (vendorId, newEmail, otp) => {
   const vendor = await Vendor.findById(vendorId);
-  if (!vendor) throw new AppError("Vendor not found", 404);
+  if (!vendor) throw new AppError("Vendor not found", HTTP_STATUS.NOT_FOUND);
 
   const existingVendor = await Vendor.findOne({ businessEmail: newEmail });
   if (existingVendor && existingVendor._id.toString() !== vendorId.toString()) {
-    throw new AppError("Email already registered by another account", 400);
+    throw new AppError("Email already registered by another account", HTTP_STATUS.BAD_REQUEST);
   }
 
   await createVendorOtpService(vendorId, otp, { tempEmail: newEmail });
@@ -334,30 +335,30 @@ export const sendVendorEmailUpdateOtpService = async (vendorId, newEmail, otp) =
 
 export const verifyVendorEmailUpdateOtpService = async (vendorId, otp, profileData) => {
   if (!vendorId || !otp) {
-    throw new AppError("OTP Required", 400);
+    throw new AppError("OTP Required", HTTP_STATUS.BAD_REQUEST);
   }
 
   const vendor = await Vendor.findById(vendorId);
   if (!vendor) {
-    throw new AppError("Vendor not found", 404);
+    throw new AppError("Vendor not found", HTTP_STATUS.NOT_FOUND);
   }
 
   const otpDoc = await Otp.findOne({ userId: vendorId });
   if (!otpDoc) {
-    throw new AppError("Invalid or Expired OTP", 400);
+    throw new AppError("Invalid or Expired OTP", HTTP_STATUS.BAD_REQUEST);
   }
 
   if (otpDoc.otp !== otp) {
-    throw new AppError("Invalid OTP", 400);
+    throw new AppError("Invalid OTP", HTTP_STATUS.BAD_REQUEST);
   }
 
   if (!otpDoc.tempEmail) {
-    throw new AppError("No pending email update found", 400);
+    throw new AppError("No pending email update found", HTTP_STATUS.BAD_REQUEST);
   }
 
   const existingVendor = await Vendor.findOne({ businessEmail: otpDoc.tempEmail });
   if (existingVendor && existingVendor._id.toString() !== vendorId.toString()) {
-    throw new AppError("Email already registered by another account", 400);
+    throw new AppError("Email already registered by another account", HTTP_STATUS.BAD_REQUEST);
   }
 
   vendor.businessEmail = otpDoc.tempEmail;
@@ -377,7 +378,7 @@ export const verifyVendorEmailUpdateOtpService = async (vendorId, otp, profileDa
 export const resendVendorEmailUpdateOtpService = async (vendorId, otp) => {
   const otpDoc = await Otp.findOne({ userId: vendorId });
   if (!otpDoc || !otpDoc.tempEmail) {
-    throw new AppError("No pending email update found", 400);
+    throw new AppError("No pending email update found", HTTP_STATUS.BAD_REQUEST);
   }
 
   await createVendorOtpService(vendorId, otp, { tempEmail: otpDoc.tempEmail });

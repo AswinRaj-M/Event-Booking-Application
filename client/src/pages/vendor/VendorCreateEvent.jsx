@@ -19,7 +19,7 @@ import { useSelector } from 'react-redux';
 import { toast } from 'sonner';
 import VendorSidebar from '../../components/vendor/VendorSidebar';
 
-// Asset imports for high-quality pre-existing images
+
 import avatarImg from '../../assets/vendor/common_avatar.png';
 import { fetchCategories, createEventApi } from '../../services/vendor.api';
 
@@ -30,7 +30,7 @@ const VendorCreateEvent = () => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   
-  // State for form inputs
+
   const [eventTitle, setEventTitle] = useState('');
   const [eventCategory, setEventCategory] = useState('');
   const [eventType, setEventType] = useState('in-person');
@@ -51,6 +51,7 @@ const VendorCreateEvent = () => {
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
+  const [onlineLink, setOnlineLink] = useState('');
   const [ageRestriction, setAgeRestriction] = useState(true);
   
   const [ticketType, setTicketType] = useState('paid');
@@ -129,17 +130,17 @@ const VendorCreateEvent = () => {
     });
   };
 
-  // File states & previews
+
   const [thumbnail, setThumbnail] = useState(null);
   const [thumbnailPreview, setThumbnailPreview] = useState(null);
   const [galleryImages, setGalleryImages] = useState([]);
   const [galleryPreviews, setGalleryPreviews] = useState([]);
 
-  // File input refs
+
   const thumbnailInputRef = useRef(null);
   const galleryInputRef = useRef(null);
 
-  // Cropping states
+
   const [showCropModal, setShowCropModal] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState('');
   const [crop, setCrop] = useState();
@@ -308,21 +309,34 @@ const VendorCreateEvent = () => {
         toast.error('Event date is required');
         return;
       }
-      if (!venueName.trim()) {
-        toast.error('Venue name is required');
-        return;
-      }
-      if (!address.trim()) {
-        toast.error('Address is required');
-        return;
-      }
-      if (!city.trim()) {
-        toast.error('City is required');
-        return;
-      }
-      if (!state.trim()) {
-        toast.error('State is required');
-        return;
+      if (eventType === 'online') {
+        if (!onlineLink.trim()) {
+          toast.error('Google Meet / Online Link is required');
+          return;
+        }
+        try {
+          new URL(onlineLink.trim());
+        } catch (_) {
+          toast.error('Please enter a valid Google Meet or Online Link URL');
+          return;
+        }
+      } else {
+        if (!venueName.trim()) {
+          toast.error('Venue name is required');
+          return;
+        }
+        if (!address.trim()) {
+          toast.error('Address is required');
+          return;
+        }
+        if (!city.trim()) {
+          toast.error('City is required');
+          return;
+        }
+        if (!state.trim()) {
+          toast.error('State is required');
+          return;
+        }
       }
       if (ticketType === 'paid') {
         if (!ticketTiers || ticketTiers.length === 0) {
@@ -375,10 +389,19 @@ const VendorCreateEvent = () => {
     formData.append('startTime', startTime);
     formData.append('endTime', endTime);
     
-    formData.append('venue', venueName);
-    formData.append('address', address);
-    formData.append('city', city);
-    formData.append('state', state);
+    if (eventType === 'online') {
+      formData.append('onlineLink', onlineLink.trim());
+      formData.append('venue', 'Online');
+      formData.append('address', 'Online');
+      formData.append('city', 'Online');
+      formData.append('state', 'Online');
+    } else {
+      formData.append('venue', venueName);
+      formData.append('address', address);
+      formData.append('city', city);
+      formData.append('state', state);
+      formData.append('onlineLink', '');
+    }
     
     formData.append('latitude', '0');
     formData.append('longitude', '0');

@@ -1,5 +1,6 @@
 import { AppError } from "../utils/AppError.js";
 import { uploadToCloudinary } from "../utils/cloudinaryUpload.js";
+import { HTTP_STATUS } from "../utils/enums/http.status.enum.js";
 import {
   generateAccessToken,
   generateRefreshToken,
@@ -32,7 +33,7 @@ export const applyVendor = async (req, res) => {
   if (!req.files?.businessDocument || !req.files?.idProof) {
     throw new AppError(
       "business document and ID Proof are required",
-      400
+      HTTP_STATUS.BAD_REQUEST
     );
   }
 
@@ -68,15 +69,15 @@ export const applyVendor = async (req, res) => {
   } catch (mailError) {
     console.error("Failed to send OTP to vendor:", mailError);
     throw new AppError(
-      "Vendor application submitted but failed to send verification email. Please try to verify or resend OTP.",
-      500
+      "vendor application submitted but failed to send verification email. Please try to verify or resend OTP.",
+      HTTP_STATUS.INTERNAL_SERVER_ERROR
     );
   }
 
   console.log("Vendor registered. OTP is: ", otp);
   console.log("OTP sent to vendor:", vendor.businessEmail);
 
-  res.status(201).json({
+  res.status(HTTP_STATUS.CREATED).json({
     message: "Otp Send To Email",
     vendorId: vendor._id,
     email: vendor.businessEmail,
@@ -109,7 +110,7 @@ export const verifyVendorOTP = async (req, res) => {
     path: "/",
   });
 
-  res.status(200).json({
+  res.status(HTTP_STATUS.OK).json({
     message: "Vendor email verified successfully",
     vendor: {
       id: vendor._id,
@@ -125,12 +126,12 @@ export const verifyVendorOTP = async (req, res) => {
 export const resendVendorOtp = async (req, res) => {
   const { vendorId } = req.body;
 
-  if (!vendorId) throw new AppError("Vendor ID is required", 400);
+  if (!vendorId) throw new AppError("Vendor ID is required", HTTP_STATUS.BAD_REQUEST);
 
   const vendor = await Vendor.findById(vendorId);
-  if (!vendor) throw new AppError("Vendor not found", 404);
+  if (!vendor) throw new AppError("Vendor not found", HTTP_STATUS.NOT_FOUND);
 
-  if (vendor.emailVerify) throw new AppError("Vendor already verified", 400);
+  if (vendor.emailVerify) throw new AppError("Vendor already verified", HTTP_STATUS.BAD_REQUEST);
 
   const otp = generateOTP();
   await createVendorOtpService(vendor._id, otp);
@@ -139,12 +140,12 @@ export const resendVendorOtp = async (req, res) => {
     await sendOTP(vendor.businessEmail, otp);
   } catch (error) {
     console.error("Error resending vendor OTP: ", error);
-    throw new AppError("Failed to resend OTP, please try again later", 500);
+    throw new AppError("Failed to resend OTP, please try again later", HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
 
   console.log("Resend vendor OTP: ", otp);
 
-  res.status(200).json({
+  res.status(HTTP_STATUS.OK).json({
     success: true,
     message: "Otp resend Successfully",
   });
@@ -161,10 +162,10 @@ export const vendorLogin = async (req, res) => {
       await sendOTP(vendor.businessEmail, otp);
     } catch (error) {
       console.error("Error from login otp send: ", error);
-      throw new AppError("Failed to send OTP, please try again later", 500);
+      throw new AppError("Failed to send OTP, please try again later", HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
     console.log("Login OTP is: ", otp);
-    return res.status(200).json({
+    return res.status(HTTP_STATUS.OK).json({
       unverified: true,
       message: "Email not verified. OTP sent to your email.",
       vendorId: vendor._id,
@@ -193,7 +194,7 @@ export const vendorLogin = async (req, res) => {
     path: "/",
   });
 
-  res.status(200).json({
+  res.status(HTTP_STATUS.OK).json({
     vendor: {
       id: vendor._id,
       organizerName: vendor.organizerName,
@@ -240,7 +241,7 @@ export const updateVendorImages = async(req,res) =>{
   const vendor = await updateVendorImagesService(vendorId,updateData)
 
 
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     success : true,
     vendor,
     message : "Images updated Successfully "
@@ -252,10 +253,10 @@ export const vendorProfile = (req,res) =>{
   const vendor = req.user
 
   if(!vendor){
-    return res.status(404).json("Vendor Not Found!")
+    return res.status(HTTP_STATUS.NOT_FOUND).json("Vendor Not Found!")
   }
   
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     success : true,
     vendor,
     message :"Vendor Profile get successfully"
@@ -282,7 +283,7 @@ export const vendorLogout = async (req, res) => {
     path: "/",
   });
 
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     message: "Logged out Successfully",
   });
 };
@@ -291,11 +292,11 @@ export const addVendorPortfolio = async (req, res) => {
   const vendorId = req.user._id;
 
   if (!vendorId) {
-    throw new AppError("Vendor ID is required", 400);
+    throw new AppError("Vendor ID is required", HTTP_STATUS.BAD_REQUEST);
   }
 
   if (!req.file) {
-    throw new AppError("Portfolio picture is required", 400);
+    throw new AppError("Portfolio picture is required", HTTP_STATUS.BAD_REQUEST);
   }
 
   const uploadResult = await uploadToCloudinary(
@@ -311,7 +312,7 @@ export const addVendorPortfolio = async (req, res) => {
 
   const vendor = await addVendorPortfolioService(vendorId, fileData);
 
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     success: true,
     message: "Portfolio picture added successfully",
     vendor,
@@ -323,16 +324,16 @@ export const deleteVendorImage = async (req, res) => {
   const { imageType } = req.params;
 
   if (!vendorId) {
-    throw new AppError("Vendor ID is required", 400);
+    throw new AppError("Vendor ID is required", HTTP_STATUS.BAD_REQUEST);
   }
 
   if (imageType !== "profilePicture" && imageType !== "coverImage") {
-    throw new AppError("Invalid image type", 400);
+    throw new AppError("Invalid image type", HTTP_STATUS.BAD_REQUEST);
   }
 
   const updatedVendor = await removeVendorImageService(vendorId, imageType);
 
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     success: true,
     message: `${imageType === "profilePicture" ? "Profile picture" : "Cover image"} removed successfully`,
     vendor: updatedVendor,
@@ -344,16 +345,16 @@ export const deleteVendorPortfolio = async (req, res) => {
   const { portfolioId } = req.params;
 
   if (!vendorId) {
-    throw new AppError("Vendor ID is required", 400);
+    throw new AppError("Vendor ID is required", HTTP_STATUS.BAD_REQUEST);
   }
 
   if (!portfolioId) {
-    throw new AppError("Portfolio ID is required", 400);
+    throw new AppError("Portfolio ID is required", HTTP_STATUS.BAD_REQUEST);
   }
 
   const updatedVendor = await removeVendorPortfolioService(vendorId, portfolioId);
 
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     success: true,
     message: "Portfolio picture removed successfully",
     vendor: updatedVendor,
@@ -364,13 +365,13 @@ export const updateVendorProfile = async (req, res) => {
   const vendorId = req.user._id;
 
   if (!vendorId) {
-    throw new AppError("Vendor ID is required", 400);
+    throw new AppError("Vendor ID is required", HTTP_STATUS.BAD_REQUEST);
   }
 
   const { organizerName, eventCategory, experience, description, websiteOrInstagram, contactPhone, businessEmail } = req.body;
 
   if (businessEmail && businessEmail !== req.user.businessEmail) {
-    throw new AppError("Email change requires verification. Please use OTP verification flow.", 400);
+    throw new AppError("Email change requires verification. Please use OTP verification flow.", HTTP_STATUS.BAD_REQUEST);
   }
 
   const updateData = {
@@ -384,7 +385,7 @@ export const updateVendorProfile = async (req, res) => {
 
   const updatedVendor = await updateVendorProfileService(vendorId, updateData);
 
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     success: true,
     message: "Profile updated successfully",
     vendor: updatedVendor,
@@ -396,7 +397,7 @@ export const sendVendorEmailUpdateOtp = async (req, res) => {
   const { newEmail } = req.body;
 
   if (!newEmail) {
-    throw new AppError("New email is required", 400);
+    throw new AppError("New email is required", HTTP_STATUS.BAD_REQUEST);
   }
 
   const otp = generateOTP();
@@ -406,12 +407,12 @@ export const sendVendorEmailUpdateOtp = async (req, res) => {
     await sendOTP(newEmail, otp);
   } catch (mailError) {
     console.error("Failed to send OTP to new email:", mailError);
-    throw new AppError("Failed to send verification email. Please try again.", 500);
+    throw new AppError("Failed to send verification email. Please try again.", HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
 
   console.log("Vendor Email update OTP is:", otp);
 
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     success: true,
     message: "OTP sent to new email address",
   });
@@ -430,7 +431,7 @@ export const verifyVendorEmailUpdateOtp = async (req, res) => {
     contactPhone,
   });
 
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     success: true,
     message: "Profile updated successfully",
     vendor: updatedVendor,
@@ -447,12 +448,12 @@ export const resendVendorEmailUpdateOtp = async (req, res) => {
     await sendOTP(tempEmail, otp);
   } catch (mailError) {
     console.error("Failed to resend OTP to new email:", mailError);
-    throw new AppError("Failed to send verification email. Please try again.", 500);
+    throw new AppError("Failed to send verification email. Please try again.", HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
 
   console.log("Resent Vendor Email update OTP is:", otp);
 
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     success: true,
     message: "OTP resent to new email address",
   });
@@ -464,7 +465,7 @@ export const createEvent = async(req,res) =>{
   const vendorId = req.user._id
 
   if(!vendorId){
-    throw new AppError("vendor ID is required",400)
+    throw new AppError("vendor ID is required",HTTP_STATUS.BAD_REQUEST)
   }
 
   if (req.body.ticketTiers && typeof req.body.ticketTiers === 'string') {
@@ -488,7 +489,7 @@ export const createEvent = async(req,res) =>{
       fileType : thumbnailUpload.resource_type
     }
   } else if (req.body.eventStatus !== 'draft') {
-    throw new AppError("Thumbnail is required", 400);
+    throw new AppError("Thumbnail is required", HTTP_STATUS.BAD_REQUEST);
   }
 
   let images = []
@@ -516,7 +517,7 @@ export const createEvent = async(req,res) =>{
   })
 
 
-  return res.status(201).json({
+  return res.status(HTTP_STATUS.CREATED).json({
     success : true,
     message : "Event Created Successfully",
     event
@@ -528,14 +529,14 @@ export const getVendorEvents = async(req, res) => {
   const vendorId = req.user._id
 
   if(!vendorId){
-    throw new AppError("vendor ID is required", 400)
+    throw new AppError("vendor ID is required", HTTP_STATUS.BAD_REQUEST)
   }
 
   const events = await getVendorEventsService(vendorId)
   
   
 
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     success: true,
     message: "Events Fetched Successfully",
     events
@@ -547,16 +548,16 @@ export const cancelEvent = async (req, res) => {
   const { eventId } = req.params
 
   if (!eventId) {
-    throw new AppError("Event ID is required", 400)
+    throw new AppError("Event ID is required", HTTP_STATUS.BAD_REQUEST)
   }
 
   const event = await cancelEventService(eventId, vendorId)
 
   if (!event) {
-    throw new AppError("Event not found or unauthorized", 404)
+    throw new AppError("Event not found or unauthorized", HTTP_STATUS.NOT_FOUND)
   }
 
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     success: true,
     message: "Event Cancelled Successfully",
     event
@@ -568,11 +569,11 @@ export const updateEvent = async (req, res) => {
   const { eventId } = req.params
 
   if (!vendorId) {
-    throw new AppError("Vendor ID is required", 400)
+    throw new AppError("Vendor ID is required", HTTP_STATUS.BAD_REQUEST)
   }
 
   if (!eventId) {
-    throw new AppError("Event ID is required", 400)
+    throw new AppError("Event ID is required", HTTP_STATUS.BAD_REQUEST)
   }
 
   if (req.body.ticketTiers && typeof req.body.ticketTiers === 'string') {
@@ -602,10 +603,10 @@ export const updateEvent = async (req, res) => {
   })
 
   if (!updatedEvent) {
-    throw new AppError("Event not found or unauthorized to update", 404)
+    throw new AppError("Event not found or unauthorized to update", HTTP_STATUS.NOT_FOUND)
   }
 
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     success: true,
     message: "Event Updated Successfully",
     event: updatedEvent,
@@ -617,20 +618,20 @@ export const deleteEvent = async (req, res) => {
   const { eventId } = req.params
 
   if (!vendorId) {
-    throw new AppError("Vendor ID is required", 400)
+    throw new AppError("Vendor ID is required", HTTP_STATUS.BAD_REQUEST)
   }
 
   if (!eventId) {
-    throw new AppError("Event ID is required", 400)
+    throw new AppError("Event ID is required", HTTP_STATUS.BAD_REQUEST)
   }
 
   const event = await deleteEventService(eventId, vendorId)
 
   if (!event) {
-    throw new AppError("Event not found or cannot be deleted (only cancelled or draft events can be deleted)", 404)
+    throw new AppError("Event not found or cannot be deleted (only cancelled or draft events can be deleted)", HTTP_STATUS.NOT_FOUND)
   }
 
-  return res.status(200).json({
+  return res.status(HTTP_STATUS.OK).json({
     success: true,
     message: "Event Deleted Successfully",
     event,

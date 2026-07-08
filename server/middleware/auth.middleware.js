@@ -1,6 +1,7 @@
 import jwt, { decode } from 'jsonwebtoken'
 import User from '../models/user.model.js'
 import Vendor from '../models/vendor.model.js'
+import { HTTP_STATUS } from '../utils/enums/http.status.enum.js'
 
 export const protect = async (req, res, next) => {
   try {
@@ -11,7 +12,7 @@ export const protect = async (req, res, next) => {
     }
 
     if (!token) {
-      return res.status(401).json({
+      return res.status(HTTP_STATUS.UNAUTHORIZED).json({
         message: "Not Authorized. No Token"
       })
     }
@@ -25,7 +26,7 @@ export const protect = async (req, res, next) => {
     }
 
     if (!user) {
-      return res.status(401).json({
+      return res.status(HTTP_STATUS.UNAUTHORIZED).json({
         message: "User not Found"
       })
     }
@@ -45,13 +46,13 @@ export const protect = async (req, res, next) => {
         path: "/",
       });
 
-      return res.status(403).json({
+      return res.status(HTTP_STATUS.FORBIDDEN).json({
         message: "Your account has been suspended by the administrator."
       });
     }
 
     if (decoded.role === 'user' && !user.isVerified) {
-      return res.status(403).json({
+      return res.status(HTTP_STATUS.FORBIDDEN).json({
         message: "Account not verified. Please verify your email."
       });
     }
@@ -61,7 +62,7 @@ export const protect = async (req, res, next) => {
   } catch (error) {
     console.error("Error from the Protect middleware : ", error)
 
-    return res.status(401).json({
+    return res.status(HTTP_STATUS.UNAUTHORIZED).json({
       message: 'Invalid Token'
     })
   }

@@ -1,4 +1,5 @@
 import express from 'express'
+import { HTTP_STATUS } from '../utils/enums/http.status.enum.js'
 import { applyVendor,
    updateVendorImages, 
    vendorLogin, 
@@ -80,7 +81,7 @@ router.delete("/delete-event/:eventId", protect, requireRole("vendor"), asyncHan
 
 router.post("/logout", protect, requireRole("vendor"), asyncHandler(vendorLogout))
 router.get("/status", protect, requireRole("vendor"), (req, res) => {
-  res.status(200).json({
+  res.status(HTTP_STATUS.OK).json({
     success: true,
     status: req.user.applicationStatus,
     isBlocked: req.user.isBlocked
