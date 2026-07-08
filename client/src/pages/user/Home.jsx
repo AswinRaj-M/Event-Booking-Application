@@ -19,15 +19,6 @@ const formatEventDate = (dateString, startTime) => {
   }
 };
 
-const CATEGORY_STYLES = [
-  { color: "bg-purple-500", shadow: "shadow-purple-500/20" },
-  { color: "bg-blue-500", shadow: "shadow-blue-500/20" },
-  { color: "bg-green-500", shadow: "shadow-green-500/20" },
-  { color: "bg-pink-500", shadow: "shadow-pink-500/20" },
-  { color: "bg-yellow-500", shadow: "shadow-yellow-500/20" },
-  { color: "bg-cyan-500", shadow: "shadow-cyan-500/20" },
-];
-
 const Home = () => {
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -139,19 +130,18 @@ const Home = () => {
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {categories.length > 0 ? (
-              categories.map((cat, i) => {
-                const style = CATEGORY_STYLES[i % CATEGORY_STYLES.length];
-                return (
-                  <div key={cat._id || i} className="bg-[#111] hover:bg-[#1a1a1a] border border-white/5 rounded-2xl p-6 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all hover:border-white/20 hover:-translate-y-1 shadow-lg">
-                    <div className={`w-3 h-3 rounded-full ${style.color} mb-1 shadow-[0_0_10px_currentColor] ${style.shadow}`} />
-                    <span className="font-medium text-sm text-gray-300">{cat.name}</span>
-                  </div>
-                );
-              })
+              categories.map((cat, i) => (
+                <div key={cat._id || i} className="bg-[#111] hover:bg-[#1a1a1a] border border-white/5 rounded-2xl p-6 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all hover:border-white/20 hover:-translate-y-1 shadow-lg">
+                  {cat.categoryIcon?.fileUrl && (
+                    <img src={cat.categoryIcon.fileUrl} alt={cat.name} className="w-8 h-8 object-contain mb-1" />
+                  )}
+                  <span className="font-medium text-sm text-gray-300">{cat.name}</span>
+                </div>
+              ))
             ) : (
               [1, 2, 3, 4, 5, 6].map((i) => (
                 <div key={i} className="bg-[#111] border border-white/5 rounded-2xl p-6 flex flex-col items-center justify-center gap-3 animate-pulse h-[100px]">
-                  <div className="w-3 h-3 rounded-full bg-zinc-800" />
+                  <div className="w-8 h-8 rounded bg-zinc-800" />
                   <div className="h-4 bg-zinc-800 w-16 rounded" />
                 </div>
               ))
