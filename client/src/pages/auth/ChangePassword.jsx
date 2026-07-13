@@ -11,7 +11,6 @@ export default function ChangePassword() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [showSecurityTip, setShowSecurityTip] = useState(true);
 
   // Password dynamic validation checks
   const isLengthValid = newPassword.length >= 8;
@@ -444,6 +443,7 @@ export default function ChangePassword() {
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   placeholder="Enter current password"
+                  autoComplete="new-password"
                 />
               </div>
             </div>
@@ -544,32 +544,6 @@ export default function ChangePassword() {
           Your security is our top priority.
         </div>
 
-        {/* Security Tip Toast */}
-        {showSecurityTip && (
-          <div className="cp-toast">
-            <div className="cp-toast-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-              </svg>
-            </div>
-            <div className="cp-toast-content">
-              <div className="cp-toast-title">Security Tip</div>
-              <div className="cp-toast-desc">Enable 2FA for an extra layer of protection on your event bookings.</div>
-            </div>
-            <button 
-              type="button"
-              className="cp-toast-close" 
-              title="Close"
-              onClick={() => setShowSecurityTip(false)}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <line x1="15" y1="9" x2="9" y2="15" />
-                <line x1="9" y1="9" x2="15" y2="15" />
-              </svg>
-            </button>
-          </div>
-        )}
       </div>
     </>
   );

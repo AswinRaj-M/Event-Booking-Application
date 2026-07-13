@@ -225,6 +225,19 @@ const VendorProfilePage = () => {
         toast.error("Organizer name cannot be empty");
         return;
       }
+      if (organizerName.trim().length < 3) {
+        toast.error("Organizer name must be at least 3 characters");
+        return;
+      }
+      if (organizerName.includes("__")) {
+        toast.error("Organizer name cannot contain consecutive underscores");
+        return;
+      }
+      const organizerNameRegex = /^[a-zA-Z0-9]+(?:[ _-][a-zA-Z0-9]+)*$/;
+      if (!organizerNameRegex.test(organizerName.trim())) {
+        toast.error("Organizer name can only contain letters, numbers, and single spaces, hyphens, or underscores");
+        return;
+      }
       if (!businessEmail.trim()) {
         toast.error("Business email cannot be empty");
         return;

@@ -38,9 +38,14 @@ const VendorEditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
   const [thumbnail, setThumbnail] = useState(null);
   const [thumbnailPreview, setThumbnailPreview] = useState(null);
   
+  const [existingImages, setExistingImages] = useState([]);
+  const [galleryImages, setGalleryImages] = useState([]);
+  const [galleryPreviews, setGalleryPreviews] = useState([]);
+  
   const thumbnailInputRef = useRef(null);
+  const galleryInputRef = useRef(null);
 
-  // Helper to format Date string to YYYY-MM-DD
+
   const formatDateForInput = (dateStr) => {
     if (!dateStr) return '';
     const d = new Date(dateStr);
@@ -51,7 +56,7 @@ const VendorEditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
     return `${year}-${month}-${day}`;
   };
 
-  // Fetch categories
+
   useEffect(() => {
     const getCategories = async () => {
       try {
@@ -94,6 +99,10 @@ const VendorEditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
       
       setThumbnail(null);
       setThumbnailPreview(raw.thumbnail?.fileUrl || null);
+      
+      setExistingImages(raw.images || []);
+      setGalleryImages([]);
+      setGalleryPreviews([]);
     }
   }, [event, isOpen]);
 
@@ -105,6 +114,24 @@ const VendorEditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
       setThumbnail(file);
       setThumbnailPreview(URL.createObjectURL(file));
     }
+  };
+
+  const handleGalleryChange = (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length) {
+      setGalleryImages((prev) => [...prev, ...files]);
+      const newPreviews = files.map((file) => URL.createObjectURL(file));
+      setGalleryPreviews((prev) => [...prev, ...newPreviews]);
+    }
+  };
+
+  const removeExistingImage = (indexToRemove) => {
+    setExistingImages((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+  };
+
+  const removeNewImage = (indexToRemove) => {
+    setGalleryImages((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+    setGalleryPreviews((prev) => prev.filter((_, idx) => idx !== indexToRemove));
   };
 
   const handleSave = async () => {
@@ -191,6 +218,11 @@ const VendorEditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
     if (thumbnail) {
       formData.append('thumbnail', thumbnail);
     }
+
+    formData.append('existingImages', JSON.stringify(existingImages));
+    galleryImages.forEach((img) => {
+      formData.append('images', img);
+    });
 
     setLoading(true);
     try {
@@ -645,6 +677,57 @@ const VendorEditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
                       <p className="text-[10px] text-zinc-500">Upload cover image. Recommended: 1920x1080px</p>
                     </>
                   )}
+                </div>
+              </div>
+
+              {/* Gallery Images */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-zinc-400">Gallery Images</label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {/* Render Existing Gallery Images */}
+                  {existingImages.map((img, index) => (
+                    <div key={`existing-${index}`} className="relative aspect-video rounded-xl overflow-hidden group border border-white/5 bg-[#12101F]/30 animate-fade-in">
+                      <img src={img.fileUrl} alt={`Gallery ${index + 1}`} className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removeExistingImage(index)}
+                        className="absolute top-1.5 right-1.5 p-1 bg-black/75 hover:bg-black/90 border border-white/10 text-white rounded-lg transition-all cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                  
+                  {/* Render Newly Selected Gallery Images */}
+                  {galleryPreviews.map((preview, index) => (
+                    <div key={`new-${index}`} className="relative aspect-video rounded-xl overflow-hidden group border border-white/5 bg-[#12101F]/30 animate-fade-in">
+                      <img src={preview} alt={`New Gallery ${index + 1}`} className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removeNewImage(index)}
+                        className="absolute top-1.5 right-1.5 p-1 bg-black/75 hover:bg-black/90 border border-white/10 text-white rounded-lg transition-all cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                  
+                  {/* Add Gallery Image Slot */}
+                  <div 
+                    onClick={() => galleryInputRef.current.click()}
+                    className="border border-dashed border-zinc-800 hover:border-purple-500/40 bg-[#12101F]/30 rounded-xl p-3 flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer aspect-video min-h-[80px] hover:bg-[#12101F]/50 group"
+                  >
+                    <input 
+                      type="file" 
+                      ref={galleryInputRef} 
+                      onChange={handleGalleryChange} 
+                      className="hidden" 
+                      multiple 
+                      accept="image/*" 
+                    />
+                    <Upload className="w-4 h-4 text-purple-400 group-hover:scale-110 transition-transform" />
+                    <p className="text-[10px] text-zinc-500 text-center font-medium group-hover:text-zinc-300 transition-colors">Add Gallery Image</p>
+                  </div>
                 </div>
               </div>
 

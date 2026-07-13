@@ -96,6 +96,8 @@ export const getAllEventsRepo = async () => {
     .populate("vendorId");
 };
 
+
+
 export const findEventById = async (id) => {
   return await Event.findById(id);
 };

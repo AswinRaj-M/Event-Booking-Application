@@ -6,7 +6,15 @@ export const registerValidation = [
     .notEmpty()
     .withMessage("Full name is required")
     .isLength({ min: 3 })
-    .withMessage("Full name must be at least 3 characters"),
+    .withMessage("Full name must be at least 3 characters")
+    .matches(/^[a-zA-Z0-9]+(?:[ _-][a-zA-Z0-9]+)*$/)
+    .withMessage("Full name can only contain letters, numbers, and single spaces, hyphens, or underscores")
+    .custom((value) => {
+      if (value.includes("__")) {
+        throw new Error("Full name cannot contain consecutive underscores");
+      }
+      return true;
+    }),
 
   body("email")
     .trim()
@@ -108,4 +116,28 @@ export const changePasswordValidation = [
       }
       return true
     })
+]
+
+export const userProfileUpdateValidation = [
+  body("fullName")
+    .trim()
+    .notEmpty()
+    .withMessage("Full name is required")
+    .isLength({ min: 3 })
+    .withMessage("Full name must be at least 3 characters")
+    .matches(/^[a-zA-Z0-9]+(?:[ _-][a-zA-Z0-9]+)*$/)
+    .withMessage("Full name can only contain letters, numbers, and single spaces, hyphens, or underscores")
+    .custom((value) => {
+      if (value.includes("__")) {
+        throw new Error("Full name cannot contain consecutive underscores");
+      }
+      return true;
+    }),
+
+  body("phoneNumber")
+    .trim()
+    .notEmpty()
+    .withMessage("Phone number is required")
+    .isMobilePhone()
+    .withMessage("Invalid phone number"),
 ]

@@ -278,7 +278,17 @@ const UserExploreEvent = () => {
               const categoryName = event.category?.name || (typeof event.category === 'string' ? event.category : 'General');
               const imageSrc = event.thumbnail?.fileUrl || "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=600&auto=format&fit=crop";
               const priceLabel = event.ticketType === "Free" ? "Entry" : "Admission";
-              const priceVal = event.ticketType === "Free" ? "Free" : "Paid";
+              const lowestPrice = event.ticketType === "Free"
+                ? 0
+                : (event.ticketTiers && event.ticketTiers.length > 0)
+                  ? Math.min(...event.ticketTiers.map(t => t.price || 0))
+                  : (event.ticketPrice !== undefined ? Number(event.ticketPrice) : 0);
+
+              const priceVal = event.ticketType === "Free" 
+                ? "Free" 
+                : lowestPrice > 0 
+                  ? `$${lowestPrice}` 
+                  : "Paid";
 
               // Show description if it exists (like Abstract Minds Exhibit in screenshot)
               // Otherwise render stack of avatars and attendee text

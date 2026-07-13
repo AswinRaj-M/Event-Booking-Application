@@ -17,7 +17,8 @@ import {
   sendEmailUpdateOtp,
   verifyEmailUpdateOtp,
   resendEmailUpdateOtp,
-  getEventById
+  getEventById,
+  createBooking
 } from "../controllers/user.controller.js"
 import passport from "passport"
 import upload from "../middleware/upload.js"
@@ -29,7 +30,8 @@ import {
   registerValidation, 
   loginValidation, 
   verifyOTPValidation,
-  changePasswordValidation
+  changePasswordValidation,
+  userProfileUpdateValidation
 } from "../validations/user.validation.js"
 
 const router = express.Router()
@@ -61,11 +63,14 @@ router.get('/explore-events', protect, requireRole("user"), asyncHandler(getExpl
 router.get('/events/:id', protect, requireRole("user"), asyncHandler(getEventById))
 
 router.get('/profile', protect, requireRole("user"), asyncHandler(getUserProfile))
-router.put('/update-profile', protect, requireRole("user"), asyncHandler(updateUserProfile))
+router.put('/update-profile', protect, requireRole("user"), userProfileUpdateValidation, validate, asyncHandler(updateUserProfile))
 router.put('/change-password', protect, requireRole("user"), changePasswordValidation, validate, asyncHandler(changePassword))
 router.post('/send-email-update-otp', protect, requireRole("user"), asyncHandler(sendEmailUpdateOtp))
-router.post('/verify-email-update-otp', protect, requireRole("user"), asyncHandler(verifyEmailUpdateOtp))
+router.post('/verify-email-update-otp', protect, requireRole("user"), userProfileUpdateValidation, validate, asyncHandler(verifyEmailUpdateOtp))
 router.post('/resend-email-update-otp', protect, requireRole("user"), asyncHandler(resendEmailUpdateOtp))
 router.patch('/profile/picture', protect, requireRole("user"), upload.single('profilePicture'), asyncHandler(updateUserProfilePicture))
+
+
+router.post('/booking/create',protect,asyncHandler(createBooking))
 
 export default router

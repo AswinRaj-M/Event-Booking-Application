@@ -26,6 +26,7 @@ import {
   verifyEmailUpdateOtpService,
   resendEmailUpdateOtpService,
   getEventByIdService,
+  createPendingBookingService,
 } from "../services/user.service.js";
 import { AppError } from "../utils/AppError.js";
 
@@ -524,4 +525,31 @@ export const getEventById = async (req, res) => {
     success: true,
     event
   });
-};
+};
+
+
+export const createBooking = async(req,res) =>{
+   const userId = req.body
+   
+   const {eventId , tierId, quantity} = req.body
+
+   if(!eventId|| !quantity) {
+    return res.status(HTTP_STATUS.BAD_REQUEST).json({
+      success : false,
+      message : "Event ID and Quantity required!"
+    })
+   }
+
+   const booking = await createPendingBookingService(
+    userId,
+    eventId,
+    tierId,
+    Number(quantity)
+   )
+
+   return res.status(HTTP_STATUS.CREATED).json({
+    success : true,
+    message : "Booking initiated successfully in pending state",
+    booking
+   })
+}

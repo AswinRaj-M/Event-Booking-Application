@@ -87,6 +87,19 @@ const UserProfile = () => {
       toast.error("Name cannot be empty");
       return;
     }
+    if (fullName.trim().length < 3) {
+      toast.error("Full name must be at least 3 characters");
+      return;
+    }
+    if (fullName.includes("__")) {
+      toast.error("Full name cannot contain consecutive underscores");
+      return;
+    }
+    const fullNameRegex = /^[a-zA-Z0-9]+(?:[ _-][a-zA-Z0-9]+)*$/;
+    if (!fullNameRegex.test(fullName.trim())) {
+      toast.error("Full name can only contain letters, numbers, and single spaces, hyphens, or underscores");
+      return;
+    }
     if (!email.trim()) {
       toast.error("Email cannot be empty");
       return;

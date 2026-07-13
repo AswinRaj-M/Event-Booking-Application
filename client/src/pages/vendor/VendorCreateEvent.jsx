@@ -37,6 +37,14 @@ const VendorCreateEvent = () => {
   const [eventType, setEventType] = useState('in-person');
   const [shortDescription, setShortDescription] = useState('');
   
+  const getTodayDateString = () => {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
   const [enableOffer, setEnableOffer] = useState(true);
   const [offerType, setOfferType] = useState('percentage');
   const [discountValue, setDiscountValue] = useState('');
@@ -44,7 +52,7 @@ const VendorCreateEvent = () => {
   const [validFrom, setValidFrom] = useState('');
   const [validUntil, setValidUntil] = useState('');
   
-  const [date, setDate] = useState('2024-10-24');
+  const [date, setDate] = useState(getTodayDateString());
   const [startTime, setStartTime] = useState('07:00 PM');
   const [endTime, setEndTime] = useState('11:00 PM');
   
@@ -308,6 +316,11 @@ const VendorCreateEvent = () => {
       }
       if (!date) {
         toast.error('Event date is required');
+        return;
+      }
+      const todayString = getTodayDateString();
+      if (date < todayString) {
+        toast.error('Event date cannot be in the past');
         return;
       }
       if (eventType === 'online') {
@@ -810,6 +823,7 @@ const VendorCreateEvent = () => {
                   <input 
                     type="date" 
                     value={date}
+                    min={getTodayDateString()}
                     onChange={(e) => setDate(e.target.value)}
                     className="w-full bg-[#12101F] text-zinc-400 px-4 py-3.5 rounded-xl border border-zinc-800/80 focus:outline-none focus:border-purple-500 transition-colors text-sm"
                   />

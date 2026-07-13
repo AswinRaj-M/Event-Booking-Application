@@ -685,43 +685,62 @@ const UserEventDetails = () => {
                   </div>
                 </div>
 
-                {/* Ticket Tier Dropdown Selection if multiple tiers exist */}
+                {/* Ticket Tier Cards Selection if multiple tiers exist */}
                 {!isFree && event?.ticketTiers && event.ticketTiers.length > 0 && (
-                  <div className="mb-4">
-                    <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold block mb-2">Select Ticket Tier</label>
-                    <div className="relative">
-                      <Ticket className="w-4 h-4 text-purple-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      <select
-                        value={selectedTierIndex}
-                        onChange={(e) => setSelectedTierIndex(Number(e.target.value))}
-                        className="w-full bg-[#120f26] border border-purple-900/35 rounded-xl py-3 pl-11 pr-4 text-white text-sm focus:outline-none focus:border-purple-500/50 appearance-none cursor-pointer transition-colors"
-                      >
-                        {event.ticketTiers.map((tier, idx) => {
-                          const left = tier.capacity - (tier.sold || 0);
-                          return (
-                            <option key={idx} value={idx}>
-                              {tier.name} (${tier.price} - {left > 0 ? `${left} left` : "Sold Out"})
-                            </option>
-                          );
-                        })}
-                      </select>
-                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500 text-[10px]">▼</div>
-                    </div>
-                  </div>
-                )}
+                  <div className="mb-6 space-y-3">
+                    <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold block mb-1">Select Ticket Tier</label>
+                    <div className="grid grid-cols-1 gap-3">
+                      {event.ticketTiers.map((tier, idx) => {
+                        const left = tier.capacity - (tier.sold || 0);
+                        const isSelected = selectedTierIndex === idx;
+                        const isSoldOut = left <= 0;
+                        
+                        return (
+                          <div
+                            key={idx}
+                            onClick={() => setSelectedTierIndex(idx)}
+                            className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between gap-3 text-left relative ${
+                              isSelected
+                                ? "bg-[#1c1437]/50 border-purple-500/70 shadow-[0_0_15px_rgba(139,92,246,0.15)]"
+                                : "bg-[#120f26]/40 border-purple-900/25 hover:border-purple-500/30"
+                            } ${isSoldOut ? "opacity-60" : ""}`}
+                          >
+                            <div className="flex justify-between items-start pr-4">
+                              <div>
+                                <h4 className="font-bold text-white text-sm tracking-tight">{tier.name}</h4>
+                                <span className={`text-[10px] font-semibold block mt-0.5 ${isSoldOut ? "text-rose-500" : "text-purple-400"}`}>
+                                  {isSoldOut ? "Sold Out" : `${left} left`}
+                                </span>
+                              </div>
+                              <span className="text-purple-400 font-extrabold text-base leading-none">
+                                ${tier.price}
+                              </span>
+                            </div>
 
-                {/* Selected Tier Benefits Quick Reference */}
-                {!isFree && event?.ticketTiers && event.ticketTiers.length > 0 && event.ticketTiers[selectedTierIndex]?.benefits?.length > 0 && (
-                  <div className="mb-4 bg-[#120f26]/40 border border-purple-900/10 rounded-2xl p-4">
-                    <span className="text-[9px] text-zinc-500 uppercase tracking-widest font-bold block mb-2">Included with {event.ticketTiers[selectedTierIndex].name}:</span>
-                    <ul className="space-y-1.5">
-                      {event.ticketTiers[selectedTierIndex].benefits.map((benefit, bIdx) => (
-                        <li key={bIdx} className="flex items-start gap-2 text-xs text-zinc-300">
-                          <span className="w-1 h-1 rounded-full bg-purple-500 mt-1.5 shrink-0" />
-                          <span className="leading-tight">{benefit}</span>
-                        </li>
-                      ))}
-                    </ul>
+                            {/* Tier Benefits */}
+                            {tier.benefits && tier.benefits.length > 0 && (
+                              <div className="pt-2 border-t border-purple-950/40">
+                                <ul className="space-y-1">
+                                  {tier.benefits.map((benefit, bIdx) => (
+                                    <li key={bIdx} className="flex items-start gap-1.5 text-[11px] text-zinc-400 leading-tight">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-purple-500/70 mt-1 shrink-0" />
+                                      <span>{benefit}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            
+                            {/* Checkmark indicator for selected */}
+                            {isSelected && (
+                              <div className="absolute top-4 right-4 flex items-center justify-center w-4 h-4 bg-purple-500 rounded-full">
+                                <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
 

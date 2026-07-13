@@ -3,6 +3,7 @@ import User from "../models/user.model.js";
 import Otp from "../models/user.otp.model.js";
 import Event from "../models/event.model.js";
 import Category from "../models/category.model.js";
+import Booking from "../models/booking.model.js";
 
 
 
@@ -147,3 +148,7 @@ export const getExploreEventsRepo = async (filters = {}) => {
 export const findEventById = async (id) => {
   return await Event.findById(id).populate("category").populate("vendorId");
 };
+
+export const createBookingRepo = async(bookingData) =>{
+ return Booking.create(bookingData)
+}

@@ -585,9 +585,10 @@ export const updateEvent = async (req, res) => {
   }
 
   let thumbnail = null
-  if (req.file) {
+  const thumbnailFile = req.file || req.files?.thumbnail?.[0]
+  if (thumbnailFile) {
     const thumbnailUpload = await uploadToCloudinary(
-      req.file.buffer,
+      thumbnailFile.buffer,
       "events/thumbnails"
     )
     thumbnail = {
@@ -597,9 +598,39 @@ export const updateEvent = async (req, res) => {
     }
   }
 
+  let existingImages = undefined
+  if (req.body.existingImages !== undefined) {
+    try {
+      existingImages = JSON.parse(req.body.existingImages)
+    } catch (e) {
+      console.error("Error parsing existingImages:", e)
+    }
+  }
+
+  let newImages = []
+  if (req.files?.images?.length) {
+    for (const image of req.files.images) {
+      const uploadResult = await uploadToCloudinary(
+        image.buffer,
+        "events/gallery"
+      )
+      newImages.push({
+        fileUrl: uploadResult.secure_url,
+        publicId: uploadResult.public_id,
+        fileType: uploadResult.resource_type
+      })
+    }
+  }
+
+  let updatedImages = undefined
+  if (req.body.existingImages !== undefined || req.files?.images?.length) {
+    updatedImages = [...(existingImages || []), ...newImages]
+  }
+
   const updatedEvent = await updateEventService(eventId, vendorId, {
     ...req.body,
     thumbnail: thumbnail || undefined,
+    images: updatedImages,
   })
 
   if (!updatedEvent) {

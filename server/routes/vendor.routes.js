@@ -27,7 +27,10 @@ import { protect } from '../middleware/auth.middleware.js'
 import { validate } from '../middleware/validate.middleware.js'
 import {
   vendorApplyValidation,
-  vendorLoginValidation
+  vendorLoginValidation,
+  vendorProfileUpdateValidation,
+  eventCreateValidation,
+  eventUpdateValidation
 } from '../validations/vendor.validation.js'
 
 const router = express.Router()
@@ -57,9 +60,9 @@ router.patch('/profile/images',
   ]),
   asyncHandler(updateVendorImages)
 )
-router.put('/update-profile', protect, requireRole("vendor"), asyncHandler(updateVendorProfile))
+router.put('/update-profile', protect, requireRole("vendor"), vendorProfileUpdateValidation, validate, asyncHandler(updateVendorProfile))
 router.post('/send-email-update-otp', protect, requireRole("vendor"), asyncHandler(sendVendorEmailUpdateOtp))
-router.post('/verify-email-update-otp', protect, requireRole("vendor"), asyncHandler(verifyVendorEmailUpdateOtp))
+router.post('/verify-email-update-otp', protect, requireRole("vendor"), vendorProfileUpdateValidation, validate, asyncHandler(verifyVendorEmailUpdateOtp))
 router.post('/resend-email-update-otp', protect, requireRole("vendor"), asyncHandler(resendVendorEmailUpdateOtp))
 router.post('/profile/portfolios', protect, requireRole("vendor"), upload.single('portfolio'), asyncHandler(addVendorPortfolio))
 router.delete('/profile/remove-portfolios/:portfolioId', protect, requireRole("vendor"), asyncHandler(deleteVendorPortfolio))
@@ -71,12 +74,25 @@ router.post(
     {name : "thumbnail",maxCount : 1},
     {name : "images" , maxCount : 10}
   ]),
+  eventCreateValidation,
+  validate,
   asyncHandler(createEvent)
 )
 
 router.get("/my-events", protect, requireRole("vendor"), asyncHandler(getVendorEvents))
 router.patch("/cancel-event/:eventId", protect, requireRole("vendor"), asyncHandler(cancelEvent))
-router.put("/update-event/:eventId", protect, requireRole("vendor"), upload.single("thumbnail"), asyncHandler(updateEvent))
+router.put(
+  "/update-event/:eventId",
+  protect,
+  requireRole("vendor"),
+  upload.fields([
+    { name: "thumbnail", maxCount: 1 },
+    { name: "images", maxCount: 10 }
+  ]),
+  eventUpdateValidation,
+  validate,
+  asyncHandler(updateEvent)
+)
 router.delete("/delete-event/:eventId", protect, requireRole("vendor"), asyncHandler(deleteEvent))
 
 router.post("/logout", protect, requireRole("vendor"), asyncHandler(vendorLogout))

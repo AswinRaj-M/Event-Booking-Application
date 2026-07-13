@@ -312,6 +312,10 @@ export const updateEventService = async (eventId, vendorId, data) => {
     updateData.thumbnail = data.thumbnail;
   }
 
+  if (data.images !== undefined) {
+    updateData.images = data.images;
+  }
+
   return await updateEventRepo(eventId, vendorId, updateData);
 };
 
