@@ -21,6 +21,7 @@ import {
   getExploreEventsRepo,
   findEventById,
   createBookingRepo,
+  findBookingByIdRepo,
 } from "../repository/user.repo.js";
 import { generateResetToken } from "../utils/generateToken.js";
 
@@ -369,4 +370,28 @@ export const createPendingBookingService = async (userId,eventId,tierId,quantity
 
   return await createBookingRepo(bookingPayload)
 
+}
+
+
+export const getBookingDetailsService = async(userId,userRole,bookingId) =>{
+  const booking = await findBookingByIdRepo(bookingId)
+
+  if(!booking){
+    throw new AppError("Booking Not Found!",HTTP_STATUS.NOT_FOUND)
+  }
+
+  const isBooker = booking.userId._id.toString() === userId.toString()
+  const isEventOwner = booking.eventId?.vendorId?.toString() === userId.toString()
+  const isAdmin = userRole === "admin"
+
+  if(!isBooker && !isEventOwner && isAdmin){
+    throw new AppError("You are not authorized to view this Booking!", HTTP_STATUS.FORBIDDEN)
+  }
+
+
+  return booking
+}
+
+export const getBookingHistoryService = async(userId) => {
+  
 }

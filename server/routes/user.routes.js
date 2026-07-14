@@ -18,7 +18,9 @@ import {
   verifyEmailUpdateOtp,
   resendEmailUpdateOtp,
   getEventById,
-  createBooking
+  createBooking,
+  getBookingHistory,
+  getBookingDetails
 } from "../controllers/user.controller.js"
 import passport from "passport"
 import upload from "../middleware/upload.js"
@@ -72,5 +74,9 @@ router.patch('/profile/picture', protect, requireRole("user"), upload.single('pr
 
 
 router.post('/booking/create',protect,asyncHandler(createBooking))
+router.get('booking/history',protect,asyncHandler(getBookingHistory))
+router.get('booking/details/:bookingId',protect,asyncHandler(getBookingDetails))
+
+
 
 export default router

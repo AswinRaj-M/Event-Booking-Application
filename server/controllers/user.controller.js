@@ -27,6 +27,8 @@ import {
   resendEmailUpdateOtpService,
   getEventByIdService,
   createPendingBookingService,
+  getBookingDetailsService,
+  getBookingHistoryService,
 } from "../services/user.service.js";
 import { AppError } from "../utils/AppError.js";
 
@@ -552,4 +554,34 @@ export const createBooking = async(req,res) =>{
     message : "Booking initiated successfully in pending state",
     booking
    })
+}
+
+
+export const getBookingDetails = async(req,res) =>{
+
+  const userId = req.user._id
+  const userRole = req.user.role
+  const {bookingId} = req.params
+
+  const booking = await getBookingDetailsService(userId,userRole,bookingId)
+
+
+  return res.status(HTTP_STATUS.OK).json({
+    success : true,
+    message : "Booking details fetch Successfully",
+    booking
+  })
+}
+
+export const getBookingHistory =  async(req,res) =>{
+  const userId =  req.user._id
+    
+  const history  = await getBookingHistoryService(userId)
+
+
+  return res.status(HTTP_STATUS.OK).json({
+    success : true,
+    messgae : "Fetch Booking History Succesfuly!",
+    history
+  })
 }
