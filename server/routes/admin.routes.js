@@ -2,23 +2,31 @@ import express from 'express'
 import {
   AdminLogin,
   logoutAdmin,
+} from "../controllers/admin/auth.controller.js"
+import {
   getAllVendors,
   getVendorById,
   vendorApprove,
   vendorReject,
+  vendorSuspend,
+  vendorUnsuspend,
   VendorSendEmail,
+} from "../controllers/admin/vendor.controller.js"
+import {
   createCategories,
   getAllCategories,
   updateCategory,
   toggleCategoryStatus,
   deleteCategory,
-  vendorSuspend,
-  vendorUnsuspend,
+} from "../controllers/admin/category.controller.js"
+import {
   getAllUsers,
   toggleUserBlock,
+} from "../controllers/admin/user.controller.js"
+import {
   getAllEventsAdmin,
-  toggleBlockEvent
-} from "../controllers/admin.controller.js"
+  toggleBlockEvent,
+} from "../controllers/admin/event.controller.js"
 import { protect } from '../middleware/auth.middleware.js'
 import { requireRole } from '../middleware/role.middleware.js'
 import { asyncHandler } from '../middleware/error.middleware.js'

@@ -32,7 +32,7 @@ const UserSideBar = () => {
 
   const platformLinks = [
     { path: USER_ROUTES.HOME, icon: LayoutDashboard, label: "Dashboard" },
-    { path: "#", icon: Ticket, label: "My Bookings" },
+    { path: USER_ROUTES.BOOKINGS, icon: Ticket, label: "My Bookings" },
     { path: "#", icon: Wallet, label: "Wallet" }
   ];
 

@@ -11,7 +11,7 @@ const Navbar = () => {
         if (path === USER_ROUTES.PROFILE) return "Profile";
         if (path === USER_ROUTES.HOME) return "Home";
         if (path === USER_ROUTES.EXPLORE) return "Browse Events";
-        if (hash.includes("bookings")) return "My Bookings";
+        if (path === USER_ROUTES.BOOKINGS) return "My Bookings";
         if (hash.includes("browse")) return "Browse Events";
         if (hash.includes("about")) return "About Us";
         return "Home";
@@ -19,7 +19,7 @@ const Navbar = () => {
 
     const menuItems = [
         { name: "Browse Events", path: USER_ROUTES.EXPLORE },
-        { name: "My Bookings", path: "#My Bookings" },
+        { name: "My Bookings", path: USER_ROUTES.BOOKINGS },
         { name: "Home", path: USER_ROUTES.HOME },
         { name: "Profile", path: USER_ROUTES.PROFILE },
         { name: "About Us", path: "#about" }

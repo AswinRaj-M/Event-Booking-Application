@@ -1,25 +1,32 @@
 import express from 'express'
 import { HTTP_STATUS } from '../utils/enums/http.status.enum.js'
-import { applyVendor,
-   updateVendorImages, 
-   vendorLogin, 
-   vendorLogout,
-   vendorProfile,
-   addVendorPortfolio,
-   deleteVendorImage,
-   deleteVendorPortfolio,
-   updateVendorProfile,
-   verifyVendorOTP,
-   resendVendorOtp,
-   createEvent,
-   getVendorEvents,
-   cancelEvent,
-   updateEvent,
-   deleteEvent,
-   sendVendorEmailUpdateOtp,
-   verifyVendorEmailUpdateOtp,
-   resendVendorEmailUpdateOtp,
-   } from "../controllers/vendor.controller.js"
+import {
+  applyVendor,
+  verifyVendorOTP,
+  resendVendorOtp,
+  vendorLogin,
+  vendorLogout,
+} from "../controllers/vendor/auth.controller.js"
+import {
+  vendorProfile,
+  updateVendorProfile,
+  updateVendorImages,
+  sendVendorEmailUpdateOtp,
+  verifyVendorEmailUpdateOtp,
+  resendVendorEmailUpdateOtp,
+} from "../controllers/vendor/profile.controller.js"
+import {
+  addVendorPortfolio,
+  deleteVendorPortfolio,
+  deleteVendorImage,
+} from "../controllers/vendor/portfolio.controller.js"
+import {
+  createEvent,
+  updateEvent,
+  getVendorEvents,
+  cancelEvent,
+  deleteEvent,
+} from "../controllers/vendor/event.controller.js"
 import upload from '../middleware/upload.js'
 import { asyncHandler } from '../middleware/error.middleware.js'
 import { requireRole } from '../middleware/role.middleware.js'

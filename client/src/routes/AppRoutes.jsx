@@ -13,6 +13,7 @@ import ResetPassword from '../pages/auth/ResetPassword.jsx';
 import GoogleAuthSuccess from '../pages/auth/GoogleAuthSuccess.jsx';
 import UserExploreEvent from '../pages/user/UserExploreEvent.jsx';
 import UserEventDetails from '../pages/user/UserEventDetails.jsx';
+import MyBookings from '../pages/user/MyBookings.jsx';
 import { COMMON_ROUTES, USER_ROUTES } from '../constants/Routes';
 
 const AppRoutes = () => {
@@ -42,6 +43,11 @@ const AppRoutes = () => {
             <Route path={USER_ROUTES.EVENT_DETAILS} element={
                 <ProtectedRoute role="user">
                     <UserEventDetails />
+                </ProtectedRoute>
+            } />
+            <Route path={USER_ROUTES.BOOKINGS} element={
+                <ProtectedRoute role="user">
+                    <MyBookings />
                 </ProtectedRoute>
             } />
             <Route path={COMMON_ROUTES.LANDING} element={

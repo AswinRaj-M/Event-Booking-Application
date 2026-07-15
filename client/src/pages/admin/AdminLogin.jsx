@@ -1,15 +1,17 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { adminClearMessages, adminLoginThunk } from "../../features/admin.slice";
 import {toast} from 'sonner'
-import { ADMIN_ROUTES } from "../../constants/Routes";
+import { ADMIN_ROUTES, COMMON_ROUTES } from "../../constants/Routes";
+import { forgotPassword } from "../../services/user.api";
 
 
 const AdminLogin = () => {
 
     const [email ,setEmail] = useState("")
     const [password, setPassword] = useState("")
+    const [localLoading, setLocalLoading] = useState(false)
 
     const dispatch = useDispatch()
     const navigate = useNavigate()
@@ -22,6 +24,8 @@ const AdminLogin = () => {
             password
         }))
     }
+
+
 
     useEffect(() =>{
         if(!loginError){
@@ -165,12 +169,12 @@ const AdminLogin = () => {
 
                         {/* Forgot Password */}
                         <div className="flex items-center justify-center pt-1">
-                            <a
-                                href="#"
+                            <Link
+                                to={COMMON_ROUTES.FORGOT_PASSWORD}
                                 className="text-xs font-semibold text-[#a855f7] hover:text-[#c084fc] transition-colors"
                             >
                                 Forgot Password?
-                            </a>
+                            </Link>
                         </div>
 
                         {/* Submit Button */}

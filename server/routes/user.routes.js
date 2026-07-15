@@ -9,19 +9,25 @@ import {
   forgotPassword,
   resetPassword,
   googleCallback,
+} from "../controllers/user/auth.controller.js"
+import {
   getUserProfile,
   updateUserProfile,
   changePassword,
   updateUserProfilePicture,
-  getExploreEvents,
   sendEmailUpdateOtp,
   verifyEmailUpdateOtp,
   resendEmailUpdateOtp,
+} from "../controllers/user/profile.controller.js"
+import {
+  getExploreEvents,
   getEventById,
+} from "../controllers/user/event.controller.js"
+import {
   createBooking,
   getBookingHistory,
-  getBookingDetails
-} from "../controllers/user.controller.js"
+  getBookingDetails,
+} from "../controllers/user/booking.controller.js"
 import passport from "passport"
 import upload from "../middleware/upload.js"
 import { protect } from "../middleware/auth.middleware.js"
