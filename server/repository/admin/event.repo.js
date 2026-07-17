@@ -1,6 +1,8 @@
 import Event from "../../models/event.model.js";
+import { updateCompletedEvents } from "../../utils/eventStatusUpdater.js";
 
 export const getAllEventsRepo = async () => {
+  await updateCompletedEvents();
   return await Event.find({ isDeleted: { $ne: true }, eventStatus: { $ne: "draft" } })
     .sort({ createdAt: -1 })
     .populate("category")

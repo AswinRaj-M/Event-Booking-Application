@@ -1,8 +1,11 @@
 import mongoose from "mongoose";
 import Event from "../../models/event.model.js";
 import Category from "../../models/category.model.js";
+import { updateCompletedEvents } from "../../utils/eventStatusUpdater.js";
 
 export const getExploreEventsRepo = async (filters = {}) => {
+  await updateCompletedEvents();
+
   const { search, category, date, sortBy } = filters;
   const page = parseInt(filters.page, 10) || 1;
   const limit = parseInt(filters.limit, 10) || 9;
@@ -11,7 +14,7 @@ export const getExploreEventsRepo = async (filters = {}) => {
   const query = {
     isDeleted: { $ne: true },
     isBlocked: { $ne: true },
-    eventStatus: { $ne: "draft" }
+    eventStatus: { $nin: ["draft", "completed", "cancelled"] }
   };
 
   if (search) {
@@ -69,5 +72,6 @@ export const getExploreEventsRepo = async (filters = {}) => {
 };
 
 export const findEventById = async (id) => {
+  await updateCompletedEvents();
   return await Event.findById(id).populate("category").populate("vendorId");
 };

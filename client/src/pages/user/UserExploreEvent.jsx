@@ -98,7 +98,7 @@ const UserExploreEvent = () => {
     return categoriesList.map(c => c.name);
   }, [categoriesList]);
 
-  const filteredEvents = events;
+  const filteredEvents = events.filter(e => e.eventStatus !== "completed" && e.eventStatus !== "cancelled" && e.eventStatus !== "draft");
 
   const handleResetFilters = () => {
     setSearchQuery("");

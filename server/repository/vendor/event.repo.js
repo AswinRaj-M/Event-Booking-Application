@@ -1,10 +1,12 @@
 import Event from "../../models/event.model.js";
+import { updateCompletedEvents } from "../../utils/eventStatusUpdater.js";
 
 export const createEventRepo = async(data) =>{
   return await Event.create(data)
 }
 
 export const getVendorEventsRepo = async(vendorId) => {
+  await updateCompletedEvents();
   return await Event.find({ vendorId, isDeleted: { $ne: true } })
   .sort({createdAt : -1})
   .populate("category")
