@@ -7,7 +7,7 @@ import {
 } from "../../services/user/booking.service.js";
 
 export const createBooking = async(req,res) =>{
-   const userId = req.body
+   const userId = req.user._id
    
    const {eventId , tierId, quantity} = req.body
 

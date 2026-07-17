@@ -18,10 +18,14 @@ export const findBookingByIdRepo = async(bookingId) =>{
 
 
 export const findUserBookingsRepo = async(userId) => {
-  return await Booking.find({userid})
+  return await Booking.find({userId})
     .populate({
       path : "eventId",
-      select : "title schedule venue city thumbnail eventType"
+      select : "title schedule venue city thumbnail eventType category",
+      populate: {
+        path: "category",
+        select: "name"
+      }
     })
     .sort({createdAt : -1})
 }

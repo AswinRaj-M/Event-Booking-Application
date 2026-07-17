@@ -28,7 +28,7 @@ import {
 import { toast } from "sonner";
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
-import { getEventById, getExploreEvents } from "../../services/user.api.js";
+import { getEventById, getExploreEvents, createBooking } from "../../services/user.api.js";
 
 // Style config matching categories to color codes
 const categoryBadgeStyles = {
@@ -242,8 +242,32 @@ const UserEventDetails = () => {
   const discountAmount = (subtotal * discountPercent) / 100;
   const totalAmount = isFree ? 0 : subtotal - discountAmount + serviceFee;
 
-  const handleBookTickets = () => {
-    toast.info("Currently Not Available !");
+  const handleBookTickets = async () => {
+    try {
+      setIsBooking(true);
+      const tierId = !isFree && event?.ticketTiers?.[selectedTierIndex]?._id 
+        ? event.ticketTiers[selectedTierIndex]._id 
+        : undefined;
+
+      const bookingData = {
+        eventId: event?._id,
+        tierId,
+        quantity,
+      };
+
+      const res = await createBooking(bookingData);
+      if (res.data?.success) {
+        toast.success(res.data.message || "Booking initiated successfully!");
+        navigate(USER_ROUTES.BOOKINGS);
+      } else {
+        toast.error(res.data?.message || "Failed to book tickets. Please try again.");
+      }
+    } catch (err) {
+      console.error("Booking Error:", err);
+      toast.error(err.response?.data?.message || "Something went wrong during the booking process.");
+    } finally {
+      setIsBooking(false);
+    }
   };
 
   const handleShare = (platform) => {

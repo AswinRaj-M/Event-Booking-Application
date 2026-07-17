@@ -1,10 +1,12 @@
 import { AppError } from "../../utils/AppError.js";
 import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
 import Event from "../../models/event.model.js";
+import mongoose from "mongoose";
 
 import {
   createBookingRepo,
   findBookingByIdRepo,
+  findUserBookingsRepo,
 } from "../../repository/user/booking.repo.js";
 
 export const createPendingBookingService = async (userId,eventId,tierId,quantity)=>{
@@ -16,7 +18,7 @@ export const createPendingBookingService = async (userId,eventId,tierId,quantity
 
 
    let selectedTier = null
-   if(event.ticketType === "free"){
+   if(event.ticketType?.toLowerCase() === "free"){
     selectedTier = event.ticketTiers?.[0] ||
      {name : "General Admmission",price : 0,capacity : event.totalTickets || 100, sold : event.soldTickets ||0}
    }
@@ -62,7 +64,7 @@ export const createPendingBookingService = async (userId,eventId,tierId,quantity
     bookingId: bookingIdString,
     eventId,
     userId,
-    tierId,
+    tierId: tierId || selectedTier?._id || new mongoose.Types.ObjectId(),
     tierName: selectedTier.name,
     ticketPrice,
     quantity,
@@ -96,5 +98,5 @@ export const getBookingDetailsService = async(userId,userRole,bookingId) =>{
 }
 
 export const getBookingHistoryService = async(userId) => {
-  
+  return await findUserBookingsRepo(userId);
 }

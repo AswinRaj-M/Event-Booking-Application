@@ -2,6 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 
 import logo from "../../assets/logo.jpeg";
+import heroBg from "../../assets/landing-page-party.jpg";
 
 const LandingPage = () => {
   return (
@@ -24,7 +25,7 @@ const LandingPage = () => {
           <div
             className="absolute inset-0 -z-10 bg-cover bg-center opacity-60 pointer-events-none"
             style={{
-              backgroundImage: `url('https://weezevent.com/wp-content/uploads/2019/01/12145054/organiser-soiree.jpg')`, // Party/Event Theme
+              backgroundImage: `url(${heroBg})`, // Party/Event Theme
               maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1), rgba(0,0,0,0))',
               WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1), rgba(0,0,0,0))'
             }}

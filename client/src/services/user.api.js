@@ -72,3 +72,15 @@ export const getEventById = (id) => {
 export const changePassword = (data) => {
   return axiosInstance.put("/users/change-password", data);
 };
+
+export const createBooking = (data) => {
+  return axiosInstance.post("/users/booking/create", data);
+};
+
+export const getBookingHistory = () => {
+  return axiosInstance.get("/users/booking/history");
+};
+
+export const getBookingDetails = (bookingId) => {
+  return axiosInstance.get(`/users/booking/details/${bookingId}`);
+};

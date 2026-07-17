@@ -80,8 +80,8 @@ router.patch('/profile/picture', protect, requireRole("user"), upload.single('pr
 
 
 router.post('/booking/create',protect,asyncHandler(createBooking))
-router.get('booking/history',protect,asyncHandler(getBookingHistory))
-router.get('booking/details/:bookingId',protect,asyncHandler(getBookingDetails))
+router.get('/booking/history',protect,asyncHandler(getBookingHistory))
+router.get('/booking/details/:bookingId',protect,asyncHandler(getBookingDetails))
 
 
 
