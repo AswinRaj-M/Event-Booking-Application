@@ -385,6 +385,44 @@ const VendorCreateEvent = () => {
           return;
         }
       }
+      if (enableOffer) {
+        if (!discountValue) {
+          toast.error('Discount value is required when offer is enabled');
+          return;
+        }
+        const val = parseFloat(discountValue);
+        if (isNaN(val) || val <= 0 || val > 100) {
+          toast.error('Discount percentage must be between 1 and 100');
+          return;
+        }
+        if (!minTickets) {
+          toast.error('Minimum tickets required is required when offer is enabled');
+          return;
+        }
+        const minTkts = parseInt(minTickets, 10);
+        if (isNaN(minTkts) || minTkts < 1) {
+          toast.error('Minimum tickets must be at least 1');
+          return;
+        }
+        if (!validFrom) {
+          toast.error('Valid From date is required when offer is enabled');
+          return;
+        }
+        if (!validUntil) {
+          toast.error('Valid Until date is required when offer is enabled');
+          return;
+        }
+        if (validFrom > validUntil) {
+          toast.error('Valid From date cannot be after Valid Until date');
+          return;
+        }
+        const todayStr = getTodayDateString();
+        if (validUntil < todayStr) {
+          toast.error('Valid Until date cannot be in the past');
+          return;
+        }
+      }
+
       if (!agreedTerms) {
         toast.error('You must agree to the Vendor Terms to publish the event');
         return;

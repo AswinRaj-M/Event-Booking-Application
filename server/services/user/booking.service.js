@@ -42,16 +42,24 @@ export const createPendingBookingService = async (userId,eventId,tierId,quantity
    let discountAmount = 0
 
    if(event.offer?.enabled && quantity >= (event.offer.minTicketsRequired ||0)){
-    const now = new Date()
-    let isOfferValid = true
+     const now = new Date()
+     let isOfferValid = true
 
-    if(event.offer.validFrom && new Date(event.offer.validFrom) > now) isOfferValid = false
-    if(event.offer.validUntil && new Date(event.offer.validUntil < now)) isOfferValid = false
+     if(event.offer.validFrom){
+       const fromDate = new Date(event.offer.validFrom)
+       fromDate.setHours(0, 0, 0, 0)
+       if(fromDate > now) isOfferValid = false
+     }
+     if(event.offer.validUntil){
+       const untilDate = new Date(event.offer.validUntil)
+       untilDate.setHours(23, 59, 59, 999)
+       if(untilDate < now) isOfferValid = false
+     }
 
-    if(isOfferValid){
-      discountAmount = (subtotal * (event.offer.discountValue) || 0) / 100
+     if(isOfferValid){
+       discountAmount = (subtotal * (event.offer.discountValue) || 0) / 100
+     }
     }
-   }
 
    const serviceFee = event.ticketType === "Free" ? 0 : 14.90
    const totalAmount = subtotal - discountAmount + serviceFee

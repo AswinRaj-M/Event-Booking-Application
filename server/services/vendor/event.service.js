@@ -196,6 +196,16 @@ export const updateEventService = async (eventId, vendorId, data) => {
     updateData.eventStatus = data.eventStatus;
   }
 
+  if (data.offerEnabled !== undefined) {
+    updateData.offer = {
+      enabled: data.offerEnabled === "true" || data.offerEnabled === true,
+      discountValue: Number(data.discountValue) || 0,
+      minTicketsRequired: Number(data.minTicketsRequired) || 0,
+      validFrom: data.validFrom || undefined,
+      validUntil: data.validUntil || undefined
+    };
+  }
+
   if (data.thumbnail) {
     updateData.thumbnail = data.thumbnail;
   }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { 
   Search, 
@@ -21,6 +21,7 @@ import { USER_ROUTES } from "../../constants/Routes";
 import { getBookingHistory } from "../../services/user.api.js";
 
 const MyBookings = () => {
+  const navigate = useNavigate();
   const user = useSelector((state) => state.user?.user);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("upcoming"); // upcoming, past, cancelled
@@ -110,8 +111,12 @@ const MyBookings = () => {
     }
   };
 
-  const handleActionClick = (actionName) => {
-    toast.info(`${actionName} is simulation placeholder`);
+  const handleActionClick = (actionName, bookingId) => {
+    if (actionName === "View Ticket QR" || actionName === "View Details") {
+      navigate(USER_ROUTES.TICKET_VIEW.replace(":id", bookingId));
+    } else {
+      toast.info(`${actionName} is simulation placeholder`);
+    }
   };
 
   const handleCancelClick = () => {
@@ -316,7 +321,7 @@ const MyBookings = () => {
                                   Add Review
                                 </button>
                                 <button 
-                                  onClick={() => handleActionClick("View Details")}
+                                  onClick={() => handleActionClick("View Details", booking._id)}
                                   className="hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer"
                                 >
                                   <Eye className="w-3.5 h-3.5" />
@@ -352,7 +357,7 @@ const MyBookings = () => {
                                     Cancel
                                   </button>
                                   <button 
-                                    onClick={() => handleActionClick("View Ticket QR")}
+                                    onClick={() => handleActionClick("View Ticket QR", booking._id)}
                                     className="flex-1 py-2 px-3 bg-white text-[#05050C] hover:bg-zinc-200 text-xs font-extrabold rounded-xl transition-all cursor-pointer shadow-[0_0_15px_rgba(255,255,255,0.1)]"
                                   >
                                     View Ticket

@@ -5,7 +5,11 @@ import {
   Ticket, 
   Upload, 
   X,
-  ChevronDown
+  ChevronDown,
+  Sparkles,
+  Info,
+  Plus,
+  Trash2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { fetchCategories, updateEventApi } from '../../services/vendor.api';
@@ -34,6 +38,84 @@ const VendorEditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
   const [price, setPrice] = useState('0.00');
   const [totalSeats, setTotalSeats] = useState('');
   const [maxTicketsPerPerson, setMaxTicketsPerPerson] = useState('');
+  
+  const [ticketTiers, setTicketTiers] = useState([
+    {
+      name: '',
+      price: '',
+      capacity: '',
+      benefits: ['']
+    }
+  ]);
+
+  const addTier = () => {
+    setTicketTiers(prev => [
+      ...prev,
+      {
+        name: '',
+        price: '',
+        capacity: '',
+        benefits: ['']
+      }
+    ]);
+  };
+
+  const removeTier = (index) => {
+    setTicketTiers(prev => prev.filter((_, idx) => idx !== index));
+  };
+
+  const handleTierChange = (index, field, value) => {
+    setTicketTiers(prev => {
+      const updated = [...prev];
+      updated[index] = {
+        ...updated[index],
+        [field]: value
+      };
+      return updated;
+    });
+  };
+
+  const addBenefit = (tierIndex) => {
+    setTicketTiers(prev => {
+      const updated = [...prev];
+      updated[tierIndex] = {
+        ...updated[tierIndex],
+        benefits: [...updated[tierIndex].benefits, '']
+      };
+      return updated;
+    });
+  };
+
+  const removeBenefit = (tierIndex, benefitIndex) => {
+    setTicketTiers(prev => {
+      const updated = [...prev];
+      updated[tierIndex] = {
+        ...updated[tierIndex],
+        benefits: updated[tierIndex].benefits.filter((_, idx) => idx !== benefitIndex)
+      };
+      return updated;
+    });
+  };
+
+  const handleBenefitChange = (tierIndex, benefitIndex, value) => {
+    setTicketTiers(prev => {
+      const updated = [...prev];
+      const updatedBenefits = [...updated[tierIndex].benefits];
+      updatedBenefits[benefitIndex] = value;
+      updated[tierIndex] = {
+        ...updated[tierIndex],
+        benefits: updatedBenefits
+      };
+      return updated;
+    });
+  };
+  
+  // Offer states
+  const [enableOffer, setEnableOffer] = useState(false);
+  const [discountValue, setDiscountValue] = useState('');
+  const [minTickets, setMinTickets] = useState('');
+  const [validFrom, setValidFrom] = useState('');
+  const [validUntil, setValidUntil] = useState('');
   
   const [thumbnail, setThumbnail] = useState(null);
   const [thumbnailPreview, setThumbnailPreview] = useState(null);
@@ -97,6 +179,31 @@ const VendorEditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
       setTotalSeats(raw.totalTickets !== undefined ? String(raw.totalTickets) : '');
       setMaxTicketsPerPerson(raw.maxTicketPerPerson !== undefined ? String(raw.maxTicketPerPerson) : '');
       
+      if (raw.ticketTiers && raw.ticketTiers.length > 0) {
+        setTicketTiers(raw.ticketTiers.map(t => ({
+          name: t.name || '',
+          price: t.price !== undefined ? String(t.price) : '',
+          capacity: t.capacity !== undefined ? String(t.capacity) : '',
+          benefits: t.benefits && t.benefits.length > 0 ? [...t.benefits] : ['']
+        })));
+      } else {
+        setTicketTiers([
+          {
+            name: '',
+            price: '',
+            capacity: '',
+            benefits: ['']
+          }
+        ]);
+      }
+      
+      const offer = raw.offer || {};
+      setEnableOffer(offer.enabled || false);
+      setDiscountValue(offer.discountValue !== undefined ? String(offer.discountValue) : '');
+      setMinTickets(offer.minTicketsRequired !== undefined ? String(offer.minTicketsRequired) : '');
+      setValidFrom(formatDateForInput(offer.validFrom));
+      setValidUntil(formatDateForInput(offer.validUntil));
+
       setThumbnail(null);
       setThumbnailPreview(raw.thumbnail?.fileUrl || null);
       
@@ -180,13 +287,76 @@ const VendorEditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
         return;
       }
     }
-    if (!totalSeats) {
-      toast.error('Total seats limit is required');
-      return;
+    if (ticketType === 'paid') {
+      if (!ticketTiers || ticketTiers.length === 0) {
+        toast.error('At least one ticket tier is required for paid events');
+        return;
+      }
+      for (let i = 0; i < ticketTiers.length; i++) {
+        const tier = ticketTiers[i];
+        if (!tier.name || !tier.name.trim()) {
+          toast.error(`Tier ${i + 1} name is required`);
+          return;
+        }
+        const priceNum = parseFloat(tier.price);
+        if (isNaN(priceNum) || priceNum <= 0) {
+          toast.error(`Tier ${i + 1} price must be greater than 0`);
+          return;
+        }
+        const capacityNum = parseInt(tier.capacity, 10);
+        if (isNaN(capacityNum) || capacityNum <= 0) {
+          toast.error(`Tier ${i + 1} capacity must be greater than 0`);
+          return;
+        }
+        const validBenefits = tier.benefits ? tier.benefits.filter(b => b.trim() !== '') : [];
+        if (validBenefits.length === 0) {
+          toast.error(`Tier ${i + 1} must have at least one benefit`);
+          return;
+        }
+      }
+    } else {
+      if (!totalSeats) {
+        toast.error('Total seats limit is required');
+        return;
+      }
     }
-    if (ticketType === 'paid' && (!price || parseFloat(price) <= 0)) {
-      toast.error('Ticket price must be greater than 0 for paid events');
-      return;
+
+    if (enableOffer) {
+      if (!discountValue) {
+        toast.error('Discount value is required when offer is enabled');
+        return;
+      }
+      const val = parseFloat(discountValue);
+      if (isNaN(val) || val <= 0 || val > 100) {
+        toast.error('Discount percentage must be between 1 and 100');
+        return;
+      }
+      if (!minTickets) {
+        toast.error('Minimum tickets required is required when offer is enabled');
+        return;
+      }
+      const minTkts = parseInt(minTickets, 10);
+      if (isNaN(minTkts) || minTkts < 1) {
+        toast.error('Minimum tickets must be at least 1');
+        return;
+      }
+      if (!validFrom) {
+        toast.error('Valid From date is required when offer is enabled');
+        return;
+      }
+      if (!validUntil) {
+        toast.error('Valid Until date is required when offer is enabled');
+        return;
+      }
+      if (validFrom > validUntil) {
+        toast.error('Valid From date cannot be after Valid Until date');
+        return;
+      }
+      const todayStr = formatDateForInput(new Date());
+      if (validUntil < todayStr) {
+        toast.error('Valid Until date cannot be in the past');
+        return;
+      }
     }
 
     const formData = new FormData();
@@ -210,10 +380,39 @@ const VendorEditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
       formData.append('state', state);
       formData.append('onlineLink', '');
     }
-    formData.append('ticketType', ticketType === 'paid' ? 'Paid' : 'Free');
-    formData.append('ticketPrice', ticketType === 'paid' ? price : '0');
-    formData.append('totalTickets', totalSeats);
+    const formattedTicketType = ticketType === 'paid' ? 'Paid' : 'Free';
+    formData.append('ticketType', formattedTicketType);
+    
+    if (formattedTicketType === 'Paid') {
+      const sumSeats = ticketTiers.reduce((sum, tier) => sum + (parseInt(tier.capacity, 10) || 0), 0);
+      const minPrice = Math.min(...ticketTiers.map(tier => parseFloat(tier.price) || 0));
+      
+      formData.append('ticketTiers', JSON.stringify(ticketTiers.map(t => ({
+        name: t.name,
+        price: parseFloat(t.price) || 0,
+        capacity: parseInt(t.capacity, 10) || 0,
+        benefits: (t.benefits || []).filter(b => b.trim() !== '')
+      }))));
+      formData.append('ticketPrice', isFinite(minPrice) ? minPrice.toString() : '0');
+      formData.append('totalTickets', sumSeats.toString());
+    } else {
+      formData.append('ticketPrice', '0');
+      formData.append('totalTickets', totalSeats || '0');
+    }
     formData.append('maxTicketPerPerson', maxTicketsPerPerson || '5');
+
+    formData.append('offerEnabled', enableOffer ? 'true' : 'false');
+    if (enableOffer) {
+      formData.append('discountValue', discountValue || '0');
+      formData.append('minTicketsRequired', minTickets || '0');
+      formData.append('validFrom', validFrom || '');
+      formData.append('validUntil', validUntil || '');
+    } else {
+      formData.append('discountValue', '0');
+      formData.append('minTicketsRequired', '0');
+      formData.append('validFrom', '');
+      formData.append('validUntil', '');
+    }
 
     if (thumbnail) {
       formData.append('thumbnail', thumbnail);
@@ -508,6 +707,84 @@ const VendorEditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
                   </div>
                 </div>
               </div>
+
+              {/* Offers & Discounts */}
+              <div className="space-y-4 pt-2">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2 text-xs font-bold text-purple-400 uppercase tracking-wider">
+                    <Sparkles className="w-4 h-4" />
+                    <span>Offers & Discounts</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[10px] font-semibold text-zinc-400">Enable Offer</span>
+                    <button 
+                      type="button"
+                      onClick={() => setEnableOffer(!enableOffer)}
+                      className={`w-9 h-5 rounded-full transition-all relative p-0.5 cursor-pointer ${enableOffer ? 'bg-purple-600' : 'bg-zinc-800'}`}
+                    >
+                      <span className={`w-4 h-4 rounded-full bg-white transition-all block ${enableOffer ? 'translate-x-4' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
+                </div>
+
+                {enableOffer && (
+                  <div className="space-y-4 bg-[#12101F]/50 border border-white/5 p-4 rounded-xl">
+                    <div className="flex gap-2 items-center text-[10px] text-purple-300 bg-purple-950/20 border border-purple-500/20 rounded-lg p-2.5">
+                      <Info className="w-3.5 h-3.5 shrink-0 text-purple-400" />
+                      <span>This offer will apply automatically to all ticket bookings for this event.</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-semibold text-zinc-400">Discount Value (%)</label>
+                        <div className="relative">
+                          <input 
+                            type="number" 
+                            placeholder="e.g. 10"
+                            value={discountValue}
+                            onChange={(e) => setDiscountValue(e.target.value)}
+                            className="w-full bg-[#12101F] text-white px-3 py-2.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-purple-500 text-xs font-semibold pr-8"
+                          />
+                          <span className="absolute right-3 top-2.5 text-xs text-zinc-500 font-bold">%</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-semibold text-zinc-400">Min Tickets Required</label>
+                        <input 
+                          type="number" 
+                          placeholder="e.g. 2"
+                          value={minTickets}
+                          onChange={(e) => setMinTickets(e.target.value)}
+                          className="w-full bg-[#12101F] text-white px-3 py-2.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-purple-500 text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-semibold text-zinc-400">Valid From</label>
+                        <input 
+                          type="date" 
+                          value={validFrom}
+                          onChange={(e) => setValidFrom(e.target.value)}
+                          className="w-full bg-[#12101F] text-zinc-400 px-3 py-2.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-purple-500 text-xs"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-semibold text-zinc-400">Valid Until</label>
+                        <input 
+                          type="date" 
+                          value={validUntil}
+                          onChange={(e) => setValidUntil(e.target.value)}
+                          className="w-full bg-[#12101F] text-zinc-400 px-3 py-2.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-purple-500 text-xs"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Right side inputs */}
@@ -613,39 +890,140 @@ const VendorEditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    {ticketType === 'paid' && (
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-semibold text-zinc-400">Price ($)</label>
-                        <input 
-                          type="number"
-                          value={price}
-                          onChange={(e) => setPrice(e.target.value)}
-                          placeholder="Price"
-                          className="w-full bg-[#12101F] text-white px-3 py-2 rounded-xl border border-zinc-800 focus:outline-none focus:border-purple-500 text-xs font-semibold"
-                        />
+                  {ticketType === 'paid' ? (
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center">
+                        <label className="text-xs font-semibold text-zinc-400">Ticket Tiers</label>
+                        <button
+                          type="button"
+                          onClick={addTier}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1C1A30] hover:bg-[#252245] border border-purple-500/20 text-purple-300 text-xs font-bold rounded-lg transition-all cursor-pointer"
+                        >
+                          <Plus className="w-3 h-3" />
+                          Add Tier
+                        </button>
                       </div>
-                    )}
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-semibold text-zinc-400">Total Seats</label>
+
+                      <div className="space-y-4">
+                        {ticketTiers.map((tier, idx) => (
+                          <div key={idx} className="bg-[#12101F]/85 border border-zinc-800/80 rounded-2xl p-5 space-y-4 relative group">
+                            <div className="flex justify-between items-center">
+                              <div className="text-[10px] font-extrabold text-purple-400 uppercase tracking-wider">Tier #{idx + 1}</div>
+                              {ticketTiers.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => removeTier(idx)}
+                                  className="p-1.5 bg-[#0B0A11]/60 hover:bg-rose-950/20 border border-zinc-800/80 hover:border-rose-500/30 text-zinc-500 hover:text-rose-400 rounded-lg transition-all cursor-pointer"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+                            
+                            <div className="space-y-3">
+                              <div className="space-y-1.5">
+                                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Tier Name</label>
+                                <input
+                                  type="text"
+                                  placeholder="e.g. VIP"
+                                  value={tier.name}
+                                  onChange={(e) => handleTierChange(idx, 'name', e.target.value)}
+                                  className="w-full bg-[#0B0A11] text-white px-3 py-2.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-purple-500 text-xs transition-colors"
+                                />
+                              </div>
+                              
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Price ($)</label>
+                                  <input
+                                    type="number"
+                                    placeholder="e.g. 99"
+                                    value={tier.price}
+                                    onChange={(e) => handleTierChange(idx, 'price', e.target.value)}
+                                    className="w-full bg-[#0B0A11] text-white px-3 py-2.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-purple-500 text-xs transition-colors"
+                                  />
+                                </div>
+
+                                <div className="space-y-1.5">
+                                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Capacity</label>
+                                  <input
+                                    type="number"
+                                    placeholder="e.g. 50"
+                                    value={tier.capacity}
+                                    onChange={(e) => handleTierChange(idx, 'capacity', e.target.value)}
+                                    className="w-full bg-[#0B0A11] text-white px-3 py-2.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-purple-500 text-xs transition-colors"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Benefits section */}
+                            <div className="space-y-2 pt-2 border-t border-zinc-800/40">
+                              <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Benefits</label>
+                              <div className="space-y-2">
+                                {(tier.benefits || []).map((benefit, bIdx) => (
+                                  <div key={bIdx} className="flex gap-2 items-center">
+                                    <input
+                                      type="text"
+                                      placeholder="e.g. Backstage pass, Free drinks"
+                                      value={benefit}
+                                      onChange={(e) => handleBenefitChange(idx, bIdx, e.target.value)}
+                                      className="flex-1 bg-[#0B0A11] text-white px-3 py-2 rounded-xl border border-zinc-800 focus:outline-none focus:border-purple-500 text-xs transition-colors"
+                                    />
+                                    {tier.benefits.length > 1 && (
+                                      <button
+                                        type="button"
+                                        onClick={() => removeBenefit(idx, bIdx)}
+                                        className="p-2 bg-[#0B0A11] hover:bg-rose-950/20 border border-zinc-800 hover:border-rose-500/30 text-zinc-500 hover:text-rose-400 rounded-xl transition-colors cursor-pointer"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => addBenefit(idx)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0B0A11] hover:bg-[#1A182E] border border-purple-500/20 text-purple-300 text-[10px] font-bold rounded-lg transition-all mt-1 cursor-pointer"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                                Add Benefit
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="flex justify-between items-center text-xs text-zinc-500 pt-1">
+                        <span>Total Capacity:</span>
+                        <span className="text-white font-bold text-sm">
+                          {ticketTiers.reduce((sum, t) => sum + (parseInt(t.capacity, 10) || 0), 0)} seats
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-zinc-400">Total Seats</label>
                       <input 
-                        type="number"
+                        type="number" 
+                        placeholder="e.g. 500"
                         value={totalSeats}
                         onChange={(e) => setTotalSeats(e.target.value)}
-                        placeholder="Seats"
-                        className="w-full bg-[#12101F] text-white px-3 py-2 rounded-xl border border-zinc-800 focus:outline-none focus:border-purple-500 text-xs"
+                        className="w-full bg-[#12101F] text-white px-4 py-3 rounded-xl border border-zinc-800 focus:outline-none focus:border-purple-500 transition-colors text-sm"
                       />
                     </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-semibold text-zinc-400">Max / Person</label>
-                      <input 
-                        type="number"
-                        value={maxTicketsPerPerson}
-                        onChange={(e) => setMaxTicketsPerPerson(e.target.value)}
-                        placeholder="Limit"
-                        className="w-full bg-[#12101F] text-white px-3 py-2 rounded-xl border border-zinc-800 focus:outline-none focus:border-purple-500 text-xs"
-                      />
-                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-zinc-400">Maximum Tickets per Person</label>
+                    <input 
+                      type="number" 
+                      placeholder="e.g. 10"
+                      value={maxTicketsPerPerson}
+                      onChange={(e) => setMaxTicketsPerPerson(e.target.value)}
+                      className="w-full bg-[#12101F] text-white px-4 py-3 rounded-xl border border-zinc-800 focus:outline-none focus:border-purple-500 transition-colors text-sm"
+                    />
                   </div>
                 </div>
               </div>

@@ -221,15 +221,20 @@ const UserEventDetails = () => {
   // Standard Mock Service Fee matches photo ($14.90 for standard booking, or $0 if free)
   const serviceFee = isFree ? 0 : 14.90;
 
-  // Active discount percent from event offer schema
   const discountPercent = useMemo(() => {
-    // Auto discount from event schema if available
     if (event?.offer?.enabled && quantity >= (event.offer.minTicketsRequired || 0)) {
-      // Check if offer is within valid date range
       const now = new Date();
       let valid = true;
-      if (event.offer.validFrom && new Date(event.offer.validFrom) > now) valid = false;
-      if (event.offer.validUntil && new Date(event.offer.validUntil) < now) valid = false;
+      if (event.offer.validFrom) {
+        const fromDate = new Date(event.offer.validFrom);
+        fromDate.setHours(0, 0, 0, 0);
+        if (fromDate > now) valid = false;
+      }
+      if (event.offer.validUntil) {
+        const untilDate = new Date(event.offer.validUntil);
+        untilDate.setHours(23, 59, 59, 999);
+        if (untilDate < now) valid = false;
+      }
       
       if (valid) {
         return event.offer.discountValue || 0;
@@ -769,6 +774,42 @@ const UserEventDetails = () => {
                 )}
 
 
+
+                {/* Active Promotion Banner */}
+                {event?.offer?.enabled && (() => {
+                  const now = new Date();
+                  let valid = true;
+                  if (event.offer.validFrom) {
+                    const fromDate = new Date(event.offer.validFrom);
+                    fromDate.setHours(0, 0, 0, 0);
+                    if (fromDate > now) valid = false;
+                  }
+                  if (event.offer.validUntil) {
+                    const untilDate = new Date(event.offer.validUntil);
+                    untilDate.setHours(23, 59, 59, 999);
+                    if (untilDate < now) valid = false;
+                  }
+                  
+                  if (valid) {
+                    return (
+                      <div className="mb-6 p-4 rounded-2xl bg-purple-950/20 border border-purple-500/20 flex gap-3 items-start text-xs text-purple-300">
+                        <Sparkles className="w-4 h-4 shrink-0 text-purple-400 mt-0.5" />
+                        <div>
+                          <p className="font-bold text-white text-xs">Special Offer Active!</p>
+                          <p className="mt-1 text-zinc-300 leading-relaxed font-medium">
+                            Get a <span className="text-purple-300 font-bold">{event.offer.discountValue}% discount</span> when you book <span className="text-purple-300 font-bold">{event.offer.minTicketsRequired || 1} or more</span> tickets!
+                          </p>
+                          {event.offer.validUntil && (
+                            <p className="mt-2 text-[10px] text-zinc-500 font-semibold">
+                              Offer valid until: {new Date(event.offer.validUntil).toLocaleDateString()}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
 
                 {/* Quantity Control Stepper */}
                 <div className="mb-6 bg-[#120f26]/60 border border-purple-900/10 rounded-2xl p-4">
