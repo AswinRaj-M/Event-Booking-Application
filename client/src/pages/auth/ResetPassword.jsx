@@ -55,7 +55,7 @@ export default function ResetPassword() {
     setDone(true);
     toast.success("Password reset Successfully")
     } catch (error) {
-      console.log("Error from reset password : ",error)
+      console.error("Error from reset password : ",error)
       toast.error(error.response?.data?.message || "Something went Wrong Try again latter")
     }
     

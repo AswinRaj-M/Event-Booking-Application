@@ -17,7 +17,7 @@ export const getTransporter = () => {
       if (err) {
         console.error("[MAIL] Verification failed:", err.message);
       } else {
-        console.log("[MAIL] Transporter ready");
+        console.log("MAIL : Transporter ready");
       }
     });
   }

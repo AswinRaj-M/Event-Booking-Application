@@ -11,8 +11,6 @@ import {
 } from "../../services/vendor/event.service.js";
 
 export const createEvent = async(req,res) =>{
-  console.log("req.body : " ,req.body)
-  console.log("status :",req.body.eventStatus)
   const vendorId = req.user._id
 
   if(!vendorId){

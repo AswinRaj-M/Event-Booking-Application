@@ -55,6 +55,17 @@ export const bookingSchema = new mongoose.Schema({
     default : "pending"
   },
 
+  couponCode :{
+    type : String,
+    upperCase : true,
+    trim : true
+  },
+
+  couponDiscount : {
+    type : Number,
+    default :0 
+  },
+
   checkedInAt : Date,
 
 

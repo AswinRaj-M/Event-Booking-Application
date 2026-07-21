@@ -179,7 +179,7 @@ const VerifyOtp = () => {
       }
       toast.success("Resend otp Successfully");
     } catch (error) {
-      console.log("Error from handleResend : ", error);
+      console.error("Error from handleResend : ", error);
       toast.error(error.response?.data?.message || "Something went Wrong");
     }
   };

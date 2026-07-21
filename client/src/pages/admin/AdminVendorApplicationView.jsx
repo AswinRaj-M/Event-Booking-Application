@@ -51,7 +51,7 @@ const AdminVendorApplicationView = () => {
       setMessage("");
       dispatch(getVendorByIdThunk(id));
     } catch (error) {
-      console.log("error:", error);
+      console.error("error:", error);
     }
   };
 
@@ -108,7 +108,7 @@ const AdminVendorApplicationView = () => {
       setMessage("");
       dispatch(getVendorByIdThunk(id))
     } catch (error) {
-      console.log("Error from sendMail Frontend : ",error)
+      console.error("Error from sendMail Frontend : ",error)
       toast.error("Something Went Wrong")
     }
   }

@@ -20,7 +20,6 @@ export const adminLoginThunk = createAsyncThunk(
 export const getAllVendorsThunk = createAsyncThunk(
   "admin/vendorManagement",
   async({status,page,limit,search,category},thunkAPI) =>{
-    console.log("thunk is working")
     try {
       const response = await adminAPI.getAllVendors({status, page, limit, search, category})
       return response.data

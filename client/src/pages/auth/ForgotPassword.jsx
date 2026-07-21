@@ -21,7 +21,7 @@ export default function ForgotPassword() {
     toast.success("Reset Link Send Successfully")
     setSent(true);
     } catch (error) {
-      console.log("Error From forgot password: ",error)
+      console.error("Error From forgot password: ",error)
       toast.error(error.response?.data?.message || "Something Went Wrong Try Again Latter")
     }
 

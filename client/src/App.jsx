@@ -12,7 +12,7 @@ function App() {
       toast.error(suspendedMessage);
       localStorage.removeItem("userSuspendedToast");
     }
-    console.log('hi');
+
     
   }, []);
 

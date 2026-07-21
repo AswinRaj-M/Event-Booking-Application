@@ -271,7 +271,7 @@ export const forgotPassword = async(req,res) =>{
   try {
     await sendMail(email,resetUrl,"Reset link")
   } catch (error) {
-    console.log("Error from send Reset link to email :",error)
+    console.error("Error from send Reset link to email :",error)
     throw new AppError("Something went Wrong",HTTP_STATUS.INTERNAL_SERVER_ERROR)
   }
   console.log("reset Url : ",resetUrl)
