@@ -1,6 +1,7 @@
 import { AppError } from "../../utils/AppError.js";
 import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
 import Event from "../../models/event.model.js";
+import Booking from "../../models/booking.model.js";
 import mongoose from "mongoose";
 import { validateAndApplyCoupon } from "./coupon.service.js";
 import CouponRedemption from "../../models/couponRedemption.model.js";
@@ -133,4 +134,40 @@ export const getBookingDetailsService = async(userId,userRole,bookingId) =>{
 
 export const getBookingHistoryService = async(userId) => {
   return await findUserBookingsRepo(userId);
-}
+};
+
+export const confirmBookingAfterPaymentService = async (bookingId) => {
+  const booking = await Booking.findById(bookingId);
+  if (!booking) return null;
+
+  // 54 & 56: Update booking status and payment status to confirmed & paid
+  booking.paymentStatus = "paid";
+  booking.bookingStatus = "confirmed";
+
+  // Generate QR Code identifier if missing
+  if (!booking.qrCode) {
+    booking.qrCode = `FESTIVO-TICKET-${booking.bookingId || booking._id}`;
+  }
+
+  await booking.save();
+
+  // Increment event sold count and tier capacity
+  try {
+    const event = await Event.findById(booking.eventId);
+    if (event) {
+      event.soldTickets = (event.soldTickets || 0) + booking.quantity;
+
+      if (event.ticketTiers && event.ticketTiers.length > 0 && booking.tierId) {
+        const tier = event.ticketTiers.find(t => t._id.toString() === booking.tierId.toString());
+        if (tier) {
+          tier.sold = (tier.sold || 0) + booking.quantity;
+        }
+      }
+      await event.save();
+    }
+  } catch (err) {
+    console.error("Error updating event sold count on booking confirmation:", err);
+  }
+
+  return booking;
+};

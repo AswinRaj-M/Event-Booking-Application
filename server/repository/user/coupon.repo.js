@@ -3,7 +3,10 @@ import CouponRedemption from "../../models/couponRedemption.model.js";
 
 export const findCouponByCodeRepo = async (couponCode) => {
   if (!couponCode) return null;
-  return await Coupon.findOne({ code: couponCode.toUpperCase().trim() });
+  return await Coupon.findOne({
+    code: couponCode.toUpperCase().trim(),
+    isDeleted: { $ne: true }
+  });
 };
 
 export const countUserCouponRedemptionsRepo = async (couponId, userId) => {
@@ -17,6 +20,8 @@ export const findActivePublicCouponsRepo = async () => {
   const now = new Date();
   return await Coupon.find({
     isActive: true,
+    isPublic: true,
+    isDeleted: { $ne: true },
     startDate: { $lte: now },
     endDate: { $gte: now }
   }).sort({ createdAt: -1 });

@@ -18,7 +18,10 @@ export const findBookingByIdRepo = async(bookingId) =>{
 
 
 export const findUserBookingsRepo = async(userId) => {
-  return await Booking.find({userId})
+  return await Booking.find({
+    userId,
+    paymentStatus: { $in: ["paid", "refunded"] }
+  })
     .populate({
       path : "eventId",
       select : "title schedule venue city thumbnail eventType category",

@@ -16,11 +16,17 @@ export const createCoupon = async (req, res) => {
 };
 
 export const getAllCoupons = async (req, res) => {
-  const coupons = await getAllCouponsService();
+  const result = await getAllCouponsService(req.query);
   return res.status(HTTP_STATUS.OK).json({
     success: true,
     message: "Coupons fetched successfully!",
-    coupons
+    coupons: result.coupons,
+    pagination: {
+      totalCoupons: result.totalCoupons,
+      totalPages: result.totalPages,
+      currentPage: result.currentPage,
+      limit: result.limit
+    }
   });
 };
 

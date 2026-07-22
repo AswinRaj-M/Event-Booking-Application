@@ -9,6 +9,7 @@ import userRoutes from './routes/user.routes.js'
 import adminRoutes from "./routes/admin.routes.js"
 import vendorRoutes from "./routes/vendor.routes.js"
 import commonRoutes from "./routes/common.routes.js"
+import paymentRoutes from "./routes/payment.routes.js"
 import { globalErrorHandler } from "./middleware/error.middleware.js"
 
 connectDB()
@@ -30,6 +31,7 @@ app.use("/api/users", userRoutes)
 app.use("/api/admin", adminRoutes)
 app.use("/api/vendor", vendorRoutes)
 app.use('/api/common', commonRoutes)
+app.use("/api/payments", paymentRoutes)
 
 
 app.use(globalErrorHandler);

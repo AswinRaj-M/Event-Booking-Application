@@ -9,6 +9,7 @@ import {
   Filter,
   ChevronDown,
   ChevronRight,
+  ChevronLeft,
   Calendar,
   RotateCcw,
   Edit3,
@@ -35,6 +36,12 @@ function AdminCouponManagement() {
   const [scopeFilter, setScopeFilter] = useState("All Types");
   const [eventFilter, setEventFilter] = useState("All Events");
   
+  // Pagination states
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(5);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCoupons, setTotalCoupons] = useState(0);
+
   // Modal states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -128,19 +135,35 @@ function AdminCouponManagement() {
     };
   };
 
-  const fetchCoupons = async () => {
+  const fetchCoupons = async (currentPage = page, searchVal = searchQuery, statusVal = statusFilter, scopeVal = scopeFilter) => {
     try {
       setLoading(true);
-      const res = await getAllCouponsApi();
+      const params = {
+        page: currentPage,
+        limit: limit,
+        search: searchVal || undefined,
+        statusFilter: statusVal !== "All Status" ? statusVal : undefined,
+        scopeFilter: scopeVal !== "All Types" ? scopeVal : undefined
+      };
+
+      const res = await getAllCouponsApi(params);
       if (res.data && res.data.success && Array.isArray(res.data.coupons)) {
         const mapped = res.data.coupons.map(mapServerCouponToUi);
         const unique = deduplicateCoupons(mapped);
         setCoupons(unique);
+
+        if (res.data.pagination) {
+          setTotalPages(res.data.pagination.totalPages || 1);
+          setTotalCoupons(res.data.pagination.totalCoupons || 0);
+        }
+
         if (unique.length > 0) {
           setExpandedRowId(unique[0].id);
         }
       } else {
         setCoupons([]);
+        setTotalPages(1);
+        setTotalCoupons(0);
       }
     } catch (error) {
       console.error("Failed to fetch coupons from server:", error);
@@ -151,8 +174,8 @@ function AdminCouponManagement() {
   };
 
   useEffect(() => {
-    fetchCoupons();
-  }, []);
+    fetchCoupons(page, searchQuery, statusFilter, scopeFilter);
+  }, [page, searchQuery, statusFilter, scopeFilter]);
 
   const toggleRow = (id) => {
     setExpandedRowId(expandedRowId === id ? null : id);
@@ -163,6 +186,7 @@ function AdminCouponManagement() {
     setStatusFilter("All Status");
     setScopeFilter("All Types");
     setEventFilter("All Events");
+    setPage(1);
     toast.info("Filters reset to default");
   };
 
@@ -300,27 +324,13 @@ function AdminCouponManagement() {
     toast.success(`Coupon "${formData.code}" updated successfully!`);
   };
 
-  // Filtered coupons without duplicates
-  const filteredCoupons = deduplicateCoupons(
-    coupons.filter(coupon => {
-      const matchesSearch = coupon.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            coupon.description.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      const matchesStatus = statusFilter === "All Status" || coupon.status.toLowerCase() === statusFilter.toLowerCase();
-      
-      const matchesScope = scopeFilter === "All Types" || 
-                           (scopeFilter === "All Events" && coupon.scope === "All Events") ||
-                           (scopeFilter === "Event Specific" && coupon.scope === "Event Specific") ||
-                           (scopeFilter === "Vendor Specific" && coupon.scope === "Vendor Specific");
-
-      return matchesSearch && matchesStatus && matchesScope;
-    })
-  );
+  // Paginated coupons from backend
+  const filteredCoupons = deduplicateCoupons(coupons);
 
   // Metrics calculation
-  const totalCouponsCount = filteredCoupons.length;
-  const activeCouponsCount = filteredCoupons.filter(c => c.status === "Active").length;
-  const expiredCouponsCount = filteredCoupons.filter(c => c.status === "Expired").length;
+  const totalCouponsCount = totalCoupons;
+  const activeCouponsCount = coupons.filter(c => c.status === "Active").length;
+  const expiredCouponsCount = coupons.filter(c => c.status === "Expired").length;
 
   return (
     <div className="flex h-screen bg-[#0B0914] text-white font-sans overflow-hidden">
@@ -755,6 +765,51 @@ function AdminCouponManagement() {
               </div>
             )}
           </div>
+
+          {/* Pagination Controls */}
+          {!loading && totalCoupons > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 pb-2 px-2 text-xs text-gray-400">
+              <div>
+                Showing <span className="font-semibold text-white">{Math.min((page - 1) * limit + 1, totalCoupons)}</span> to{" "}
+                <span className="font-semibold text-white">{Math.min(page * limit, totalCoupons)}</span> of{" "}
+                <span className="font-semibold text-white">{totalCoupons}</span> coupons
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPage(prev => Math.max(1, prev - 1))}
+                  disabled={page === 1}
+                  className="px-3 py-1.5 rounded-lg bg-gray-900 border border-gray-800 text-gray-300 hover:text-white hover:border-purple-500/50 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1 cursor-pointer"
+                >
+                  <ChevronLeft className="w-4 h-4" /> Previous
+                </button>
+
+                <div className="flex items-center gap-1 px-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((pNum) => (
+                    <button
+                      key={pNum}
+                      onClick={() => setPage(pNum)}
+                      className={`w-8 h-8 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                        pNum === page
+                          ? "bg-purple-600 text-white shadow-lg shadow-purple-600/30"
+                          : "bg-gray-900 border border-gray-800 text-gray-400 hover:text-white"
+                      }`}
+                    >
+                      {pNum}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={page === totalPages}
+                  className="px-3 py-1.5 rounded-lg bg-gray-900 border border-gray-800 text-gray-300 hover:text-white hover:border-purple-500/50 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1 cursor-pointer"
+                >
+                  Next <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
 
         </div>
       </main>

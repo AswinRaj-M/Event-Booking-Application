@@ -8,6 +8,16 @@ const couponSchema = new mongoose.Schema({
     upperCase : true,
     trim : true
   },
+  displayName : {
+    type : String,
+    trim : true,
+    default : ""
+  },
+  description : {
+    type : String,
+    trim : true,
+    default : ""
+  },
   discountType : {
     type : String,
     enum : ["percentage","fixed"],
@@ -54,6 +64,14 @@ const couponSchema = new mongoose.Schema({
     ref : "Event"
   },
   isActive  : {
+    type : Boolean,
+    default : false
+  },
+  isPublic : {
+    type : Boolean,
+    default : true
+  },
+  isDeleted : {
     type : Boolean,
     default : false
   }

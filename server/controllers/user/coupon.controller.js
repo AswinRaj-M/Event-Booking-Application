@@ -1,4 +1,4 @@
-import { validateAndApplyCoupon } from "../../services/user/coupon.service.js";
+import { validateAndApplyCoupon, getActivePublicCouponsService } from "../../services/user/coupon.service.js";
 import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
 
 export const validateCoupon = async (req, res) => {
@@ -26,5 +26,13 @@ export const validateCoupon = async (req, res) => {
     couponCode: coupon.code,
     discountType: coupon.discountType,
     discountValue: coupon.discountValue
+  });
+};
+
+export const getPublicCoupons = async (req, res) => {
+  const coupons = await getActivePublicCouponsService();
+  return res.status(HTTP_STATUS.OK).json({
+    success: true,
+    coupons
   });
 };

@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import Event from "../../models/event.model.js";
 import Category from "../../models/category.model.js";
+import User from "../../models/user.model.js";
 import { updateCompletedEvents } from "../../utils/eventStatusUpdater.js";
 
 export const getExploreEventsRepo = async (filters = {}) => {
@@ -56,6 +57,7 @@ export const getExploreEventsRepo = async (filters = {}) => {
   }
 
   const totalEvents = await Event.countDocuments(query);
+  const totalUsers = await User.countDocuments({ role: "user", isBlocked: { $ne: true } });
   const events = await Event.find(query)
     .populate("category")
     .populate("vendorId")
@@ -66,6 +68,7 @@ export const getExploreEventsRepo = async (filters = {}) => {
   return {
     events,
     totalEvents,
+    totalUsers,
     totalPages: Math.ceil(totalEvents / limit),
     currentPage: page
   };

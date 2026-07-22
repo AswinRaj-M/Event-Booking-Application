@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
-import { Search, MapPin, Calendar, Clock, ArrowRight, Ticket, Star, Users } from 'lucide-react';
+import { Search, MapPin, Calendar, Clock, ArrowRight, Ticket, Star, Users, Tag, Copy, Check } from 'lucide-react';
 import { VENDOR_ROUTES, USER_ROUTES } from '../../constants/Routes';
-import { getExploreEvents } from '../../services/user.api.js';
+import { getExploreEvents, getPublicCouponsApi } from '../../services/user.api.js';
 import { getAllCategories } from '../../services/common.api.js';
+import { toast } from 'sonner';
 
 const formatEventDate = (dateString, startTime) => {
   if (!dateString) return "Date TBA";
@@ -22,6 +23,9 @@ const formatEventDate = (dateString, startTime) => {
 const Home = () => {
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [publicCoupons, setPublicCoupons] = useState([]);
+  const [copiedCode, setCopiedCode] = useState("");
+  const [stats, setStats] = useState({ totalEvents: 0, totalUsers: 0, rating: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -29,13 +33,19 @@ const Home = () => {
     const fetchHomeData = async () => {
       try {
         setLoading(true);
-        const [eventsRes, catsRes] = await Promise.all([
+        const [eventsRes, catsRes, couponsRes] = await Promise.all([
           getExploreEvents({ limit: 4 }),
-          getAllCategories()
+          getAllCategories(),
+          getPublicCouponsApi().catch(() => ({ data: { success: false } }))
         ]);
 
         if (eventsRes.data && eventsRes.data.success) {
           setUpcomingEvents(eventsRes.data.events || []);
+          setStats({
+            totalEvents: eventsRes.data.totalEvents || 0,
+            totalUsers: eventsRes.data.totalUsers || 0,
+            rating: 0
+          });
         }
 
         if (catsRes.data && catsRes.data.success) {
@@ -50,6 +60,10 @@ const Home = () => {
             }
           }
           setCategories(uniqueCats);
+        }
+
+        if (couponsRes.data && couponsRes.data.success) {
+          setPublicCoupons(couponsRes.data.coupons || []);
         }
       } catch (err) {
         console.error("Error fetching home data:", err);
@@ -86,7 +100,7 @@ const Home = () => {
           </p>
 
 
-          <div className="flex flex-col sm:flex-row items-center gap-4 mb-24">
+          <div className="flex flex-col sm:flex-row items-center gap-4 mb-12">
             <Link to="#" className="px-8 py-3.5 bg-white text-black font-bold rounded-full hover:bg-gray-100 transition-colors shadow-[0_0_20px_rgba(255,255,255,0.2)]">
               Explore Events
             </Link>
@@ -95,23 +109,72 @@ const Home = () => {
             </Link>
           </div>
 
+          {/* Active Public Promotional Coupon Banner */}
+          {publicCoupons.length > 0 && (
+            <div className="w-full max-w-4xl mx-auto mb-16">
+              <div className="bg-gradient-to-r from-purple-950/80 via-indigo-950/80 to-purple-950/80 border border-purple-500/40 rounded-2xl p-4 md:p-6 shadow-[0_0_30px_rgba(168,85,247,0.2)] flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-4 text-left">
+                  <div className="w-12 h-12 rounded-xl bg-purple-600/30 border border-purple-400/40 flex items-center justify-center text-purple-300 shrink-0">
+                    <Tag className="w-6 h-6 animate-pulse" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 text-[10px] font-bold uppercase tracking-wider border border-purple-500/30">
+                        Promotional Offer
+                      </span>
+                      {publicCoupons[0].endDate && (
+                        <span className="text-[11px] text-gray-400">
+                          Expires {new Date(publicCoupons[0].endDate).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="text-base md:text-lg font-bold text-white mt-1">
+                      {publicCoupons[0].displayName ? publicCoupons[0].displayName : `Save ${publicCoupons[0].discountType === "percentage" ? `${publicCoupons[0].discountValue}% OFF` : `₹${publicCoupons[0].discountValue} OFF`}`} <span className="text-purple-400 font-mono">({publicCoupons[0].code})</span>
+                    </h3>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {publicCoupons[0].description || "Apply code during event checkout to claim discount."}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 shrink-0">
+                  <div className="bg-[#0B0914] border border-purple-500/40 rounded-xl px-4 py-2.5 flex items-center gap-3 font-mono font-bold text-sm text-purple-300 shadow-inner">
+                    <span>{publicCoupons[0].code}</span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(publicCoupons[0].code);
+                        setCopiedCode(publicCoupons[0].code);
+                        toast.success(`Copied coupon code ${publicCoupons[0].code}!`);
+                        setTimeout(() => setCopiedCode(""), 3000);
+                      }}
+                      className="p-1 text-gray-400 hover:text-white transition-colors cursor-pointer"
+                      title="Copy Coupon Code"
+                    >
+                      {copiedCode === publicCoupons[0].code ? (
+                        <Check className="w-4 h-4 text-green-400" />
+                      ) : (
+                        <Copy className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Stats Section */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-24 w-full max-w-4xl mx-auto border-t border-white/10 pt-12">
+          <div className="grid grid-cols-3 gap-6 md:gap-16 w-full max-w-3xl mx-auto border-t border-white/10 pt-12">
             <div className="flex flex-col items-center">
-              <span className="text-4xl md:text-5xl font-black text-white mb-2 drop-shadow-md">0</span>
-              <span className="text-xs md:text-sm text-gray-500 font-semibold uppercase tracking-widest">Active Events</span>
+              <span className="text-4xl md:text-5xl font-black text-white mb-2 drop-shadow-md">{stats.totalEvents}</span>
+              <span className="text-xs md:text-sm text-gray-500 font-semibold uppercase tracking-widest text-center">Active Events</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <span className="text-4xl md:text-5xl font-black text-white mb-2 drop-shadow-md">{stats.totalUsers}</span>
+              <span className="text-xs md:text-sm text-gray-500 font-semibold uppercase tracking-widest text-center">Users</span>
             </div>
             <div className="flex flex-col items-center">
               <span className="text-4xl md:text-5xl font-black text-white mb-2 drop-shadow-md">0</span>
-              <span className="text-xs md:text-sm text-gray-500 font-semibold uppercase tracking-widest">Users</span>
-            </div>
-            <div className="flex flex-col items-center">
-              <span className="text-4xl md:text-5xl font-black text-white mb-2 drop-shadow-md">0</span>
-              <span className="text-xs md:text-sm text-gray-500 font-semibold uppercase tracking-widest">Cities</span>
-            </div>
-            <div className="flex flex-col items-center">
-              <span className="text-4xl md:text-5xl font-black text-white mb-2 drop-shadow-md">0</span>
-              <span className="text-xs md:text-sm text-gray-500 font-semibold uppercase tracking-widest">Rating</span>
+              <span className="text-xs md:text-sm text-gray-500 font-semibold uppercase tracking-widest text-center">Rating</span>
             </div>
           </div>
         </section>

@@ -247,32 +247,25 @@ const UserEventDetails = () => {
   const discountAmount = (subtotal * discountPercent) / 100;
   const totalAmount = isFree ? 0 : subtotal - discountAmount + serviceFee;
 
-  const handleBookTickets = async () => {
-    try {
-      setIsBooking(true);
-      const tierId = !isFree && event?.ticketTiers?.[selectedTierIndex]?._id 
-        ? event.ticketTiers[selectedTierIndex]._id 
-        : undefined;
+  const handleBookTickets = () => {
+    if (!event) return;
+    const tier = !isFree && event?.ticketTiers?.[selectedTierIndex] 
+      ? event.ticketTiers[selectedTierIndex] 
+      : null;
 
-      const bookingData = {
-        eventId: event?._id,
-        tierId,
-        quantity,
-      };
+    const checkoutState = {
+      event,
+      selectedTier: tier,
+      tierId: tier?._id,
+      quantity,
+      ticketPrice: isFree ? 0 : ticketPrice,
+      subtotal,
+      serviceFee,
+      discountAmount,
+      totalAmount
+    };
 
-      const res = await createBooking(bookingData);
-      if (res.data?.success) {
-        toast.success(res.data.message || "Booking initiated successfully!");
-        navigate(USER_ROUTES.BOOKINGS);
-      } else {
-        toast.error(res.data?.message || "Failed to book tickets. Please try again.");
-      }
-    } catch (err) {
-      console.error("Booking Error:", err);
-      toast.error(err.response?.data?.message || "Something went wrong during the booking process.");
-    } finally {
-      setIsBooking(false);
-    }
+    navigate(USER_ROUTES.CHECKOUT, { state: checkoutState });
   };
 
   const handleShare = (platform) => {

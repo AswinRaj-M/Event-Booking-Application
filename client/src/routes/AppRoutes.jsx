@@ -15,6 +15,8 @@ import UserExploreEvent from '../pages/user/UserExploreEvent.jsx';
 import UserEventDetails from '../pages/user/UserEventDetails.jsx';
 import MyBookings from '../pages/user/MyBookings.jsx';
 import TicketViewPage from '../pages/user/TicketViewPage.jsx';
+import PaymentCheckout from '../pages/user/PaymentCheckout.jsx';
+import PaymentStatusPage from '../pages/user/PaymentStatusPage.jsx';
 import { COMMON_ROUTES, USER_ROUTES } from '../constants/Routes';
 
 const AppRoutes = () => {
@@ -49,6 +51,16 @@ const AppRoutes = () => {
             <Route path={USER_ROUTES.BOOKINGS} element={
                 <ProtectedRoute role="user">
                     <MyBookings />
+                </ProtectedRoute>
+            } />
+            <Route path={USER_ROUTES.CHECKOUT} element={
+                <ProtectedRoute role="user">
+                    <PaymentCheckout />
+                </ProtectedRoute>
+            } />
+            <Route path={USER_ROUTES.PAYMENT_STATUS} element={
+                <ProtectedRoute role="user">
+                    <PaymentStatusPage />
                 </ProtectedRoute>
             } />
             <Route path={USER_ROUTES.TICKET_VIEW} element={

@@ -1,24 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminSidebar from "../../components/admin/AdminSidebar";
 import { ADMIN_ROUTES } from '../../constants/Routes';
 import {
   Sidebar,
   ChevronRight,
-  Sparkles,
   Percent,
-  DollarSign,
   Calendar,
-  Eye,
-  Tag,
   AlertTriangle,
   Users,
-  ShoppingBag,
-  ArrowLeft,
-  Check
+  ShoppingBag
 } from "lucide-react";
 import { toast } from "sonner";
 import { createCouponApi } from "../../services/admin.api";
+import { getAllCategories } from "../../services/common.api";
 
 function AdminCreateCoupon() {
   const navigate = useNavigate();
@@ -26,29 +21,46 @@ function AdminCreateCoupon() {
 
   // Form State
   const [isActive, setIsActive] = useState(true);
-  const [couponCode, setCouponCode] = useState("SUMMER2025");
-  const [displayName, setDisplayName] = useState("Summer Music Festival Special");
-  const [description, setDescription] = useState("Get 20% off on all weekend passes for the Summer Festival.");
+  const [couponCode, setCouponCode] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [description, setDescription] = useState("");
   
   const [discountType, setDiscountType] = useState("percentage"); // "percentage" | "fixed"
-  const [discountValue, setDiscountValue] = useState("20");
-  const [maxDiscountAmount, setMaxDiscountAmount] = useState("50");
-  const [minOrderValue, setMinOrderValue] = useState("100");
+  const [discountValue, setDiscountValue] = useState("");
+  const [maxDiscountAmount, setMaxDiscountAmount] = useState("");
+  const [minOrderValue, setMinOrderValue] = useState("");
 
+  // Scope & Category Dynamic Data
   const [scope, setScope] = useState("All Events");
-  const [category, setCategory] = useState("");
+  const [minPriceThreshold, setMinPriceThreshold] = useState("");
+  const [categoriesList, setCategoriesList] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState("");
   
-  const [totalUses, setTotalUses] = useState("1000");
+  const [totalUses, setTotalUses] = useState("");
   const [usesPerUser, setUsesPerUser] = useState("1");
   const [newUsersOnly, setNewUsersOnly] = useState(false);
 
-  const [startDate, setStartDate] = useState("2024-06-01");
-  const [endDate, setEndDate] = useState("2025-12-31");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [autoExpire, setAutoExpire] = useState(true);
 
   const [visibility, setVisibility] = useState("public"); // "public" | "private"
-  const [showBanner, setShowBanner] = useState(true);
-  const [bannerText, setBannerText] = useState("Summer Music Festival Special 20% Off Code:SUMMER1231");
+
+  // Fetch categories from database for dropdown options
+  useEffect(() => {
+    const loadScopeOptions = async () => {
+      try {
+        const catRes = await getAllCategories();
+        if (catRes.data && catRes.data.success && Array.isArray(catRes.data.data)) {
+          setCategoriesList(catRes.data.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch categories list:", err);
+      }
+    };
+
+    loadScopeOptions();
+  }, []);
 
   // Random Code Generator
   const generateRandomCode = () => {
@@ -76,17 +88,28 @@ function AdminCreateCoupon() {
       return;
     }
 
+    if (scope === "Price Range" && (!minPriceThreshold || Number(minPriceThreshold) <= 0)) {
+      toast.error("Please enter a valid minimum event price threshold");
+      return;
+    }
+
+    const effectiveMinPurchase = scope === "Price Range"
+      ? (Number(minPriceThreshold) || 0)
+      : (Number(minOrderValue) || 0);
+
     const payload = {
       code: couponCode.trim().toUpperCase(),
       discountType: discountType,
       discountValue: Number(discountValue),
-      minPurchaseAmount: Number(minOrderValue) || 0,
+      minPurchaseAmount: effectiveMinPurchase,
       startDate: startDate || new Date(),
       endDate: endDate,
       usagelimit: Number(totalUses) || 100,
       perUserLimit: Number(usesPerUser) || 1,
       isActive: isActive,
-      description: description || displayName
+      isPublic: visibility === "public",
+      displayName: displayName.trim(),
+      description: description.trim()
     };
 
     if (maxDiscountAmount && Number(maxDiscountAmount) > 0) {
@@ -391,6 +414,7 @@ function AdminCreateCoupon() {
                     <h3 className="text-sm font-bold text-white">Scope</h3>
                   </div>
 
+                  {/* Scope Selection */}
                   <div>
                     <label className="block text-[11px] font-semibold text-gray-400 mb-1.5">Apply Coupon To</label>
                     <select
@@ -399,22 +423,49 @@ function AdminCreateCoupon() {
                       className="w-full bg-[#0B0914] border border-gray-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-purple-500 cursor-pointer"
                     >
                       <option value="All Events">All Events (Platform-wide)</option>
-                      <option value="Event Specific">Event Specific</option>
-                      <option value="Vendor Specific">Vendor Specific</option>
+                      <option value="Price Range">Events Above Minimum Price (Price Range)</option>
                     </select>
                   </div>
 
+                  {/* Conditional Price Range Input */}
+                  {scope === "Price Range" && (
+                    <div className="animate-in fade-in duration-200">
+                      <label className="block text-[11px] font-semibold text-gray-400 mb-1.5">
+                        Minimum Event Price (₹) <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs font-bold">₹</span>
+                        <input
+                          type="number"
+                          value={minPriceThreshold}
+                          onChange={(e) => {
+                            setMinPriceThreshold(e.target.value);
+                            setMinOrderValue(e.target.value);
+                          }}
+                          className="w-full bg-[#0B0914] border border-purple-800/60 rounded-xl pl-7 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-purple-500 font-bold"
+                          placeholder="500"
+                        />
+                      </div>
+                      <p className="text-[10px] text-purple-400 mt-1">
+                        Coupon applies only to events with price ≥ ₹{minPriceThreshold || 0}.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Dynamic Category Selector */}
                   <div>
                     <label className="block text-[11px] font-semibold text-gray-400 mb-1.5">Filter Category (Optional)</label>
                     <select
-                      value={category}
-                      onChange={(e) => setCategory(e.target.value)}
-                      className="w-full bg-[#0B0914] border border-gray-800 rounded-xl px-3 py-2.5 text-xs text-gray-400 focus:outline-none focus:border-purple-500 cursor-pointer"
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      className="w-full bg-[#0B0914] border border-gray-800 rounded-xl px-3 py-2.5 text-xs text-gray-300 focus:outline-none focus:border-purple-500 cursor-pointer"
                     >
                       <option value="">Select category</option>
-                      <option value="Music">Music Festivals</option>
-                      <option value="Tech">Tech Conferences</option>
-                      <option value="Workshops">Workshops</option>
+                      {categoriesList.map((cat) => (
+                        <option key={cat._id} value={cat.name || cat._id}>
+                          {cat.name}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </div>
@@ -582,50 +633,6 @@ function AdminCreateCoupon() {
                     </div>
                   </div>
                 </div>
-
-                {/* Show Banner Toggle */}
-                <div className="flex items-center justify-between pt-2">
-                  <div>
-                    <p className="text-xs font-bold text-white">Show Promotional Banner</p>
-                    <p className="text-[10px] text-gray-500">Display a sticky banner on applicable event pages</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowBanner(!showBanner)}
-                    className={`w-10 h-5 rounded-full p-0.5 transition-colors cursor-pointer ${
-                      showBanner ? "bg-purple-600" : "bg-gray-800"
-                    }`}
-                  >
-                    <div
-                      className={`w-4 h-4 rounded-full bg-white transition-transform ${
-                        showBanner ? "translate-x-5" : "translate-x-0"
-                      }`}
-                    ></div>
-                  </button>
-                </div>
-
-                {/* Banner Text Preview Field */}
-                {showBanner && (
-                  <div className="pt-2">
-                    <label className="block text-[11px] font-semibold text-gray-400 mb-1.5">
-                      Banner Text Preview
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={bannerText}
-                        onChange={(e) => setBannerText(e.target.value)}
-                        className="w-full bg-[#0B0914] border border-gray-800 rounded-xl pl-3 pr-20 py-2.5 text-xs text-white focus:outline-none focus:border-purple-500"
-                      />
-                      <button
-                        type="button"
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-300 font-semibold px-2 py-1 rounded bg-gray-800 border border-gray-700"
-                      >
-                        Preview
-                      </button>
-                    </div>
-                  </div>
-                )}
               </div>
 
             </div>
@@ -643,10 +650,10 @@ function AdminCreateCoupon() {
                   <div className="w-4 h-4 rounded-full bg-[#151221] absolute -right-2 top-1/2 -translate-y-1/2"></div>
 
                   <h2 className="text-xl font-black text-white font-mono tracking-wider drop-shadow-md">
-                    {couponCode || "SUMMER2025"}
+                    {couponCode || "YOUR CODE"}
                   </h2>
                   <p className="text-xs text-purple-200 mt-1 font-medium">
-                    {displayName || "Summer Music Festival Special"}
+                    {displayName || "Promotion Title"}
                   </p>
                 </div>
 
@@ -654,26 +661,25 @@ function AdminCreateCoupon() {
                 <div className="p-6 text-center space-y-4 bg-[#12101A]">
                   <div>
                     <span className="text-4xl font-extrabold text-white tracking-tight">
-                      {discountValue ? (discountType === "percentage" ? `${discountValue}%` : `₹${discountValue}`) : "20%"}
+                      {discountValue ? (discountType === "percentage" ? `${discountValue}%` : `₹${discountValue}`) : "0%"}
                     </span>
                     <span className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1.5">OFF</span>
                   </div>
 
                   <p className="text-xs text-gray-400 leading-relaxed px-2">
-                    {description || "Valid on all weekend passes for the Summer Festival. Min order $100."}
+                    {description || "Coupon discount description."}
                   </p>
 
-                  <div className="flex items-center justify-center gap-2 pt-1">
-                    <span className="px-2.5 py-1 rounded-md bg-purple-950/80 border border-purple-800/60 text-purple-300 text-[10px] font-semibold">
-                      Music
-                    </span>
-                    <span className="px-2.5 py-1 rounded-md bg-purple-950/80 border border-purple-800/60 text-purple-300 text-[10px] font-semibold">
-                      Festival
-                    </span>
-                  </div>
+                  {selectedCategory && (
+                    <div className="flex items-center justify-center gap-2 pt-1 flex-wrap">
+                      <span className="px-2.5 py-1 rounded-md bg-purple-950/80 border border-purple-800/60 text-purple-300 text-[10px] font-semibold">
+                        {selectedCategory}
+                      </span>
+                    </div>
+                  )}
 
                   <div className="pt-3 border-t border-gray-800/80 text-[11px] text-gray-500 font-medium">
-                    Valid until {endDate ? new Date(endDate).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }) : "Dec 31, 2025"}
+                    Valid until {endDate ? new Date(endDate).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }) : "Expiry Date"}
                   </div>
                 </div>
 
@@ -700,7 +706,7 @@ function AdminCreateCoupon() {
                   </div>
                   <div className="flex justify-between items-center py-1 border-b border-gray-800/50">
                     <span className="text-gray-400">Max Uses</span>
-                    <span className="font-semibold text-white">{totalUses || "1000"}</span>
+                    <span className="font-semibold text-white">{totalUses || "-"}</span>
                   </div>
                 </div>
 
@@ -712,13 +718,6 @@ function AdminCreateCoupon() {
                   </span>
                 </div>
 
-                {/* Preview Checkout Button */}
-                <button
-                  type="button"
-                  className="w-full py-2.5 border border-gray-800 hover:border-gray-700 rounded-xl text-xs font-semibold text-gray-300 hover:text-white bg-[#0B0914] transition-all cursor-pointer"
-                >
-                  Preview Checkout
-                </button>
               </div>
 
               {/* Bottom Quick Analytics Stats */}
@@ -735,7 +734,7 @@ function AdminCreateCoupon() {
                   <div className="flex items-center justify-center mb-1 text-purple-400">
                     <ShoppingBag className="w-4 h-4" />
                   </div>
-                  <div className="text-lg font-black text-white">45</div>
+                  <div className="text-lg font-black text-white">All</div>
                   <div className="text-[10px] text-gray-400 font-medium">Eligible Events</div>
                 </div>
               </div>

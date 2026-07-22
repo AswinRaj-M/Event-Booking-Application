@@ -49,8 +49,8 @@ export const createCouponService = async (data) => {
   });
 };
 
-export const getAllCouponsService = async () => {
-  return await findAllCouponsRepo();
+export const getAllCouponsService = async (queryParams = {}) => {
+  return await findAllCouponsRepo(queryParams);
 };
 
 export const toggleCouponStatusService = async (id) => {

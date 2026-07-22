@@ -84,3 +84,7 @@ export const getBookingHistory = () => {
 export const getBookingDetails = (bookingId) => {
   return axiosInstance.get(`/users/booking/details/${bookingId}`);
 };
+
+export const getPublicCouponsApi = () => {
+  return axiosInstance.get("/users/public-coupons");
+};

@@ -63,6 +63,11 @@ const MyBookings = () => {
 
   // Filter and process bookings based on activeTab and search query
   const filteredBookings = bookings.filter((booking) => {
+    // Exclude failed or un-paid abandoned checkout attempts
+    if (booking.paymentStatus === "failed" || (booking.paymentStatus === "pending" && booking.bookingStatus !== "confirmed")) {
+      return false;
+    }
+
     const title = booking.eventId?.title || "";
     const matchesSearch = title.toLowerCase().includes(searchQuery.toLowerCase());
 

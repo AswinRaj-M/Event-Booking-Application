@@ -1,6 +1,7 @@
 import { 
   findCouponByCodeRepo, 
-  countUserCouponRedemptionsRepo 
+  countUserCouponRedemptionsRepo,
+  findActivePublicCouponsRepo
 } from "../../repository/user/coupon.repo.js";
 import { AppError } from "../../utils/AppError.js";
 import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
@@ -65,4 +66,8 @@ export const validateAndApplyCoupon = async (couponCode, userId, eventId, subtot
     coupon,
     discountAmount: Math.round(discountAmount * 100) / 100
   };
+};
+
+export const getActivePublicCouponsService = async () => {
+  return await findActivePublicCouponsRepo();
 };
