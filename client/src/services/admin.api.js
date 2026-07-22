@@ -70,3 +70,19 @@ export const fetchAllEventsAdmin = () => {
 export const toggleBlockEventApi = (eventId, data) => {
   return axiosInstance.patch(`/admin/events/toggle-block/${eventId}`, data);
 };
+
+export const createCouponApi = (data) => {
+  return axiosInstance.post("/admin/coupons", data);
+};
+
+export const getAllCouponsApi = () => {
+  return axiosInstance.get("/admin/coupons");
+};
+
+export const toggleCouponStatusApi = (id) => {
+  return axiosInstance.patch(`/admin/coupons/toggle-status/${id}`);
+};
+
+export const deleteCouponApi = (id) => {
+  return axiosInstance.delete(`/admin/coupons/${id}`);
+};

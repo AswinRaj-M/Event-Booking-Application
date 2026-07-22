@@ -55,7 +55,7 @@ const couponSchema = new mongoose.Schema({
   },
   isActive  : {
     type : Boolean,
-    defualt : false
+    default : false
   }
 },{timestamps : true})
 

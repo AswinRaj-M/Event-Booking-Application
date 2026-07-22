@@ -6,4 +6,6 @@ export const ADMIN_ROUTES = {
   CATEGORIES: '/admin/categories',
   VENDOR_APPLICATION: '/admin/vendor-application/:id',
   EVENTS: '/admin/events',
+  COUPONS: '/admin/coupons',
+  CREATE_COUPON: '/admin/coupons/create',
 };

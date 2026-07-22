@@ -9,7 +9,7 @@ import {
 export const createBooking = async(req,res) =>{
    const userId = req.user._id
    
-   const {eventId , tierId, quantity} = req.body
+   const {eventId , tierId, quantity, couponCode} = req.body
 
    if(!eventId|| !quantity) {
     return res.status(HTTP_STATUS.BAD_REQUEST).json({
@@ -22,7 +22,8 @@ export const createBooking = async(req,res) =>{
     userId,
     eventId,
     tierId,
-    Number(quantity)
+    Number(quantity),
+    couponCode
    )
 
    return res.status(HTTP_STATUS.CREATED).json({

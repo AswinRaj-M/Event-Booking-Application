@@ -27,6 +27,12 @@ import {
   getAllEventsAdmin,
   toggleBlockEvent,
 } from "../controllers/admin/event.controller.js"
+import {
+  createCoupon,
+  getAllCoupons,
+  toggleCouponStatus,
+  deleteCoupon
+} from "../controllers/admin/couponManage.controller.js"
 import { protect } from '../middleware/auth.middleware.js'
 import { requireRole } from '../middleware/role.middleware.js'
 import { asyncHandler } from '../middleware/error.middleware.js'
@@ -63,5 +69,10 @@ router.delete('/delete-category/:id', protect, requireRole("admin"), asyncHandle
 router.get("/events-management", protect, requireRole("admin"), asyncHandler(getAllEventsAdmin))
 router.patch("/events/toggle-block/:eventId", protect, requireRole("admin"), asyncHandler(toggleBlockEvent))
 
+// Coupon Routes
+router.post('/coupons', protect, requireRole("admin"), asyncHandler(createCoupon))
+router.get('/coupons', protect, requireRole("admin"), asyncHandler(getAllCoupons))
+router.patch('/coupons/toggle-status/:id', protect, requireRole("admin"), asyncHandler(toggleCouponStatus))
+router.delete('/coupons/:id', protect, requireRole("admin"), asyncHandler(deleteCoupon))
 
 export default router

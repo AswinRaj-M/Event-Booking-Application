@@ -28,6 +28,7 @@ import {
   getBookingHistory,
   getBookingDetails,
 } from "../controllers/user/booking.controller.js"
+import { validateCoupon } from "../controllers/user/coupon.controller.js"
 import passport from "passport"
 import upload from "../middleware/upload.js"
 import { protect } from "../middleware/auth.middleware.js"
@@ -82,7 +83,6 @@ router.patch('/profile/picture', protect, requireRole("user"), upload.single('pr
 router.post('/booking/create',protect,asyncHandler(createBooking))
 router.get('/booking/history',protect,asyncHandler(getBookingHistory))
 router.get('/booking/details/:bookingId',protect,asyncHandler(getBookingDetails))
-
-
+router.post('/booking/validate-coupon', protect, requireRole("user"), asyncHandler(validateCoupon))
 
 export default router

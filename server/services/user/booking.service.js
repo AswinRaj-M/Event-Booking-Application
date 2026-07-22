@@ -2,6 +2,8 @@ import { AppError } from "../../utils/AppError.js";
 import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
 import Event from "../../models/event.model.js";
 import mongoose from "mongoose";
+import { validateAndApplyCoupon } from "./coupon.service.js";
+import CouponRedemption from "../../models/couponRedemption.model.js";
 
 import {
   createBookingRepo,
@@ -9,7 +11,7 @@ import {
   findUserBookingsRepo,
 } from "../../repository/user/booking.repo.js";
 
-export const createPendingBookingService = async (userId,eventId,tierId,quantity)=>{
+export const createPendingBookingService = async (userId, eventId, tierId, quantity, couponCode) => {
    const event = await Event.findOne({_id : eventId, isDeleted : false, isBlocked : false})
 
    if(!event){
@@ -61,28 +63,52 @@ export const createPendingBookingService = async (userId,eventId,tierId,quantity
      }
     }
 
+   let couponDiscount = 0;
+   let validatedCoupon = null;
+
+   if (couponCode && couponCode.trim() !== "") {
+     const result = await validateAndApplyCoupon(couponCode, userId, eventId, subtotal);
+     validatedCoupon = result.coupon;
+     couponDiscount = result.discountAmount;
+   }
+
    const serviceFee = event.ticketType === "Free" ? 0 : 14.90
-   const totalAmount = subtotal - discountAmount + serviceFee
+   const totalAmount = Math.max(0, subtotal - discountAmount - couponDiscount + serviceFee);
 
    // to generate unique bookingId
-  const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-  const bookingIdString = `BK-${Date.now().toString().slice(-6)}-${randomSuffix}`;
+   const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+   const bookingIdString = `BK-${Date.now().toString().slice(-6)}-${randomSuffix}`;
 
-    const bookingPayload = {
-    bookingId: bookingIdString,
-    eventId,
-    userId,
-    tierId: tierId || selectedTier?._id || new mongoose.Types.ObjectId(),
-    tierName: selectedTier.name,
-    ticketPrice,
-    quantity,
-    totalAmount,
-    paymentStatus: "pending",
-    bookingStatus: "pending"
-  };
+   const bookingPayload = {
+     bookingId: bookingIdString,
+     eventId,
+     userId,
+     tierId: tierId || selectedTier?._id || new mongoose.Types.ObjectId(),
+     tierName: selectedTier.name,
+     ticketPrice,
+     quantity,
+     totalAmount,
+     couponCode: validatedCoupon ? validatedCoupon.code : undefined,
+     couponDiscount: couponDiscount,
+     paymentStatus: "pending",
+     bookingStatus: "pending"
+   };
 
-  return await createBookingRepo(bookingPayload)
+   const newBooking = await createBookingRepo(bookingPayload);
 
+   if (validatedCoupon) {
+     validatedCoupon.usedCount += 1;
+     await validatedCoupon.save();
+
+     await CouponRedemption.create({
+       couponId: validatedCoupon._id,
+       userId: userId,
+       bookingId: newBooking._id,
+       discountApplied: couponDiscount
+     });
+   }
+
+   return newBooking;
 }
 
 

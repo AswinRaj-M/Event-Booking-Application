@@ -13,6 +13,7 @@ import {
     BarChart3,
     Settings,
     Layers,
+    Tag,
     LogOut
 } from 'lucide-react'
 
@@ -68,6 +69,10 @@ function AdminSidebar() {
                 <div className="px-4 mb-6">
                     <p className="px-4 text-[11px] font-semibold text-gray-500 mb-2 uppercase">Management</p>
                     <nav className="space-y-1">
+                        <Link to={ADMIN_ROUTES.COUPONS} className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive(ADMIN_ROUTES.COUPONS) ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
+                            <Tag className={`mr-3 h-5 w-5 ${isActive(ADMIN_ROUTES.COUPONS) ? 'text-purple-400' : 'text-gray-500'}`} />
+                            Coupons
+                        </Link>
                         <Link to="#" className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive('/admin/bookings') ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
                             <Ticket className={`mr-3 h-5 w-5 ${isActive('/admin/bookings') ? 'text-purple-400' : 'text-gray-500'}`} />
                             Bookings
