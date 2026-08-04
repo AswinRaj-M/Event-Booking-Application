@@ -189,12 +189,12 @@ const PaymentCheckout = () => {
 
       // Step 3: Configure Razorpay Checkout Options
       const options = {
-        key: orderData.key || import.meta.env.VITE_RAZORPAY_KEY_ID,
+        key: orderData.key,
         amount: orderData.amount,
         currency: orderData.currency || "INR",
         name: "Festivo Event Booking",
         description: `Ticket booking for ${event.title}`,
-        image: event.images?.[0]?.fileUrl || "/logo.png",
+        image: event.images?.[0]?.fileUrl || "/logo.jpeg",
         order_id: orderData.order_id,
         handler: async function (response) {
           try {

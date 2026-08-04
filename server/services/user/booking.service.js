@@ -1,10 +1,13 @@
 import { AppError } from "../../utils/AppError.js";
+import { generateQrToken } from "../../utils/generateQrToken.js";
+import { generateTicketNumber } from "../../utils/generateTicketNumber.js";
 import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
 import Event from "../../models/event.model.js";
 import Booking from "../../models/booking.model.js";
 import mongoose from "mongoose";
 import { validateAndApplyCoupon } from "./coupon.service.js";
 import CouponRedemption from "../../models/couponRedemption.model.js";
+import { generateQRCode } from "../../utils/generateQrCode.js";
 
 import {
   createBookingRepo,
@@ -92,7 +95,8 @@ export const createPendingBookingService = async (userId, eventId, tierId, quant
      couponCode: validatedCoupon ? validatedCoupon.code : undefined,
      couponDiscount: couponDiscount,
      paymentStatus: "pending",
-     bookingStatus: "pending"
+     bookingStatus: "pending",
+     tickets : []
    };
 
    const newBooking = await createBookingRepo(bookingPayload);
@@ -128,8 +132,20 @@ export const getBookingDetailsService = async(userId,userRole,bookingId) =>{
     throw new AppError("You are not authorized to view this Booking!", HTTP_STATUS.FORBIDDEN)
   }
 
+  const bookingObj = booking.toObject()
 
-  return booking
+  if(bookingObj.tickets && bookingObj.tickets.length > 0){
+    bookingObj.tickets = await Promise.all(
+      bookingObj.tickets.map(async(ticket) =>{
+        const qrCodeImage = await generateQRCode(ticket.qrCodeToken)
+        return {
+          ...ticket,
+          qrCodeImage
+        }
+      })
+    )
+  }
+  return bookingObj
 }
 
 export const getBookingHistoryService = async(userId) => {
@@ -140,18 +156,28 @@ export const confirmBookingAfterPaymentService = async (bookingId) => {
   const booking = await Booking.findById(bookingId);
   if (!booking) return null;
 
-  // 54 & 56: Update booking status and payment status to confirmed & paid
+
   booking.paymentStatus = "paid";
   booking.bookingStatus = "confirmed";
 
-  // Generate QR Code identifier if missing
-  if (!booking.qrCode) {
-    booking.qrCode = `FESTIVO-TICKET-${booking.bookingId || booking._id}`;
+
+  if (!booking.tickets||booking.tickets.length === 0) {
+    const generatedTickets =  []
+    for(let i = 0; i<booking.quantity; i++){
+      generatedTickets.push({
+        ticketId : generateTicketNumber(),
+        qrCodeToken : generateQrToken(),
+        status : "valid",
+        checkedInAt : null,
+        checkedInBy : null
+      })
+    }
+    booking.tickets = generatedTickets;
   }
 
   await booking.save();
 
-  // Increment event sold count and tier capacity
+  
   try {
     const event = await Event.findById(booking.eventId);
     if (event) {
@@ -171,3 +197,31 @@ export const confirmBookingAfterPaymentService = async (bookingId) => {
 
   return booking;
 };
+
+
+export const getUserTicketsService = async(userId) =>{
+  const bookings = findUserBookingsRepo(userId)
+
+  const formattedBookings = await Promise.all(
+    bookings.map(async(booking) =>{
+      const bookingObj = booking.toObject()
+
+      if(bookingObj.tickets &&bookingObj.tickets.length > 0){
+        bookingObj.tickets = await Promise.all(
+          bookingObj.tickets.map(async(ticket) =>{
+            qrCodeImage = generateQRCode(ticket.qrCodeToken)
+
+            return {
+              ticketId : ticket.ticketId,
+              status : ticket.status,
+              checkedInAt : ticket.checkedInAt,
+              qrCodeImage
+            }
+          })
+        )
+      }
+      return bookingObj
+    })
+  )
+  return formattedBookings
+}

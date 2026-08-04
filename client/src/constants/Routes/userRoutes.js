@@ -5,6 +5,7 @@ export const USER_ROUTES = {
   EXPLORE: '/user/explore',
   EVENT_DETAILS: '/user/event/:id',
   BOOKINGS: '/user/bookings',
+  MY_TICKETS: '/user/my-tickets',
   CHECKOUT: '/user/checkout',
   PAYMENT_STATUS: '/user/payment-status',
   TICKET_VIEW: '/user/booking/:id',

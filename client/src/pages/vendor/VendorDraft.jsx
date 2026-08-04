@@ -76,9 +76,13 @@ const VendorDraft = () => {
   };
 
   const handlePublishDraft = async (event) => {
+    const isOnline = event.eventType === 'Online';
+    const hasLocation = isOnline ? !!event.onlineLink : (!!event.venue && !!event.city && !!event.state);
+    const hasTickets = (event.ticketTiers && event.ticketTiers.length > 0) || (event.totalTickets && event.totalTickets > 0);
+
     // Check if event has all required fields to publish
     if (!event.title || !event.description || !event.category || !event.schedule?.date || 
-        !event.venue || !event.city || !event.state || !event.totalTickets || !event.thumbnail?.fileUrl) {
+        !hasLocation || !hasTickets || !event.thumbnail?.fileUrl) {
       
       toast.error("Please fill in all required fields in the edit modal before publishing");
       setSelectedEvent({ id: event._id, rawEvent: event });
@@ -146,8 +150,14 @@ const VendorDraft = () => {
     if (event.description && event.description.trim()) progress += 15;
     if (event.category) progress += 15;
     if (event.schedule?.date) progress += 15;
-    if (event.venue && event.venue.trim()) progress += 15;
-    if (event.totalTickets && event.totalTickets > 0) progress += 15;
+
+    const isOnline = event.eventType === 'Online';
+    const hasLocation = isOnline ? !!event.onlineLink : (event.venue && event.venue.trim());
+    if (hasLocation) progress += 15;
+
+    const hasTickets = (event.ticketTiers && event.ticketTiers.length > 0) || (event.totalTickets && event.totalTickets > 0);
+    if (hasTickets) progress += 15;
+
     if (event.thumbnail?.fileUrl) progress += 10;
     return Math.min(progress, 100);
   };
@@ -320,11 +330,17 @@ const VendorDraft = () => {
                         <div className="space-y-2 pt-2">
                           <div className="flex justify-between items-center text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
                             <span>Completeness</span>
-                            <span className="text-amber-500">{progress}% Complete</span>
+                            <span className={progress === 100 ? "text-emerald-400 font-extrabold" : "text-amber-500"}>
+                              {progress}% Complete
+                            </span>
                           </div>
                           <div className="w-full h-1.5 bg-zinc-900 border border-white/5 rounded-full overflow-hidden">
                             <div 
-                              className="h-full bg-gradient-to-r from-amber-500 to-yellow-400 rounded-full transition-all duration-500" 
+                              className={`h-full rounded-full transition-all duration-500 ${
+                                progress === 100 
+                                  ? "bg-gradient-to-r from-emerald-500 to-green-400" 
+                                  : "bg-gradient-to-r from-amber-500 to-yellow-400"
+                              }`} 
                               style={{ width: `${progress}%` }} 
                             />
                           </div>

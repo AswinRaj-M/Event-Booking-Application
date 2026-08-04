@@ -85,6 +85,10 @@ export const getBookingDetails = (bookingId) => {
   return axiosInstance.get(`/users/booking/details/${bookingId}`);
 };
 
+export const getUserTickets = () => {
+  return axiosInstance.get("/users/my-tickets");
+};
+
 export const getPublicCouponsApi = () => {
   return axiosInstance.get("/users/public-coupons");
 };

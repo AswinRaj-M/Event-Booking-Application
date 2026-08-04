@@ -1,6 +1,34 @@
 import mongoose from "mongoose";
 
 
+
+export const ticketSchema = new mongoose.Schema({
+  ticketId  :{
+    type : String,
+    required : true,
+    unique : true
+  },
+  qrCodeToken :{
+    type : String,
+    required : true,
+    unique : true
+  },
+  status : {
+    type : String,
+    enum :["valid","checked-in","cancelled"],
+    default : "valid"
+  },
+  checkedInAt :{
+    type : Date,
+    default  : null
+  },
+  checkedInBy : {
+    type : mongoose.Schema.Types.ObjectId,
+    ref : "Vendor",
+    default : null
+  }
+})
+
 export const bookingSchema = new mongoose.Schema({
   bookingId : String,
 
@@ -41,8 +69,6 @@ export const bookingSchema = new mongoose.Schema({
     required : true
   },
 
-  qrCode : String,
-
   paymentStatus : {
     type : String,
     enum : ["pending","failed","paid","refunded"],
@@ -51,7 +77,7 @@ export const bookingSchema = new mongoose.Schema({
 
   bookingStatus : {
     type : String,
-    enum :["pending","confirmed","cancelled","checked-in"],
+    enum :["pending", "confirmed", "cancelled", "completed"],
     default : "pending"
   },
 
@@ -60,15 +86,11 @@ export const bookingSchema = new mongoose.Schema({
     upperCase : true,
     trim : true
   },
-
+  tickets : [ticketSchema],
   couponDiscount : {
     type : Number,
     default :0 
   },
-
-  checkedInAt : Date,
-
-
 },{timestamps : true})
 
 const Booking = mongoose.model("Booking",bookingSchema)

@@ -4,6 +4,7 @@ import {
   createPendingBookingService,
   getBookingDetailsService,
   getBookingHistoryService,
+  getUserTicketsService,
 } from "../../services/user/booking.service.js";
 
 export const createBooking = async(req,res) =>{
@@ -60,5 +61,17 @@ export const getBookingHistory =  async(req,res) =>{
     success : true,
     messgae : "Fetch Booking History Succesfuly!",
     history
+  })
+}
+
+export const getUserTickets = async(req,res) =>{
+  const userId = req.user.userId
+  
+  const bookings = await getUserTicketsService(userId)
+
+  return res.status(HTTP_STATUS.OK).json({
+    success : true,
+    message : ' User tickets fetched Successfully!',
+    bookings
   })
 }

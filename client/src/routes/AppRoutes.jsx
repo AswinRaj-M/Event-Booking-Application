@@ -14,6 +14,7 @@ import GoogleAuthSuccess from '../pages/auth/GoogleAuthSuccess.jsx';
 import UserExploreEvent from '../pages/user/UserExploreEvent.jsx';
 import UserEventDetails from '../pages/user/UserEventDetails.jsx';
 import MyBookings from '../pages/user/MyBookings.jsx';
+import MyTicketsPage from '../pages/user/MyTicketsPage.jsx';
 import TicketViewPage from '../pages/user/TicketViewPage.jsx';
 import PaymentCheckout from '../pages/user/PaymentCheckout.jsx';
 import PaymentStatusPage from '../pages/user/PaymentStatusPage.jsx';
@@ -51,6 +52,11 @@ const AppRoutes = () => {
             <Route path={USER_ROUTES.BOOKINGS} element={
                 <ProtectedRoute role="user">
                     <MyBookings />
+                </ProtectedRoute>
+            } />
+            <Route path={USER_ROUTES.MY_TICKETS} element={
+                <ProtectedRoute role="user">
+                    <MyTicketsPage />
                 </ProtectedRoute>
             } />
             <Route path={USER_ROUTES.CHECKOUT} element={
