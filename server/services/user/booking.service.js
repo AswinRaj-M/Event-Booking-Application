@@ -11,8 +11,11 @@ import { generateQRCode } from "../../utils/generateQrCode.js";
 
 import {
   createBookingRepo,
+  decrementEventSoldCountRepo,
   findBookingByIdRepo,
+  findBookingByTicketRepo,
   findUserBookingsRepo,
+  saveBookingRepo,
 } from "../../repository/user/booking.repo.js";
 
 export const createPendingBookingService = async (userId, eventId, tierId, quantity, couponCode) => {
@@ -224,4 +227,72 @@ export const getUserTicketsService = async(userId) =>{
     })
   )
   return formattedBookings
+}
+
+
+export const cancelTicketService = async(userId,ticketId,allowedLimitHours = 24)=>{
+  const booking = await findBookingByTicketRepo(ticketId)
+  if(!booking){
+    throw new AppError("Booking Not Found!",HTTP_STATUS.NOT_FOUND)
+  }
+
+  const bookingUserId = booking.userId._id ? booking.userId._id.toString() : booking.userId.toString()
+
+  if(bookingUserId !== userId.toString()){
+    throw new AppError("You are not authorized to cancel the Ticket!",HTTP_STATUS.FORBIDDEN)
+  }
+
+  const ticket = booking.tickets.find((ticket) => ticket.ticketId === ticketId)
+
+  if(!ticket){
+    throw new AppError("Specified ticket not found in Booking",HTTP_STATUS.NOT_FOUND)
+  }
+
+  if(ticket.status === "cancelled"){
+    throw new AppError("This Ticket Already Cancelled!",HTTP_STATUS.BAD_REQUEST)
+  }
+
+  if(ticket.status === "checked-in"){
+    throw new AppError("cheked-in tickets cant be cancelled!",HTTP_STATUS.BAD_REQUEST)
+  }
+
+  const event = booking.eventId
+
+  if(!eventId||!event.schedule || !event.schedule.date){
+    throw new AppError("Event Schedule details Missing ",HTTP_STATUS.BAD_REQUEST)
+  }
+
+  const eventStartDate = new Date(event.schedule.date)
+  if(event.schedule.startTime){
+    const [hours,minutes] = event.schedule.startTime.split(":").map(Number)
+    eventStartDate.setHours(hours || 0,minutes || 0,0,0);
+  }
+
+  const now = new Date()
+  const limitInMillis = allowedLimitHours * 60 * 60 * 1000
+  const cancellationDeadLine = new Date(eventStartDate.getTime() - limitInMillis)
+
+  if(now > cancellationDeadLine){
+    throw new AppError(`Cancellation time limit expired. Tickets can only be cancelled up to ${allowedLimitHours} hours before
+       the event start time.`,
+        HTTP_STATUS.BAD_REQUEST
+      );
+  }
+  ticket.status === "cancelled"
+  const allCancelled = booking.tickets.every((ticket) => ticket.status === "cancelled")
+  if(allCancelled){
+    booking.bookingStatus === "cancelled"
+  }
+
+  await saveBookingRepo(booking)
+  await decrementEventSoldCountRepo(event._id,booking.tierId)
+
+
+  return {
+    bookingId : booking.bookingId || booking._id,
+    ticketId : ticket.ticketId,
+    ticketStatus : ticket.status,
+    bookingStatus : booking.bookingStatus,
+    cancellationDeadLine
+  }
 }

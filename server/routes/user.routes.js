@@ -28,6 +28,7 @@ import {
   getBookingHistory,
   getBookingDetails,
   getUserTickets,
+  cancelTicket,
 } from "../controllers/user/booking.controller.js"
 import { validateCoupon, getPublicCoupons } from "../controllers/user/coupon.controller.js"
 import passport from "passport"
@@ -87,5 +88,6 @@ router.get('/booking/details/:bookingId',protect,asyncHandler(getBookingDetails)
 router.post('/booking/validate-coupon', protect, requireRole("user"), asyncHandler(validateCoupon))
 router.get('/public-coupons', asyncHandler(getPublicCoupons))
 router.get('/my-tickets',protect,requireRole("user"),asyncHandler(getUserTickets))
+router.get('booking/cancel-ticket/:ticketId',protect,requireRole("user"),asyncHandler(cancelTicket))
 
 export default router

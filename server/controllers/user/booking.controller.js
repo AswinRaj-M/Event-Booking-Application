@@ -1,11 +1,13 @@
 import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
 
 import {
+  cancelTicketService,
   createPendingBookingService,
   getBookingDetailsService,
   getBookingHistoryService,
   getUserTicketsService,
 } from "../../services/user/booking.service.js";
+import { AppError } from "../../utils/AppError.js";
 
 export const createBooking = async(req,res) =>{
    const userId = req.user._id
@@ -73,5 +75,26 @@ export const getUserTickets = async(req,res) =>{
     success : true,
     message : ' User tickets fetched Successfully!',
     bookings
+  })
+}
+
+
+export const cancelTicket = async(req,res) =>{
+  const userId = req.user._id
+  const ticketId = req.params;
+
+  if(!ticketId){
+    return res.status(HTTP_STATUS.BAD_REQUEST).json({
+      success: false,
+      message : "Ticket Id required for Cancellation!"
+    })
+  }
+
+  const result = await cancelTicketService(userId,ticketId)
+
+  return res.status(HTTP_STATUS.OK).json({
+    success : true,
+    message : " Ticket Cancelled Successfully",
+    data : result
   })
 }
