@@ -31,6 +31,11 @@ import {
   cancelTicket,
 } from "../controllers/user/booking.controller.js"
 import { validateCoupon, getPublicCoupons } from "../controllers/user/coupon.controller.js"
+import {
+  checkRefundEligibility,
+  requestRefund,
+  getUserRefunds
+} from "../controllers/user/refund.controller.js"
 import passport from "passport"
 import upload from "../middleware/upload.js"
 import { protect } from "../middleware/auth.middleware.js"
@@ -88,6 +93,11 @@ router.get('/booking/details/:bookingId',protect,asyncHandler(getBookingDetails)
 router.post('/booking/validate-coupon', protect, requireRole("user"), asyncHandler(validateCoupon))
 router.get('/public-coupons', asyncHandler(getPublicCoupons))
 router.get('/my-tickets',protect,requireRole("user"),asyncHandler(getUserTickets))
-router.get('booking/cancel-ticket/:ticketId',protect,requireRole("user"),asyncHandler(cancelTicket))
+router.get('/booking/cancel-ticket/:ticketId',protect,requireRole("user"),asyncHandler(cancelTicket))
+
+// Refund routes (Step 74 & Step 75)
+router.get('/refund/eligibility/:bookingId', protect, requireRole("user"), asyncHandler(checkRefundEligibility))
+router.post('/refund/request', protect, requireRole("user"), asyncHandler(requestRefund))
+router.get('/refund/my-requests', protect, requireRole("user"), asyncHandler(getUserRefunds))
 
 export default router

@@ -13,12 +13,14 @@ import {
   Eye, 
   Plus,
   ShieldCheck,
-  Info
+  Info,
+  RotateCcw
 } from "lucide-react";
 import { toast } from "sonner";
 import UserSideBar from "../../components/user/UserSideBar";
 import { USER_ROUTES } from "../../constants/Routes";
 import { getBookingHistory } from "../../services/user.api.js";
+import RefundModal from "../../components/user/RefundModal";
 
 const MyBookings = () => {
   const navigate = useNavigate();
@@ -28,27 +30,39 @@ const MyBookings = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
+  const [selectedBookingForRefund, setSelectedBookingForRefund] = useState(null);
+
+  const fetchBookings = async () => {
+    try {
+      setLoading(true);
+      const res = await getBookingHistory();
+      if (res.data?.success) {
+        setBookings(res.data.history || []);
+      } else {
+        setError("Failed to fetch booking history.");
+      }
+    } catch (err) {
+      console.error("Fetch bookings error:", err);
+      setError(err.response?.data?.message || "Could not retrieve booking details.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Fetch bookings on load
   useEffect(() => {
-    const fetchBookings = async () => {
-      try {
-        setLoading(true);
-        const res = await getBookingHistory();
-        if (res.data?.success) {
-          setBookings(res.data.history || []);
-        } else {
-          setError("Failed to fetch booking history.");
-        }
-      } catch (err) {
-        console.error("Fetch bookings error:", err);
-        setError(err.response?.data?.message || "Could not retrieve booking details.");
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchBookings();
   }, []);
+
+  const handleOpenRefundModal = (booking) => {
+    setSelectedBookingForRefund(booking);
+    setIsRefundModalOpen(true);
+  };
+
+  const handleRefundSuccess = () => {
+    fetchBookings();
+  };
 
   // Format Date Helper
   const getFormattedDate = (dateStr) => {
@@ -356,10 +370,11 @@ const MyBookings = () => {
                               {booking.bookingStatus !== "cancelled" && (
                                 <div className="flex gap-2 w-full">
                                   <button 
-                                    onClick={handleCancelClick}
-                                    className="flex-1 py-2 px-3 bg-rose-950/20 hover:bg-rose-900/40 border border-rose-500/20 hover:border-rose-500/40 text-rose-300 hover:text-rose-200 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                                    onClick={() => handleOpenRefundModal(booking)}
+                                    className="flex-1 py-2 px-3 bg-purple-950/30 hover:bg-purple-900/50 border border-purple-500/30 text-purple-300 hover:text-purple-200 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
                                   >
-                                    Cancel
+                                    <RotateCcw className="w-3.5 h-3.5" />
+                                    Refund
                                   </button>
                                   <button 
                                     onClick={() => handleActionClick("View Ticket QR", booking._id)}
@@ -389,6 +404,14 @@ const MyBookings = () => {
             )}
           </div>
         )}
+
+        {/* Refund Request Flow Modal */}
+        <RefundModal
+          isOpen={isRefundModalOpen}
+          onClose={() => setIsRefundModalOpen(false)}
+          booking={selectedBookingForRefund}
+          onSuccess={handleRefundSuccess}
+        />
       </main>
     </div>
   );

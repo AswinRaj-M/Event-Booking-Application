@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Booking from "../../models/booking.model.js";
 
 export const createBookingRepo = async(bookingData) =>{
@@ -5,7 +6,12 @@ export const createBookingRepo = async(bookingData) =>{
 }
 
 export const findBookingByIdRepo = async(bookingId) =>{
-  return await Booking.findById(bookingId)
+  const isObjectId = mongoose.Types.ObjectId.isValid(bookingId);
+  const query = isObjectId 
+    ? { $or: [{ _id: bookingId }, { bookingId: bookingId }] } 
+    : { bookingId: bookingId };
+
+  return await Booking.findOne(query)
   .populate({
     path : "eventId",
     select : "title description schedule venue address city thumbnail eventType"
