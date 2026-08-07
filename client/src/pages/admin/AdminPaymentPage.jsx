@@ -45,7 +45,7 @@ const AdminPaymentPage = () => {
   const [withdrawalRequests, setWithdrawalRequests] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Recent Wallet Transactions State
+  // Clean Recent Wallet Transactions State (Unique Log Records)
   const [transactions, setTransactions] = useState([
     {
       id: "TXN-8472",
@@ -81,17 +81,6 @@ const AdminPaymentPage = () => {
       date: "Oct 23, 2024"
     },
     {
-      id: "TXN-8469",
-      type: "Debit",
-      typeBg: "bg-rose-950/60 border-rose-500/30 text-rose-400",
-      amount: -2450.00,
-      from: "Starlight Events",
-      reason: "Vendor payout",
-      status: "Pending",
-      statusBg: "bg-amber-950/60 border-amber-500/30 text-amber-400",
-      date: "Oct 22, 2024"
-    },
-    {
       id: "TXN-8468",
       type: "Credit",
       typeBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
@@ -101,17 +90,6 @@ const AdminPaymentPage = () => {
       status: "Completed",
       statusBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
       date: "Oct 22, 2024"
-    },
-    {
-      id: "TXN-8467",
-      type: "Debit",
-      typeBg: "bg-rose-950/60 border-rose-500/30 text-rose-400",
-      amount: -5200.00,
-      from: "DJ Beats Pro",
-      reason: "Vendor payout",
-      status: "Pending",
-      statusBg: "bg-amber-950/60 border-amber-500/30 text-amber-400",
-      date: "Oct 21, 2024"
     },
     {
       id: "TXN-8466",
@@ -134,47 +112,32 @@ const AdminPaymentPage = () => {
       status: "Completed",
       statusBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
       date: "Oct 20, 2024"
-    },
-    {
-      id: "TXN-8464",
-      type: "Credit",
-      typeBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
-      amount: 2890.00,
-      from: "Booking #4508",
-      reason: "Event commission",
-      status: "Completed",
-      statusBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
-      date: "Oct 20, 2024"
-    },
-    {
-      id: "TXN-8463",
-      type: "Credit",
-      typeBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
-      amount: 6450.00,
-      from: "Booking #4505",
-      reason: "Event commission",
-      status: "Completed",
-      statusBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
-      date: "Oct 19, 2024"
     }
   ]);
 
-  // Fetch Real Withdrawal Requests
+  // Fetch Real Withdrawal Requests (Filtering out duplicates)
   const fetchWithdrawals = async () => {
     try {
       setLoading(true);
       const res = await getAdminWithdrawalsApi();
       if (res.data?.success && res.data.requests) {
-        const mapped = res.data.requests.map((r) => ({
-          id: r._id,
-          vendorName: r.vendorId?.businessName || r.vendorId?.fullName || "Vendor Account",
-          vendorAvatar: r.vendorId?.profilePicture?.fileUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
-          amount: r.amount,
-          reqDate: new Date(r.requestedAt || r.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-          balance: `$${r.amount.toLocaleString()}`,
-          status: r.status,
-          destinationAccount: r.destinationAccount
-        }));
+        const uniqueRequestsMap = new Map();
+        res.data.requests.forEach((r) => {
+          if (!uniqueRequestsMap.has(r._id)) {
+            uniqueRequestsMap.set(r._id, {
+              id: r._id,
+              vendorName: r.vendorId?.businessName || r.vendorId?.fullName || "Vendor Account",
+              vendorAvatar: r.vendorId?.profilePicture?.fileUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+              amount: r.amount,
+              reqDate: new Date(r.requestedAt || r.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+              balance: `$${r.amount.toLocaleString()}`,
+              status: r.status,
+              destinationAccount: r.destinationAccount
+            });
+          }
+        });
+
+        const mapped = Array.from(uniqueRequestsMap.values());
         setWithdrawalRequests(mapped);
 
         // Calculate pending amount total
