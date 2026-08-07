@@ -8,4 +8,5 @@ export const ADMIN_ROUTES = {
   EVENTS: '/admin/events',
   COUPONS: '/admin/coupons',
   CREATE_COUPON: '/admin/coupons/create',
+  PAYMENTS: '/admin/payments',
 };

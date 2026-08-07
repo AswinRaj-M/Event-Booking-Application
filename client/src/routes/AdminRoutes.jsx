@@ -10,6 +10,7 @@ import AdminUsersManagement from '../pages/admin/AdminUsersManagement.jsx'
 import AdminEventManagement from '../pages/admin/AdminEventManagement.jsx'
 import AdminCouponManagement from '../pages/admin/AdminCouponManagement.jsx'
 import AdminCreateCoupon from '../pages/admin/AdminCreateCoupon.jsx'
+import AdminPaymentPage from '../pages/admin/AdminPaymentPage.jsx'
 import { ADMIN_ROUTES } from '../constants/Routes'
 
 function AdminRoutes() {
@@ -58,6 +59,11 @@ function AdminRoutes() {
       <Route path={ADMIN_ROUTES.CREATE_COUPON.replace('/admin', '')} element={
         <ProtectedRoute role="admin">
           <AdminCreateCoupon />
+        </ProtectedRoute>
+      } />
+      <Route path={ADMIN_ROUTES.PAYMENTS.replace('/admin', '')} element={
+        <ProtectedRoute role="admin">
+          <AdminPaymentPage />
         </ProtectedRoute>
       } />
     </Routes>
