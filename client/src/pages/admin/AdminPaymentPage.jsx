@@ -27,8 +27,8 @@ import {
 const AdminPaymentPage = () => {
   // Financial KPI state
   const [platformBalance, setPlatformBalance] = useState(142384.00);
-  const [vendorPayouts, setVendorPayouts] = useState(84291.50);
-  const [pendingWithdrawalsAmount, setPendingWithdrawalsAmount] = useState(12450.00);
+  const [vendorPayouts, setVendorPayouts] = useState(0);
+  const [pendingWithdrawalsAmount, setPendingWithdrawalsAmount] = useState(0);
   const [commissionEarned, setCommissionEarned] = useState(28940.25);
 
   // Add Funds Modal State
@@ -41,81 +41,12 @@ const AdminPaymentPage = () => {
   const [rejectingItem, setRejectingItem] = useState(null);
   const [rejectionReason, setRejectionReason] = useState("");
 
-  // Withdrawal Requests State
+  // Withdrawal Requests & Transactions State
   const [withdrawalRequests, setWithdrawalRequests] = useState([]);
+  const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Clean Recent Wallet Transactions State (Unique Log Records)
-  const [transactions, setTransactions] = useState([
-    {
-      id: "TXN-8472",
-      type: "Credit",
-      typeBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
-      amount: 3250.00,
-      from: "Booking #4521",
-      reason: "Event commission",
-      status: "Completed",
-      statusBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
-      date: "Oct 24, 2024"
-    },
-    {
-      id: "TXN-8471",
-      type: "Debit",
-      typeBg: "bg-rose-950/60 border-rose-500/30 text-rose-400",
-      amount: -1800.00,
-      from: "Elite Catering",
-      reason: "Vendor payout",
-      status: "Completed",
-      statusBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
-      date: "Oct 23, 2024"
-    },
-    {
-      id: "TXN-8470",
-      type: "Credit",
-      typeBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
-      amount: 5890.00,
-      from: "Booking #4518",
-      reason: "Event commission",
-      status: "Completed",
-      statusBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
-      date: "Oct 23, 2024"
-    },
-    {
-      id: "TXN-8468",
-      type: "Credit",
-      typeBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
-      amount: 1250.00,
-      from: "Booking #4515",
-      reason: "Event commission",
-      status: "Completed",
-      statusBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
-      date: "Oct 22, 2024"
-    },
-    {
-      id: "TXN-8466",
-      type: "Credit",
-      typeBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
-      amount: 4120.00,
-      from: "Booking #4512",
-      reason: "Event commission",
-      status: "Completed",
-      statusBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
-      date: "Oct 21, 2024"
-    },
-    {
-      id: "TXN-8465",
-      type: "Debit",
-      typeBg: "bg-rose-950/60 border-rose-500/30 text-rose-400",
-      amount: -3750.00,
-      from: "Venue Masters",
-      reason: "Vendor payout",
-      status: "Completed",
-      statusBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
-      date: "Oct 20, 2024"
-    }
-  ]);
-
-  // Fetch Real Withdrawal Requests (Filtering out duplicates)
+  // Fetch Real Withdrawal Requests (Filtering out duplicates & building live transaction log)
   const fetchWithdrawals = async () => {
     try {
       setLoading(true);
@@ -140,11 +71,37 @@ const AdminPaymentPage = () => {
         const mapped = Array.from(uniqueRequestsMap.values());
         setWithdrawalRequests(mapped);
 
-        // Calculate pending amount total
+        // Calculate pending amount total dynamically
         const pendingTotal = mapped
           .filter((r) => r.status === "pending")
           .reduce((sum, r) => sum + r.amount, 0);
         setPendingWithdrawalsAmount(pendingTotal);
+
+        // Calculate approved payouts total dynamically
+        const approvedTotal = mapped
+          .filter((r) => r.status === "approved")
+          .reduce((sum, r) => sum + r.amount, 0);
+        setVendorPayouts(approvedTotal);
+
+        // Build unique transactions log from real withdrawal requests
+        const txLogs = mapped.map((req) => {
+          const isApproved = req.status === "approved";
+          const isRejected = req.status === "rejected";
+          return {
+            id: `TXN-${req.id.slice(-6).toUpperCase()}`,
+            type: "Debit",
+            typeBg: "bg-rose-950/60 border-rose-500/30 text-rose-400",
+            amount: -req.amount,
+            from: req.vendorName,
+            reason: "Vendor payout",
+            status: isApproved ? "Completed" : (isRejected ? "Rejected" : "Pending"),
+            statusBg: isApproved 
+              ? "bg-emerald-950/60 border-emerald-500/30 text-emerald-400" 
+              : (isRejected ? "bg-rose-950/60 border-rose-500/30 text-rose-400" : "bg-amber-950/60 border-amber-500/30 text-amber-400"),
+            date: req.reqDate
+          };
+        });
+        setTransactions(txLogs);
       }
     } catch (err) {
       console.error("Error fetching admin withdrawal requests:", err);
@@ -214,6 +171,9 @@ const AdminPaymentPage = () => {
   const handleExportReport = () => {
     toast.info("Preparing financial report... Download will start shortly.");
   };
+
+  // Pending requests list
+  const pendingRequests = withdrawalRequests.filter(r => r.status === "pending");
 
   return (
     <div className="flex h-screen bg-[#080614] text-white overflow-hidden font-sans">
@@ -298,7 +258,7 @@ const AdminPaymentPage = () => {
             </div>
             <div className="flex items-center gap-1.5 text-xs font-bold text-amber-400">
               <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
-              {withdrawalRequests.length} requests pending
+              {pendingRequests.length} requests pending
             </div>
           </div>
 
@@ -329,7 +289,7 @@ const AdminPaymentPage = () => {
               <div className="flex items-center justify-between mb-5">
                 <div>
                   <h3 className="text-lg font-black text-white tracking-tight">Withdrawal Requests</h3>
-                  <p className="text-xs text-zinc-400 font-medium mt-0.5">Action required: {withdrawalRequests.length} requests</p>
+                  <p className="text-xs text-zinc-400 font-medium mt-0.5">Action required: {pendingRequests.length} requests</p>
                 </div>
                 <span className="px-3 py-1 bg-amber-950/60 border border-amber-500/30 text-amber-400 text-[10px] font-extrabold rounded-full">
                   Pending
@@ -338,12 +298,12 @@ const AdminPaymentPage = () => {
 
               {/* List of Requests */}
               <div className="space-y-4">
-                {withdrawalRequests.length === 0 ? (
+                {pendingRequests.length === 0 ? (
                   <div className="py-8 text-center text-zinc-500 text-xs font-medium">
                     No pending withdrawal requests.
                   </div>
                 ) : (
-                  withdrawalRequests.map((req) => (
+                  pendingRequests.map((req) => (
                     <div key={req.id} className="bg-[#070512] border border-white/5 rounded-2xl p-4 space-y-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -427,45 +387,53 @@ const AdminPaymentPage = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5 text-xs">
-                  {Array.from(new Map(transactions.map(t => [t.id, t])).values()).map((tx) => {
-                    const isCredit = tx.type === "Credit";
+                  {transactions.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-zinc-500 font-medium">
+                        No transactions found.
+                      </td>
+                    </tr>
+                  ) : (
+                    Array.from(new Map(transactions.map(t => [t.id, t])).values()).map((tx) => {
+                      const isCredit = tx.type === "Credit";
 
-                    return (
-                      <tr key={tx.id} className="hover:bg-white/[0.02] transition-colors group">
-                        <td className="py-3.5 font-mono text-[11px] font-bold text-zinc-400 whitespace-nowrap">
-                          #{tx.id}
-                        </td>
+                      return (
+                        <tr key={tx.id} className="hover:bg-white/[0.02] transition-colors group">
+                          <td className="py-3.5 font-mono text-[11px] font-bold text-zinc-400 whitespace-nowrap">
+                            #{tx.id}
+                          </td>
 
-                        <td className="py-3.5 whitespace-nowrap">
-                          <span className={`inline-block px-2.5 py-0.5 rounded-md text-[10px] font-extrabold border ${tx.typeBg}`}>
-                            {tx.type}
-                          </span>
-                        </td>
+                          <td className="py-3.5 whitespace-nowrap">
+                            <span className={`inline-block px-2.5 py-0.5 rounded-md text-[10px] font-extrabold border ${tx.typeBg}`}>
+                              {tx.type}
+                            </span>
+                          </td>
 
-                        <td className={`py-3.5 font-black text-xs whitespace-nowrap ${isCredit ? "text-emerald-400" : "text-rose-400"}`}>
-                          {isCredit ? `+$${tx.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}` : `-$${Math.abs(tx.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}`}
-                        </td>
+                          <td className={`py-3.5 font-black text-xs whitespace-nowrap ${isCredit ? "text-emerald-400" : "text-rose-400"}`}>
+                            {isCredit ? `+$${tx.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}` : `-$${Math.abs(tx.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}`}
+                          </td>
 
-                        <td className="py-3.5 font-bold text-white whitespace-nowrap">
-                          {tx.from}
-                        </td>
+                          <td className="py-3.5 font-bold text-white whitespace-nowrap">
+                            {tx.from}
+                          </td>
 
-                        <td className="py-3.5 text-zinc-400 text-[11px] whitespace-nowrap">
-                          {tx.reason}
-                        </td>
+                          <td className="py-3.5 text-zinc-400 text-[11px] whitespace-nowrap">
+                            {tx.reason}
+                          </td>
 
-                        <td className="py-3.5 whitespace-nowrap">
-                          <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${tx.statusBg}`}>
-                            {tx.status}
-                          </span>
-                        </td>
+                          <td className="py-3.5 whitespace-nowrap">
+                            <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${tx.statusBg}`}>
+                              {tx.status}
+                            </span>
+                          </td>
 
-                        <td className="py-3.5 text-right text-zinc-400 text-[11px] font-medium whitespace-nowrap">
-                          {tx.date}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                          <td className="py-3.5 text-right text-zinc-400 text-[11px] font-medium whitespace-nowrap">
+                            {tx.date}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
