@@ -274,115 +274,140 @@ const UserExploreEvent = () => {
         {/* Events Grid */}
         {!loading && !error && filteredEvents.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
-            {filteredEvents.map((event) => {
-              const categoryName = event.category?.name || (typeof event.category === 'string' ? event.category : 'General');
-              const imageSrc = event.thumbnail?.fileUrl || "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=600&auto=format&fit=crop";
-              const priceLabel = event.ticketType === "Free" ? "Entry" : "Admission";
-              const lowestPrice = event.ticketType === "Free"
-                ? 0
-                : (event.ticketTiers && event.ticketTiers.length > 0)
-                  ? Math.min(...event.ticketTiers.map(t => t.price || 0))
-                  : (event.ticketPrice !== undefined ? Number(event.ticketPrice) : 0);
+              {filteredEvents.map((event) => {
+                const categoryName = event.category?.name || (typeof event.category === 'string' ? event.category : 'General');
+                const imageSrc = event.thumbnail?.fileUrl || "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=600&auto=format&fit=crop";
+                const priceLabel = event.ticketType === "Free" ? "Entry" : "Admission";
+                
+                const totalCapacity = (event.ticketTiers && event.ticketTiers.length > 0)
+                  ? event.ticketTiers.reduce((sum, tier) => sum + (tier.capacity || 0), 0)
+                  : (event.totalTickets || 0);
 
-              const priceVal = event.ticketType === "Free" 
-                ? "Free" 
-                : lowestPrice > 0 
-                  ? `$${lowestPrice}` 
-                  : "Paid";
+                const totalSold = (event.ticketTiers && event.ticketTiers.length > 0)
+                  ? event.ticketTiers.reduce((sum, tier) => sum + (tier.sold || 0), 0)
+                  : (event.soldTickets || 0);
 
-              // Show description if it exists (like Abstract Minds Exhibit in screenshot)
-              // Otherwise render stack of avatars and attendee text
-              const hasDescription = !!event.description;
+                const isSoldOut = totalCapacity > 0 && totalSold >= totalCapacity;
 
-              // Generate deterministic attendee count for beautiful mock-up display
-              const attendingCountNum = event.soldTickets || (Math.floor((new Date(event.createdAt || Date.now()).getTime() % 1500)) + 80);
-              const formattedAttending = attendingCountNum >= 1000 
-                ? `+${(attendingCountNum / 1000).toFixed(1)}k attending` 
-                : `+${attendingCountNum} attending`;
+                const lowestPrice = event.ticketType === "Free"
+                  ? 0
+                  : (event.ticketTiers && event.ticketTiers.length > 0)
+                    ? Math.min(...event.ticketTiers.map(t => t.price || 0))
+                    : (event.ticketPrice !== undefined ? Number(event.ticketPrice) : 0);
 
-              return (
-                <Link
-                  key={event._id}
-                  to={USER_ROUTES.EVENT_DETAILS.replace(':id', event._id)}
-                  className="group bg-[#0b0914]/60 hover:bg-[#0c0a1c]/90 border border-white/5 hover:border-purple-500/20 rounded-3xl overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.3)] hover:shadow-[0_20px_40px_rgba(139,92,246,0.12)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col h-full text-left"
-                >
-                  {/* Event Image */}
-                  <div className="relative h-52 w-full overflow-hidden">
-                    <img
-                      src={imageSrc}
-                      alt={event.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      loading="lazy"
-                    />
-                    {/* Badge Overlay */}
-                    <div className="absolute top-4 right-4">
-                      <span className="px-3 py-1 rounded-full text-xs font-semibold tracking-wide backdrop-blur-md bg-purple-950/80 text-purple-300 border border-purple-500/20">
-                        {categoryName}
-                      </span>
-                    </div>
-                  </div>
+                const priceVal = isSoldOut
+                  ? "Sold Out"
+                  : event.ticketType === "Free" 
+                    ? "Free" 
+                    : lowestPrice > 0 
+                      ? `$${lowestPrice}` 
+                      : "Paid";
 
-                  {/* Event Details Content */}
-                  <div className="p-6 flex-grow flex flex-col justify-between">
-                    <div>
-                      {/* Date & Time */}
-                      <span className="text-purple-400 text-xs font-bold uppercase tracking-wider block mb-2.5">
-                        {formatEventDate(event.schedule?.date, event.schedule?.startTime)}
-                      </span>
+                // Show description if it exists (like Abstract Minds Exhibit in screenshot)
+                // Otherwise render stack of avatars and attendee text
+                const hasDescription = !!event.description;
 
-                      {/* Title */}
-                      <div className="block group-hover:underline decoration-purple-500 decoration-2 underline-offset-4">
-                        <h3 className="text-xl font-bold text-white mb-3 tracking-tight group-hover:text-purple-300 transition-colors line-clamp-1" title={event.title}>
-                          {event.title}
-                        </h3>
-                      </div>
+                // Generate deterministic attendee count for beautiful mock-up display
+                const attendingCountNum = event.soldTickets || (Math.floor((new Date(event.createdAt || Date.now()).getTime() % 1500)) + 80);
+                const formattedAttending = attendingCountNum >= 1000 
+                  ? `+${(attendingCountNum / 1000).toFixed(1)}k attending` 
+                  : `+${attendingCountNum} attending`;
 
-                      {/* Description (if present) */}
-                      {hasDescription && (
-                        <p className="text-zinc-400 text-sm mb-4 line-clamp-2 leading-relaxed font-light">
-                          {event.description}
-                        </p>
-                      )}
-
-                      {/* Location info */}
-                      <div className="flex items-center gap-2 text-zinc-400 text-xs mb-4">
-                        <MapPin className="w-3.5 h-3.5 text-purple-400/80" />
-                        <span className="line-clamp-1">{event.venue}, {event.city}</span>
-                      </div>
-                    </div>
-
-                    <div>
-                      {/* Render attendee avatars or skip depending on description visibility */}
-                      {!hasDescription && (
-                        <div className="flex items-center gap-1.5 mb-6">
-                          <Users className="w-3.5 h-3.5 text-purple-400/60" />
-                          <span className="text-zinc-500 text-xs font-medium">
-                            {formattedAttending}
+                return (
+                  <Link
+                    key={event._id}
+                    to={USER_ROUTES.EVENT_DETAILS.replace(':id', event._id)}
+                    className="group bg-[#0b0914]/60 hover:bg-[#0c0a1c]/90 border border-white/5 hover:border-purple-500/20 rounded-3xl overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.3)] hover:shadow-[0_20px_40px_rgba(139,92,246,0.12)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col h-full text-left"
+                  >
+                    {/* Event Image */}
+                    <div className="relative h-52 w-full overflow-hidden">
+                      <img
+                        src={imageSrc}
+                        alt={event.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        loading="lazy"
+                      />
+                      {/* Sold Out Badge Overlay */}
+                      {isSoldOut && (
+                        <div className="absolute top-4 left-4 z-20">
+                          <span className="px-3 py-1 rounded-full text-xs font-bold tracking-wider backdrop-blur-md bg-rose-600/90 text-white border border-rose-500/40 uppercase shadow-lg">
+                            Sold Out
                           </span>
                         </div>
                       )}
+                      {/* Category Badge Overlay */}
+                      <div className="absolute top-4 right-4">
+                        <span className="px-3 py-1 rounded-full text-xs font-semibold tracking-wide backdrop-blur-md bg-purple-950/80 text-purple-300 border border-purple-500/20">
+                          {categoryName}
+                        </span>
+                      </div>
+                    </div>
 
-                      {/* Card Separator */}
-                      <div className="border-t border-purple-950/40 my-4.5" />
+                    {/* Event Details Content */}
+                    <div className="p-6 flex-grow flex flex-col justify-between">
+                      <div>
+                        {/* Date & Time */}
+                        <span className="text-purple-400 text-xs font-bold uppercase tracking-wider block mb-2.5">
+                          {formatEventDate(event.schedule?.date, event.schedule?.startTime)}
+                        </span>
 
-                      {/* Footer (Price Only) */}
-                      <div className="flex items-center justify-between mt-2">
-                        <div className="flex flex-col">
-                          <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">
-                            {priceLabel}
-                          </span>
-                          <span className={`${
-                            priceVal === "Free" ? "text-emerald-400" : "text-purple-400"
-                          } font-extrabold text-lg mt-0.5`}>
-                            {priceVal}
-                          </span>
+                        {/* Title */}
+                        <div className="block group-hover:underline decoration-purple-500 decoration-2 underline-offset-4">
+                          <h3 className="text-xl font-bold text-white mb-3 tracking-tight group-hover:text-purple-300 transition-colors line-clamp-1" title={event.title}>
+                            {event.title}
+                          </h3>
+                        </div>
+
+                        {/* Description (if present) */}
+                        {hasDescription && (
+                          <p className="text-zinc-400 text-sm mb-4 line-clamp-2 leading-relaxed font-light">
+                            {event.description}
+                          </p>
+                        )}
+
+                        {/* Location info */}
+                        <div className="flex items-center gap-2 text-zinc-400 text-xs mb-4">
+                          <MapPin className="w-3.5 h-3.5 text-purple-400/80" />
+                          <span className="line-clamp-1">{event.venue}, {event.city}</span>
+                        </div>
+                      </div>
+
+                      <div>
+                        {/* Render attendee avatars or skip depending on description visibility */}
+                        {!hasDescription && (
+                          <div className="flex items-center gap-1.5 mb-6">
+                            <Users className="w-3.5 h-3.5 text-purple-400/60" />
+                            <span className="text-zinc-500 text-xs font-medium">
+                              {formattedAttending}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Card Separator */}
+                        <div className="border-t border-purple-950/40 my-4.5" />
+
+                        {/* Footer (Price or Sold Out) */}
+                        <div className="flex items-center justify-between mt-2">
+                          <div className="flex flex-col">
+                            <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">
+                              {priceLabel}
+                            </span>
+                            <span className={`${
+                              isSoldOut
+                                ? "text-rose-500 uppercase tracking-wider"
+                                : priceVal === "Free"
+                                ? "text-emerald-400"
+                                : "text-purple-400"
+                            } font-extrabold text-lg mt-0.5`}>
+                              {priceVal}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </Link>
-              );
-            })}
+                  </Link>
+                );
+              })}
           </div>
         )}
 

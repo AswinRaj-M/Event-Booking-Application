@@ -249,6 +249,10 @@ const UserEventDetails = () => {
 
   const handleBookTickets = () => {
     if (!event) return;
+    if (availableSeats <= 0) {
+      toast.error("This ticket tier is sold out!");
+      return;
+    }
     const tier = !isFree && event?.ticketTiers?.[selectedTierIndex] 
       ? event.ticketTiers[selectedTierIndex] 
       : null;

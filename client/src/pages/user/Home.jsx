@@ -262,7 +262,20 @@ const Home = () => {
               {upcomingEvents.map((event) => {
                 const categoryName = event.category?.name || (typeof event.category === 'string' ? event.category : 'General');
                 const imageSrc = event.thumbnail?.fileUrl || "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=600&auto=format&fit=crop";
-                const priceVal = event.ticketType === "Free" || !event.ticketTiers || event.ticketTiers.length === 0
+                
+                const totalCapacity = (event.ticketTiers && event.ticketTiers.length > 0)
+                  ? event.ticketTiers.reduce((sum, tier) => sum + (tier.capacity || 0), 0)
+                  : (event.totalTickets || 0);
+
+                const totalSold = (event.ticketTiers && event.ticketTiers.length > 0)
+                  ? event.ticketTiers.reduce((sum, tier) => sum + (tier.sold || 0), 0)
+                  : (event.soldTickets || 0);
+
+                const isSoldOut = totalCapacity > 0 && totalSold >= totalCapacity;
+
+                const priceVal = isSoldOut
+                  ? "Sold Out"
+                  : event.ticketType === "Free" || !event.ticketTiers || event.ticketTiers.length === 0
                   ? "Free"
                   : `$${Math.min(...event.ticketTiers.map(t => t.price || 0))}`;
 
@@ -279,7 +292,11 @@ const Home = () => {
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         loading="lazy"
                       />
-                      <div className="absolute top-3 right-3 z-20 bg-black/80 backdrop-blur-md px-2.5 py-1 rounded-md text-xs font-bold border border-white/10 shadow-lg text-white">
+                      <div className={`absolute top-3 right-3 z-20 ${
+                        isSoldOut 
+                          ? "bg-rose-600/90 text-white border-rose-500/40 uppercase tracking-wider" 
+                          : "bg-black/80 text-white border-white/10"
+                      } backdrop-blur-md px-2.5 py-1 rounded-md text-xs font-bold border shadow-lg`}>
                         {priceVal}
                       </div>
                       <div className="absolute bottom-3 left-3 z-20">

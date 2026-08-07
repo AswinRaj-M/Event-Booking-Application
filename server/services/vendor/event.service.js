@@ -178,11 +178,15 @@ export const cancelEventService = async (eventId, vendorId) => {
     }
   }
 
-  event.eventStatus = "cancelled";
-  await event.save();
+  await Event.updateOne(
+    { _id: eventId, vendorId },
+    { $set: { eventStatus: "cancelled" } }
+  );
+
+  const updatedEvent = await Event.findById(eventId);
 
   return {
-    event,
+    event: updatedEvent,
     refundedBookingsCount: refundedCount
   };
 };

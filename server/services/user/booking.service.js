@@ -41,10 +41,14 @@ export const createPendingBookingService = async (userId, eventId, tierId, quant
     throw new AppError("Selected Ticket Tier Does Not Exists!",HTTP_STATUS.BAD_REQUEST)
    }
 
-   const availableSeats = selectedTier.capacity - (selectedTier.sold || 0)
+   const availableSeats = selectedTier.capacity - (selectedTier.sold || 0);
 
-   if(availableSeats < quantity){
-    throw new AppError(`Insufficient tickets available!. Only ${availableSeats}`,HTTP_STATUS.BAD_REQUEST)
+   if (availableSeats <= 0) {
+    throw new AppError("This event or ticket tier is sold out!", HTTP_STATUS.BAD_REQUEST);
+   }
+
+   if (availableSeats < quantity) {
+    throw new AppError(`Insufficient tickets available! Only ${availableSeats} tickets left.`, HTTP_STATUS.BAD_REQUEST);
    }
 
    const ticketPrice = selectedTier.price || 0
@@ -171,17 +175,16 @@ export const confirmBookingAfterPaymentService = async (bookingId) => {
 
   
   try {
-    const event = await Event.findById(booking.eventId);
-    if (event) {
-      event.soldTickets = (event.soldTickets || 0) + booking.quantity;
-
-      if (event.ticketTiers && event.ticketTiers.length > 0 && booking.tierId) {
-        const tier = event.ticketTiers.find(t => t._id.toString() === booking.tierId.toString());
-        if (tier) {
-          tier.sold = (tier.sold || 0) + booking.quantity;
-        }
-      }
-      await event.save();
+    if (booking.tierId) {
+      await Event.updateOne(
+        { _id: booking.eventId, "ticketTiers._id": booking.tierId },
+        { $inc: { soldTickets: booking.quantity, "ticketTiers.$.sold": booking.quantity } }
+      );
+    } else {
+      await Event.updateOne(
+        { _id: booking.eventId },
+        { $inc: { soldTickets: booking.quantity } }
+      );
     }
   } catch (err) {
     console.error("Error updating event sold count on booking confirmation:", err);

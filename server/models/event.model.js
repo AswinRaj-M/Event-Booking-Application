@@ -3,7 +3,7 @@ import fileSchema from "./file.schema.js";
 
 const requiredIfNotDraft = function() {
   const doc = typeof this.ownerDocument === 'function' ? this.ownerDocument() : this;
-  return doc.eventStatus !== "draft";
+  return doc.eventStatus !== "draft" && doc.eventStatus !== "cancelled";
 };
 
 
