@@ -22,6 +22,10 @@ passport.use(
             googleId: profile.id,
             isVerified: true, 
           });
+        } else if (!user.googleId) {
+          user.googleId = profile.id;
+          user.isVerified = true;
+          await user.save();
         }
 
         return done(null, user);

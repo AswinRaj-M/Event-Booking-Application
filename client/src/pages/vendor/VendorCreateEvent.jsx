@@ -405,20 +405,24 @@ const VendorCreateEvent = () => {
           return;
         }
         if (!validFrom) {
-          toast.error('Valid From date is required when offer is enabled');
+          toast.error('Offer Start Date is required when offer is enabled');
           return;
         }
         if (!validUntil) {
-          toast.error('Valid Until date is required when offer is enabled');
-          return;
-        }
-        if (validFrom > validUntil) {
-          toast.error('Valid From date cannot be after Valid Until date');
+          toast.error('Offer End Date is required when offer is enabled');
           return;
         }
         const todayStr = getTodayDateString();
+        if (validFrom < todayStr) {
+          toast.error('Offer Start Date cannot be in the past');
+          return;
+        }
         if (validUntil < todayStr) {
-          toast.error('Valid Until date cannot be in the past');
+          toast.error('Offer End Date cannot be in the past');
+          return;
+        }
+        if (validUntil <= validFrom) {
+          toast.error('Offer End Date must be after Offer Start Date');
           return;
         }
       }
@@ -823,6 +827,7 @@ const VendorCreateEvent = () => {
                       <input 
                         type="date" 
                         value={validFrom}
+                        min={getTodayDateString()}
                         onChange={(e) => setValidFrom(e.target.value)}
                         className="w-full bg-[#12101F] text-zinc-400 px-4 py-3.5 rounded-xl border border-zinc-800/80 focus:outline-none focus:border-purple-500 transition-colors text-sm"
                       />
@@ -833,6 +838,7 @@ const VendorCreateEvent = () => {
                       <input 
                         type="date" 
                         value={validUntil}
+                        min={validFrom || getTodayDateString()}
                         onChange={(e) => setValidUntil(e.target.value)}
                         className="w-full bg-[#12101F] text-zinc-400 px-4 py-3.5 rounded-xl border border-zinc-800/80 focus:outline-none focus:border-purple-500 transition-colors text-sm"
                       />

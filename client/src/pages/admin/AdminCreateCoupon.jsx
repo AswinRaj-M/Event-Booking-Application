@@ -75,16 +75,56 @@ function AdminCreateCoupon() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!couponCode.trim()) {
+    const cleanCode = couponCode.trim().toUpperCase();
+    if (!cleanCode) {
       toast.error("Coupon Code is required");
       return;
     }
-    if (!discountValue || Number(discountValue) <= 0) {
-      toast.error("Please enter a valid discount value");
+    const codeRegex = /^[A-Z0-9_-]{3,20}$/;
+    if (!codeRegex.test(cleanCode)) {
+      toast.error("Coupon Code must be 3-20 characters (letters, numbers, hyphens, underscores)");
       return;
     }
+
+    const discountVal = Number(discountValue);
+    if (!discountValue || isNaN(discountVal) || discountVal <= 0) {
+      toast.error("Please enter a valid discount value greater than 0");
+      return;
+    }
+
+    if (discountType === "percentage" && discountVal > 100) {
+      toast.error("Percentage discount cannot exceed 100%");
+      return;
+    }
+
+    if (minOrderValue && Number(minOrderValue) < 0) {
+      toast.error("Minimum order value cannot be negative");
+      return;
+    }
+
+    if (maxDiscountAmount && Number(maxDiscountAmount) < 0) {
+      toast.error("Maximum discount amount cannot be negative");
+      return;
+    }
+
+    if (totalUses) {
+      const usesNum = Number(totalUses);
+      if (isNaN(usesNum) || usesNum < 1 || !Number.isInteger(usesNum)) {
+        toast.error("Usage limit must be a positive integer (at least 1)");
+        return;
+      }
+    }
+
     if (!endDate) {
-      toast.error("End date is required");
+      toast.error("Expiry date (End Date) is required");
+      return;
+    }
+
+    const expDate = new Date(endDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (isNaN(expDate.getTime()) || expDate < today) {
+      toast.error("Expiry date cannot be in the past");
       return;
     }
 

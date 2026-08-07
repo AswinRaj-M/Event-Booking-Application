@@ -31,7 +31,7 @@ const PaymentSuccessView = ({ payment, event }) => {
           <div className="text-right">
             <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Amount Paid</span>
             <div className="text-lg font-black text-purple-400 mt-0.5">
-              ₹{payment?.amount ? Number(payment.amount).toFixed(2) : '0.00'}
+              ${payment?.amount ? Number(payment.amount).toFixed(2) : '0.00'}
             </div>
           </div>
         </div>

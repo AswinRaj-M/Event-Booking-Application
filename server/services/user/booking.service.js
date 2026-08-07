@@ -4,6 +4,7 @@ import { generateTicketNumber } from "../../utils/generateTicketNumber.js";
 import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
 import Event from "../../models/event.model.js";
 import Booking from "../../models/booking.model.js";
+import Coupon from "../../models/coupon.model.js";
 import mongoose from "mongoose";
 import { validateAndApplyCoupon } from "./coupon.service.js";
 import CouponRedemption from "../../models/couponRedemption.model.js";
@@ -104,19 +105,6 @@ export const createPendingBookingService = async (userId, eventId, tierId, quant
    };
 
    const newBooking = await createBookingRepo(bookingPayload);
-
-   if (validatedCoupon) {
-     validatedCoupon.usedCount += 1;
-     await validatedCoupon.save();
-
-     await CouponRedemption.create({
-       couponId: validatedCoupon._id,
-       userId: userId,
-       bookingId: newBooking._id,
-       discountApplied: couponDiscount
-     });
-   }
-
    return newBooking;
 }
 
@@ -204,6 +192,29 @@ export const confirmBookingAfterPaymentService = async (bookingId) => {
     await processVendorBookingEarnings(booking);
   } catch (err) {
     console.error("Error processing vendor wallet earnings on booking confirmation:", err);
+  }
+
+  // Consume applied coupon only after successful payment confirmation
+  if (booking.couponCode && booking.couponDiscount > 0) {
+    try {
+      const coupon = await Coupon.findOne({ code: booking.couponCode });
+      if (coupon) {
+        const existingRedemption = await CouponRedemption.findOne({ bookingId: booking._id });
+        if (!existingRedemption) {
+          coupon.usedCount += 1;
+          await coupon.save();
+
+          await CouponRedemption.create({
+            couponId: coupon._id,
+            userId: booking.userId,
+            bookingId: booking._id,
+            discountApplied: booking.couponDiscount
+          });
+        }
+      }
+    } catch (couponErr) {
+      console.error("Error consuming coupon on payment confirmation:", couponErr);
+    }
   }
 
   return booking;

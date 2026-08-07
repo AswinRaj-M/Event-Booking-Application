@@ -1,6 +1,8 @@
 import { AppError } from "../../utils/AppError.js";
 import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
 import Event from "../../models/event.model.js";
+import Booking from "../../models/booking.model.js";
+import { processVendorBookingRefund } from "./vendorWallet.service.js";
 
 import {
   createEventRepo,
@@ -10,7 +12,44 @@ import {
   deleteEventRepo,
 } from "../../repository/vendor/event.repo.js";
 
+const validateOfferDates = (offerEnabled, validFrom, validUntil) => {
+  const isEnabled = offerEnabled === "true" || offerEnabled === true;
+  if (!isEnabled) return;
+
+  if (!validFrom || !validUntil) {
+    throw new AppError("Offer validFrom and validUntil dates are required when offer is enabled", HTTP_STATUS.BAD_REQUEST);
+  }
+
+  const fromDate = new Date(validFrom);
+  const untilDate = new Date(validUntil);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (isNaN(fromDate.getTime()) || isNaN(untilDate.getTime())) {
+    throw new AppError("Invalid offer dates provided", HTTP_STATUS.BAD_REQUEST);
+  }
+
+  const fromDateOnly = new Date(fromDate);
+  fromDateOnly.setHours(0, 0, 0, 0);
+  const untilDateOnly = new Date(untilDate);
+  untilDateOnly.setHours(0, 0, 0, 0);
+
+  if (fromDateOnly < today) {
+    throw new AppError("Offer Start Date cannot be in the past", HTTP_STATUS.BAD_REQUEST);
+  }
+
+  if (untilDateOnly < today) {
+    throw new AppError("Offer End Date cannot be in the past", HTTP_STATUS.BAD_REQUEST);
+  }
+
+  if (untilDateOnly <= fromDateOnly) {
+    throw new AppError("Offer End Date must be after Offer Start Date", HTTP_STATUS.BAD_REQUEST);
+  }
+};
+
 export const createEventService = async(data)=>{
+  validateOfferDates(data.offerEnabled, data.validFrom, data.validUntil);
+
   let ticketTiers = data.ticketTiers;
   if (data.ticketType === "Free") {
     ticketTiers = [{
@@ -92,19 +131,60 @@ export const createEventService = async(data)=>{
 export const getVendorEventsService = async (vendorId) => {
   const events =  await getVendorEventsRepo(vendorId);
   return events.map((event) =>{
-    const totalTickets = event.ticketTiers.reduce(
-      (sum,tier) => sum + tier.capacity,0
-    )
+    const totalTickets = (event.ticketTiers || []).reduce(
+      (sum,tier) => sum + (tier.capacity || 0), 0
+    );
+    const soldTickets = event.soldTickets || (event.ticketTiers || []).reduce(
+      (sum, tier) => sum + (tier.sold || 0), 0
+    );
 
     return {
       ...event.toObject(),
-      totalTickets
+      totalTickets,
+      soldTickets
     }
   })
 };
 
 export const cancelEventService = async (eventId, vendorId) => {
-  return await cancelEventRepo(eventId, vendorId);
+  const event = await Event.findOne({ _id: eventId, vendorId });
+  if (!event) {
+    throw new AppError("Event not found or unauthorized", HTTP_STATUS.NOT_FOUND);
+  }
+  if (event.eventStatus === "cancelled") {
+    throw new AppError("Event is already cancelled", HTTP_STATUS.BAD_REQUEST);
+  }
+
+  // Handle all existing paid/confirmed bookings safely
+  const paidBookings = await Booking.find({
+    eventId: eventId,
+    paymentStatus: "paid"
+  });
+
+  let refundedCount = 0;
+  for (const booking of paidBookings) {
+    booking.bookingStatus = "cancelled";
+    booking.paymentStatus = "refunded";
+    if (booking.tickets && booking.tickets.length > 0) {
+      booking.tickets.forEach(t => { t.status = "cancelled"; });
+    }
+    await booking.save();
+
+    try {
+      await processVendorBookingRefund(booking);
+      refundedCount++;
+    } catch (err) {
+      console.error(`[Cancel Event] Error refunding booking ${booking._id}:`, err);
+    }
+  }
+
+  event.eventStatus = "cancelled";
+  await event.save();
+
+  return {
+    event,
+    refundedBookingsCount: refundedCount
+  };
 };
 
 export const updateEventService = async (eventId, vendorId, data) => {
@@ -197,8 +277,12 @@ export const updateEventService = async (eventId, vendorId, data) => {
   }
 
   if (data.offerEnabled !== undefined) {
+    const offerEnabled = data.offerEnabled === "true" || data.offerEnabled === true;
+    if (offerEnabled) {
+      validateOfferDates(data.offerEnabled, data.validFrom, data.validUntil);
+    }
     updateData.offer = {
-      enabled: data.offerEnabled === "true" || data.offerEnabled === true,
+      enabled: offerEnabled,
       discountValue: Number(data.discountValue) || 0,
       minTicketsRequired: Number(data.minTicketsRequired) || 0,
       validFrom: data.validFrom || undefined,
