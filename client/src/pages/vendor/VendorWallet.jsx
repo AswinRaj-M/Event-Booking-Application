@@ -30,7 +30,7 @@ const VendorWallet = () => {
 
   // Form State
   const [withdrawAmount, setWithdrawAmount] = useState("");
-  const [destinationAccount, setDestinationAccount] = useState("Chase Bank (**** 8842)");
+  const [destinationAccount, setDestinationAccount] = useState("Direct Bank Transfer");
   const [loading, setLoading] = useState(false);
 
   // Transaction History State
@@ -426,15 +426,13 @@ const VendorWallet = () => {
               {/* Destination Account */}
               <div>
                 <label className="text-xs font-bold text-zinc-300 block mb-1.5">Destination Account</label>
-                <select 
+                <input 
+                  type="text" 
                   value={destinationAccount}
                   onChange={(e) => setDestinationAccount(e.target.value)}
-                  className="w-full bg-[#080612] border border-zinc-800/90 rounded-2xl px-4 py-3 text-xs text-white focus:outline-none focus:border-purple-500 transition-colors cursor-pointer"
-                >
-                  <option value="Chase Bank (**** 8842)">Chase Bank (**** 8842)</option>
-                  <option value="HDFC Bank (**** 8829)">HDFC Bank (**** 8829)</option>
-                  <option value="Direct Bank Transfer">Direct Bank Transfer</option>
-                </select>
+                  placeholder="Direct Bank Transfer / Account Details"
+                  className="w-full bg-[#080612] border border-zinc-800/90 rounded-2xl px-4 py-3 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-purple-500 transition-colors font-medium"
+                />
               </div>
 
               {/* Info Alert Box */}
