@@ -75,4 +75,15 @@ router.get('/coupons', protect, requireRole("admin"), asyncHandler(getAllCoupons
 router.patch('/coupons/toggle-status/:id', protect, requireRole("admin"), asyncHandler(toggleCouponStatus))
 router.delete('/coupons/:id', protect, requireRole("admin"), asyncHandler(deleteCoupon))
 
+// Withdrawal Routes
+import {
+  getAdminWithdrawalRequests,
+  approveWithdrawal,
+  rejectWithdrawal,
+} from "../controllers/admin/withdrawal.controller.js"
+
+router.get('/withdrawals', protect, requireRole("admin"), asyncHandler(getAdminWithdrawalRequests))
+router.patch('/withdrawals/:id/approve', protect, requireRole("admin"), asyncHandler(approveWithdrawal))
+router.patch('/withdrawals/:id/reject', protect, requireRole("admin"), asyncHandler(rejectWithdrawal))
+
 export default router

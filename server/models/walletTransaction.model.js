@@ -17,18 +17,24 @@ const walletTransactionSchema = new mongoose.Schema(
     bookingId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Booking",
-      required: true,
+      required: false,
       index: true,
     },
     eventId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Event",
-      required: true,
+      required: false,
+      index: true,
+    },
+    withdrawalId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "WithdrawalRequest",
+      required: false,
       index: true,
     },
     transactionType: {
       type: String,
-      enum: ["credit", "debit", "earnings", "payout", "refund"],
+      enum: ["credit", "debit", "earnings", "payout", "refund", "withdrawal"],
       default: "earnings",
       required: true,
     },

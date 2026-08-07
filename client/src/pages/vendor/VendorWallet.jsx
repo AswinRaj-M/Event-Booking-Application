@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import VendorSidebar from "../../components/vendor/VendorSidebar";
-import { getVendorWalletApi, getVendorWalletTransactionsApi } from "../../services/vendor.api.js";
+import { getVendorWalletApi, getVendorWalletTransactionsApi, requestWithdrawalApi } from "../../services/vendor.api.js";
 
 const VendorWallet = () => {
   const vendor = useSelector((state) => state.vendor?.vendor || state.user?.user);
@@ -116,45 +116,47 @@ const VendorWallet = () => {
     setWithdrawAmount(availableBalance.toString());
   };
 
-  const handleWithdrawSubmit = (e) => {
+  const handleWithdrawSubmit = async (e) => {
     e.preventDefault();
     const amt = parseFloat(withdrawAmount);
-    if (!amt || amt < 50) {
-      toast.error("Minimum withdrawal amount is $50.00");
+    if (!amt || amt <= 0) {
+      toast.error("Please enter a valid withdrawal amount greater than zero.");
       return;
     }
     if (amt > availableBalance) {
-      toast.error("Requested amount exceeds available balance!");
+      toast.error("Requested amount exceeds available wallet balance!");
       return;
     }
 
-    setLoading(true);
-    toast.loading("Submitting payout request...", { id: "vendor-payout-toast" });
+    try {
+      setLoading(true);
+      const res = await requestWithdrawalApi({
+        amount: amt,
+        destinationAccount,
+      });
 
-    setTimeout(() => {
-      setAvailableBalance((prev) => prev - amt);
-      setPendingPayouts((prev) => prev + amt);
-
-      const newTx = {
-        id: `vtx-${Date.now()}`,
-        date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-        time: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
-        title: `Withdrawal to ${destinationAccount.split(" ")[0]}`,
-        subtitle: `Ref: Payout #${Math.floor(1000 + Math.random() * 9000)}`,
-        type: "Payout",
-        typeBg: "bg-amber-950/60 border-amber-500/30 text-amber-300",
-        status: "Pending",
-        statusBg: "bg-amber-950/60 border-amber-500/30 text-amber-400",
-        amount: -amt,
-        icon: Building2,
-        iconBg: "bg-amber-950/60 text-amber-400 border-amber-500/30"
-      };
-
-      setTransactions((prev) => [newTx, ...prev]);
-      setWithdrawAmount("");
+      if (res.data?.success) {
+        toast.success(res.data.message || "Withdrawal request submitted successfully!");
+        setWithdrawAmount("");
+        // Refresh wallet data to reflect pending status
+        const [walletRes, txRes] = await Promise.all([
+          getVendorWalletApi(),
+          getVendorWalletTransactionsApi()
+        ]);
+        if (walletRes.data?.success && walletRes.data.wallet) {
+          const w = walletRes.data.wallet;
+          setAvailableBalance(w.availableBalance || 0);
+          setTotalEarnings(w.totalEarnings || 0);
+          setPendingPayouts(w.pendingBalance || 0);
+          setTotalWithdrawn(w.totalWithdrawn || 0);
+        }
+      }
+    } catch (err) {
+      console.error("Error submitting withdrawal request:", err);
+      toast.error(err.response?.data?.message || "Failed to submit withdrawal request.");
+    } finally {
       setLoading(false);
-      toast.success(`Payout request of $${amt.toFixed(2)} submitted successfully!`, { id: "vendor-payout-toast" });
-    }, 1200);
+    }
   };
 
   const handleExportReport = () => {

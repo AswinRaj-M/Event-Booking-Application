@@ -116,7 +116,14 @@ router.get("/status", protect, requireRole("vendor"), (req, res) => {
   });
 })
 
+import {
+  requestWithdrawalController,
+  getVendorWithdrawalsController
+} from "../controllers/vendor/withdrawal.controller.js"
+
 router.get("/wallet", protect, requireRole("vendor"), asyncHandler(getVendorWallet))
 router.get("/wallet/transactions", protect, requireRole("vendor"), asyncHandler(getVendorTransactions))
+router.post("/wallet/withdraw", protect, requireRole("vendor"), asyncHandler(requestWithdrawalController))
+router.get("/wallet/withdrawals", protect, requireRole("vendor"), asyncHandler(getVendorWithdrawalsController))
 
 export default router

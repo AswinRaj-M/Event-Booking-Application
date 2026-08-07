@@ -86,3 +86,15 @@ export const toggleCouponStatusApi = (id) => {
 export const deleteCouponApi = (id) => {
   return axiosInstance.delete(`/admin/coupons/${id}`);
 };
+
+export const getAdminWithdrawalsApi = (status) => {
+  return axiosInstance.get("/admin/withdrawals" + (status ? `?status=${status}` : ""));
+};
+
+export const approveWithdrawalApi = (id) => {
+  return axiosInstance.patch(`/admin/withdrawals/${id}/approve`);
+};
+
+export const rejectWithdrawalApi = (id, rejectionReason) => {
+  return axiosInstance.patch(`/admin/withdrawals/${id}/reject`, { rejectionReason });
+};

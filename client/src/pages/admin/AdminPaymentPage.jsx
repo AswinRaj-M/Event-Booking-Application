@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   Wallet as WalletIcon, 
   TrendingUp, 
@@ -18,6 +18,11 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import AdminSidebar from "../../components/admin/AdminSidebar";
+import {
+  getAdminWithdrawalsApi,
+  approveWithdrawalApi,
+  rejectWithdrawalApi
+} from "../../services/admin.api.js";
 
 const AdminPaymentPage = () => {
   // Financial KPI state
@@ -31,179 +36,89 @@ const AdminPaymentPage = () => {
   const [addAmount, setAddAmount] = useState("");
   const [addSource, setAddSource] = useState("Platform Reserve Account");
 
-  // Withdrawal Requests State matching mockup design
-  const [withdrawalRequests, setWithdrawalRequests] = useState([
-    {
-      id: "req-1",
-      vendorName: "Starlight Events",
-      vendorAvatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
-      amount: 2450.00,
-      reqDate: "Oct 24, 2024",
-      balance: "8.2k",
-      status: "pending"
-    },
-    {
-      id: "req-2",
-      vendorName: "Elite Catering",
-      vendorAvatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80",
-      amount: 1800.00,
-      reqDate: "Oct 23, 2024",
-      balance: "4.5k",
-      status: "pending"
-    },
-    {
-      id: "req-3",
-      vendorName: "DJ Beats Pro",
-      vendorAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
-      amount: 5200.00,
-      reqDate: "Oct 23, 2024",
-      balance: "12k",
-      status: "pending"
+  // Rejection Reason Modal State
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectingItem, setRejectingItem] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState("");
+
+  // Withdrawal Requests State
+  const [withdrawalRequests, setWithdrawalRequests] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch Real Withdrawal Requests
+  const fetchWithdrawals = async () => {
+    try {
+      setLoading(true);
+      const res = await getAdminWithdrawalsApi();
+      if (res.data?.success && res.data.requests) {
+        const mapped = res.data.requests.map((r) => ({
+          id: r._id,
+          vendorName: r.vendorId?.businessName || r.vendorId?.fullName || "Vendor Account",
+          vendorAvatar: r.vendorId?.profilePicture?.fileUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+          amount: r.amount,
+          reqDate: new Date(r.requestedAt || r.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+          balance: `$${r.amount.toLocaleString()}`,
+          status: r.status,
+          destinationAccount: r.destinationAccount
+        }));
+        setWithdrawalRequests(mapped);
+
+        // Calculate pending amount total
+        const pendingTotal = mapped
+          .filter((r) => r.status === "pending")
+          .reduce((sum, r) => sum + r.amount, 0);
+        setPendingWithdrawalsAmount(pendingTotal);
+      }
+    } catch (err) {
+      console.error("Error fetching admin withdrawal requests:", err);
+    } finally {
+      setLoading(false);
     }
-  ]);
-
-  // Recent Wallet Transactions State matching mockup design
-  const [transactions, setTransactions] = useState([
-    {
-      id: "TXN-8472",
-      type: "Credit",
-      typeBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
-      amount: 3250.00,
-      from: "Booking #4521",
-      reason: "Event commission",
-      status: "Completed",
-      statusBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
-      date: "Oct 24, 2024"
-    },
-    {
-      id: "TXN-8471",
-      type: "Debit",
-      typeBg: "bg-rose-950/60 border-rose-500/30 text-rose-400",
-      amount: -1800.00,
-      from: "Elite Catering",
-      reason: "Vendor payout",
-      status: "Completed",
-      statusBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
-      date: "Oct 23, 2024"
-    },
-    {
-      id: "TXN-8470",
-      type: "Credit",
-      typeBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
-      amount: 5890.00,
-      from: "Booking #4518",
-      reason: "Event commission",
-      status: "Completed",
-      statusBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
-      date: "Oct 23, 2024"
-    },
-    {
-      id: "TXN-8469",
-      type: "Debit",
-      typeBg: "bg-rose-950/60 border-rose-500/30 text-rose-400",
-      amount: -2450.00,
-      from: "Starlight Events",
-      reason: "Vendor payout",
-      status: "Pending",
-      statusBg: "bg-amber-950/60 border-amber-500/30 text-amber-400",
-      date: "Oct 22, 2024"
-    },
-    {
-      id: "TXN-8468",
-      type: "Credit",
-      typeBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
-      amount: 1250.00,
-      from: "Booking #4515",
-      reason: "Event commission",
-      status: "Completed",
-      statusBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
-      date: "Oct 22, 2024"
-    },
-    {
-      id: "TXN-8467",
-      type: "Debit",
-      typeBg: "bg-rose-950/60 border-rose-500/30 text-rose-400",
-      amount: -5200.00,
-      from: "DJ Beats Pro",
-      reason: "Vendor payout",
-      status: "Pending",
-      statusBg: "bg-amber-950/60 border-amber-500/30 text-amber-400",
-      date: "Oct 21, 2024"
-    },
-    {
-      id: "TXN-8466",
-      type: "Credit",
-      typeBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
-      amount: 4120.00,
-      from: "Booking #4512",
-      reason: "Event commission",
-      status: "Completed",
-      statusBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
-      date: "Oct 21, 2024"
-    },
-    {
-      id: "TXN-8465",
-      type: "Debit",
-      typeBg: "bg-rose-950/60 border-rose-500/30 text-rose-400",
-      amount: -3750.00,
-      from: "Venue Masters",
-      reason: "Vendor payout",
-      status: "Completed",
-      statusBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
-      date: "Oct 20, 2024"
-    },
-    {
-      id: "TXN-8464",
-      type: "Credit",
-      typeBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
-      amount: 2890.00,
-      from: "Booking #4508",
-      reason: "Event commission",
-      status: "Completed",
-      statusBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
-      date: "Oct 20, 2024"
-    },
-    {
-      id: "TXN-8463",
-      type: "Credit",
-      typeBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
-      amount: 6450.00,
-      from: "Booking #4505",
-      reason: "Event commission",
-      status: "Completed",
-      statusBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
-      date: "Oct 19, 2024"
-    }
-  ]);
-
-  // Action Handlers
-  const handleApproveRequest = (id, vendorName, amount) => {
-    setWithdrawalRequests(prev => prev.filter(r => r.id !== id));
-    setVendorPayouts(prev => prev + amount);
-    setPlatformBalance(prev => prev - amount);
-    setPendingWithdrawalsAmount(prev => Math.max(0, prev - amount));
-
-    setTransactions(prev => [
-      {
-        id: `TXN-${Math.floor(8000 + Math.random() * 1000)}`,
-        type: "Debit",
-        typeBg: "bg-rose-950/60 border-rose-500/30 text-rose-400",
-        amount: -amount,
-        from: vendorName,
-        reason: "Vendor payout",
-        status: "Completed",
-        statusBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
-        date: "Just now"
-      },
-      ...prev
-    ]);
-
-    toast.success(`Withdrawal request of $${amount.toLocaleString()} for ${vendorName} approved!`);
   };
 
-  const handleRejectRequest = (id, vendorName) => {
-    setWithdrawalRequests(prev => prev.filter(r => r.id !== id));
-    toast.error(`Withdrawal request for ${vendorName} rejected.`);
+  useEffect(() => {
+    fetchWithdrawals();
+  }, []);
+
+  // Action Handlers
+  const handleApproveRequest = async (id, vendorName, amount) => {
+    try {
+      toast.loading("Approving withdrawal request...", { id: "admin-approve-toast" });
+      const res = await approveWithdrawalApi(id);
+      if (res.data?.success) {
+        toast.success(`Withdrawal request of $${amount.toLocaleString()} for ${vendorName} approved successfully!`, { id: "admin-approve-toast" });
+        await fetchWithdrawals();
+      }
+    } catch (err) {
+      console.error("Error approving withdrawal:", err);
+      toast.error(err.response?.data?.message || "Failed to approve withdrawal request.", { id: "admin-approve-toast" });
+    }
+  };
+
+  const openRejectModal = (request) => {
+    setRejectingItem(request);
+    setRejectionReason("");
+    setShowRejectModal(true);
+  };
+
+  const handleRejectSubmit = async (e) => {
+    e.preventDefault();
+    if (!rejectingItem) return;
+
+    try {
+      toast.loading("Rejecting withdrawal request...", { id: "admin-reject-toast" });
+      const res = await rejectWithdrawalApi(rejectingItem.id, rejectionReason);
+      if (res.data?.success) {
+        toast.success(`Withdrawal request for ${rejectingItem.vendorName} rejected.`, { id: "admin-reject-toast" });
+        setShowRejectModal(false);
+        setRejectingItem(null);
+        setRejectionReason("");
+        await fetchWithdrawals();
+      }
+    } catch (err) {
+      console.error("Error rejecting withdrawal:", err);
+      toast.error(err.response?.data?.message || "Failed to reject withdrawal request.", { id: "admin-reject-toast" });
+    }
   };
 
   const handleAddFundsSubmit = (e) => {
@@ -502,7 +417,7 @@ const AdminPaymentPage = () => {
                       {/* Action Buttons */}
                       <div className="grid grid-cols-2 gap-2.5 pt-1">
                         <button 
-                          onClick={() => handleRejectRequest(req.id, req.vendorName)}
+                          onClick={() => openRejectModal(req)}
                           className="py-2 bg-[#17142B] hover:bg-[#221E3E] text-zinc-300 hover:text-white text-xs font-extrabold rounded-xl border border-white/5 transition-all cursor-pointer"
                         >
                           Reject
@@ -667,6 +582,68 @@ const AdminPaymentPage = () => {
                     className="flex-1 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-extrabold rounded-2xl shadow-lg transition-all cursor-pointer"
                   >
                     Confirm Deposit
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        {/* Reject Withdrawal Request Modal */}
+        {showRejectModal && rejectingItem && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+            <div className="bg-[#0E0C20] border border-rose-500/30 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-rose-600/20 border border-rose-500/30 rounded-2xl text-rose-400">
+                    <X className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black text-white">Reject Withdrawal Request</h3>
+                    <p className="text-xs text-zinc-400 font-medium">Specify reason for vendor request rejection</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowRejectModal(false)}
+                  className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleRejectSubmit} className="space-y-4">
+                <div className="bg-[#070512] border border-white/5 rounded-2xl p-4 flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-bold text-white block">{rejectingItem.vendorName}</span>
+                    <span className="text-[11px] text-zinc-400">Requested: ${rejectingItem.amount?.toLocaleString()}</span>
+                  </div>
+                  <span className="px-2.5 py-1 bg-amber-950/60 border border-amber-500/30 text-amber-400 text-[10px] font-extrabold rounded-full">
+                    Pending Review
+                  </span>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-zinc-300 block mb-1.5">Rejection Reason (Optional)</label>
+                  <textarea 
+                    rows={3}
+                    placeholder="Enter reason for rejecting this payout request (e.g., Invalid bank details)..."
+                    value={rejectionReason}
+                    onChange={(e) => setRejectionReason(e.target.value)}
+                    className="w-full bg-[#080614] border border-zinc-800 rounded-2xl p-3 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-rose-500 transition-colors font-medium resize-none"
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button 
+                    type="button"
+                    onClick={() => setShowRejectModal(false)}
+                    className="flex-1 py-3 bg-[#16132D] hover:bg-[#201C3F] text-zinc-300 text-xs font-extrabold rounded-2xl transition-all cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    className="flex-1 py-3 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white text-xs font-extrabold rounded-2xl shadow-lg transition-all cursor-pointer"
+                  >
+                    Reject Request
                   </button>
                 </div>
               </form>

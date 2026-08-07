@@ -107,3 +107,11 @@ export const getVendorWalletApi = () => {
 export const getVendorWalletTransactionsApi = (page = 1, limit = 20) => {
   return axiosInstance.get(`/vendor/wallet/transactions?page=${page}&limit=${limit}`);
 };
+
+export const requestWithdrawalApi = (data) => {
+  return axiosInstance.post("/vendor/wallet/withdraw", data);
+};
+
+export const getVendorWithdrawalsApi = () => {
+  return axiosInstance.get("/vendor/wallet/withdrawals");
+};
