@@ -45,6 +45,120 @@ const AdminPaymentPage = () => {
   const [withdrawalRequests, setWithdrawalRequests] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // Recent Wallet Transactions State
+  const [transactions, setTransactions] = useState([
+    {
+      id: "TXN-8472",
+      type: "Credit",
+      typeBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
+      amount: 3250.00,
+      from: "Booking #4521",
+      reason: "Event commission",
+      status: "Completed",
+      statusBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
+      date: "Oct 24, 2024"
+    },
+    {
+      id: "TXN-8471",
+      type: "Debit",
+      typeBg: "bg-rose-950/60 border-rose-500/30 text-rose-400",
+      amount: -1800.00,
+      from: "Elite Catering",
+      reason: "Vendor payout",
+      status: "Completed",
+      statusBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
+      date: "Oct 23, 2024"
+    },
+    {
+      id: "TXN-8470",
+      type: "Credit",
+      typeBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
+      amount: 5890.00,
+      from: "Booking #4518",
+      reason: "Event commission",
+      status: "Completed",
+      statusBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
+      date: "Oct 23, 2024"
+    },
+    {
+      id: "TXN-8469",
+      type: "Debit",
+      typeBg: "bg-rose-950/60 border-rose-500/30 text-rose-400",
+      amount: -2450.00,
+      from: "Starlight Events",
+      reason: "Vendor payout",
+      status: "Pending",
+      statusBg: "bg-amber-950/60 border-amber-500/30 text-amber-400",
+      date: "Oct 22, 2024"
+    },
+    {
+      id: "TXN-8468",
+      type: "Credit",
+      typeBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
+      amount: 1250.00,
+      from: "Booking #4515",
+      reason: "Event commission",
+      status: "Completed",
+      statusBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
+      date: "Oct 22, 2024"
+    },
+    {
+      id: "TXN-8467",
+      type: "Debit",
+      typeBg: "bg-rose-950/60 border-rose-500/30 text-rose-400",
+      amount: -5200.00,
+      from: "DJ Beats Pro",
+      reason: "Vendor payout",
+      status: "Pending",
+      statusBg: "bg-amber-950/60 border-amber-500/30 text-amber-400",
+      date: "Oct 21, 2024"
+    },
+    {
+      id: "TXN-8466",
+      type: "Credit",
+      typeBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
+      amount: 4120.00,
+      from: "Booking #4512",
+      reason: "Event commission",
+      status: "Completed",
+      statusBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
+      date: "Oct 21, 2024"
+    },
+    {
+      id: "TXN-8465",
+      type: "Debit",
+      typeBg: "bg-rose-950/60 border-rose-500/30 text-rose-400",
+      amount: -3750.00,
+      from: "Venue Masters",
+      reason: "Vendor payout",
+      status: "Completed",
+      statusBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
+      date: "Oct 20, 2024"
+    },
+    {
+      id: "TXN-8464",
+      type: "Credit",
+      typeBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
+      amount: 2890.00,
+      from: "Booking #4508",
+      reason: "Event commission",
+      status: "Completed",
+      statusBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
+      date: "Oct 20, 2024"
+    },
+    {
+      id: "TXN-8463",
+      type: "Credit",
+      typeBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
+      amount: 6450.00,
+      from: "Booking #4505",
+      reason: "Event commission",
+      status: "Completed",
+      statusBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
+      date: "Oct 19, 2024"
+    }
+  ]);
+
   // Fetch Real Withdrawal Requests
   const fetchWithdrawals = async () => {
     try {
