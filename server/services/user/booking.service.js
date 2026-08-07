@@ -8,6 +8,7 @@ import mongoose from "mongoose";
 import { validateAndApplyCoupon } from "./coupon.service.js";
 import CouponRedemption from "../../models/couponRedemption.model.js";
 import { generateQRCode } from "../../utils/generateQrCode.js";
+import { processVendorBookingEarnings, processVendorBookingRefund } from "../vendor/vendorWallet.service.js";
 
 import {
   createBookingRepo,
@@ -198,6 +199,13 @@ export const confirmBookingAfterPaymentService = async (bookingId) => {
     console.error("Error updating event sold count on booking confirmation:", err);
   }
 
+  // Credit Vendor Wallet with Net Earnings & Store Wallet Transaction
+  try {
+    await processVendorBookingEarnings(booking);
+  } catch (err) {
+    console.error("Error processing vendor wallet earnings on booking confirmation:", err);
+  }
+
   return booking;
 };
 
@@ -230,69 +238,93 @@ export const getUserTicketsService = async(userId) =>{
 }
 
 
-export const cancelTicketService = async(userId,ticketId,allowedLimitHours = 24)=>{
-  const booking = await findBookingByTicketRepo(ticketId)
-  if(!booking){
-    throw new AppError("Booking Not Found!",HTTP_STATUS.NOT_FOUND)
+export const cancelTicketService = async(userId, ticketId, allowedLimitHours = 0) => {
+  const booking = await findBookingByTicketRepo(ticketId);
+  if (!booking) {
+    throw new AppError("Booking Not Found!", HTTP_STATUS.NOT_FOUND);
   }
 
-  const bookingUserId = booking.userId._id ? booking.userId._id.toString() : booking.userId.toString()
+  const bookingUserId = booking.userId?._id
+    ? booking.userId._id.toString()
+    : booking.userId?.toString();
 
-  if(bookingUserId !== userId.toString()){
-    throw new AppError("You are not authorized to cancel the Ticket!",HTTP_STATUS.FORBIDDEN)
+  if (bookingUserId && bookingUserId !== userId.toString()) {
+    throw new AppError("You are not authorized to cancel this ticket!", HTTP_STATUS.FORBIDDEN);
   }
 
-  const ticket = booking.tickets.find((ticket) => ticket.ticketId === ticketId)
+  const ticket = booking.tickets.find((t) => t.ticketId === ticketId);
 
-  if(!ticket){
-    throw new AppError("Specified ticket not found in Booking",HTTP_STATUS.NOT_FOUND)
+  if (!ticket) {
+    throw new AppError("Specified ticket not found in Booking", HTTP_STATUS.NOT_FOUND);
   }
 
-  if(ticket.status === "cancelled"){
-    throw new AppError("This Ticket Already Cancelled!",HTTP_STATUS.BAD_REQUEST)
+  if (ticket.status === "cancelled") {
+    return {
+      bookingId: booking.bookingId || booking._id,
+      ticketId: ticket.ticketId,
+      ticketStatus: "cancelled",
+      bookingStatus: booking.bookingStatus,
+      message: "Ticket is already cancelled.",
+    };
   }
 
-  if(ticket.status === "checked-in"){
-    throw new AppError("cheked-in tickets cant be cancelled!",HTTP_STATUS.BAD_REQUEST)
+  if (ticket.status === "checked-in") {
+    throw new AppError("Checked-in tickets cannot be cancelled!", HTTP_STATUS.BAD_REQUEST);
   }
 
-  const event = booking.eventId
+  const event = booking.eventId;
 
-  if(!eventId||!event.schedule || !event.schedule.date){
-    throw new AppError("Event Schedule details Missing ",HTTP_STATUS.BAD_REQUEST)
+  if (event && event.schedule && event.schedule.date) {
+    const eventStartDate = new Date(event.schedule.date);
+    if (event.schedule.startTime) {
+      const timeStr = String(event.schedule.startTime).trim();
+      const match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+      if (match) {
+        let hours = parseInt(match[1], 10);
+        const minutes = parseInt(match[2], 10);
+        const period = match[3]?.toUpperCase();
+        if (period === "PM" && hours < 12) hours += 12;
+        if (period === "AM" && hours === 12) hours = 0;
+        eventStartDate.setHours(hours, minutes, 0, 0);
+      }
+    }
+
+    const now = new Date();
+    if (allowedLimitHours > 0) {
+      const limitInMillis = allowedLimitHours * 60 * 60 * 1000;
+      const cancellationDeadLine = new Date(eventStartDate.getTime() - limitInMillis);
+      if (!isNaN(cancellationDeadLine.getTime()) && now > cancellationDeadLine) {
+        throw new AppError(`Cancellation time limit expired. Tickets can only be cancelled up to ${allowedLimitHours} hours before event start time.`, HTTP_STATUS.BAD_REQUEST);
+      }
+    }
   }
 
-  const eventStartDate = new Date(event.schedule.date)
-  if(event.schedule.startTime){
-    const [hours,minutes] = event.schedule.startTime.split(":").map(Number)
-    eventStartDate.setHours(hours || 0,minutes || 0,0,0);
+  ticket.status = "cancelled";
+  const allCancelled = booking.tickets.every((t) => t.status === "cancelled");
+  if (allCancelled) {
+    booking.bookingStatus = "cancelled";
   }
 
-  const now = new Date()
-  const limitInMillis = allowedLimitHours * 60 * 60 * 1000
-  const cancellationDeadLine = new Date(eventStartDate.getTime() - limitInMillis)
+  await saveBookingRepo(booking);
 
-  if(now > cancellationDeadLine){
-    throw new AppError(`Cancellation time limit expired. Tickets can only be cancelled up to ${allowedLimitHours} hours before
-       the event start time.`,
-        HTTP_STATUS.BAD_REQUEST
-      );
-  }
-  ticket.status === "cancelled"
-  const allCancelled = booking.tickets.every((ticket) => ticket.status === "cancelled")
-  if(allCancelled){
-    booking.bookingStatus === "cancelled"
+  try {
+    await processVendorBookingRefund(booking);
+  } catch (err) {
+    console.error("Error processing vendor wallet refund deduction:", err);
   }
 
-  await saveBookingRepo(booking)
-  await decrementEventSoldCountRepo(event._id,booking.tierId)
-
+  try {
+    if (event && event._id) {
+      await decrementEventSoldCountRepo(event._id, booking.tierId);
+    }
+  } catch (err) {
+    console.error("Error decrementing event sold count:", err);
+  }
 
   return {
-    bookingId : booking.bookingId || booking._id,
-    ticketId : ticket.ticketId,
-    ticketStatus : ticket.status,
-    bookingStatus : booking.bookingStatus,
-    cancellationDeadLine
-  }
-}
+    bookingId: booking.bookingId || booking._id,
+    ticketId: ticket.ticketId,
+    ticketStatus: ticket.status,
+    bookingStatus: booking.bookingStatus,
+  };
+};

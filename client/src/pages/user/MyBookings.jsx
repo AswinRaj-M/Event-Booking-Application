@@ -13,14 +13,12 @@ import {
   Eye, 
   Plus,
   ShieldCheck,
-  Info,
-  RotateCcw
+  Info
 } from "lucide-react";
 import { toast } from "sonner";
 import UserSideBar from "../../components/user/UserSideBar";
 import { USER_ROUTES } from "../../constants/Routes";
-import { getBookingHistory } from "../../services/user.api.js";
-import RefundModal from "../../components/user/RefundModal";
+import { getBookingHistory, cancelTicketApi } from "../../services/user.api.js";
 
 const MyBookings = () => {
   const navigate = useNavigate();
@@ -30,9 +28,8 @@ const MyBookings = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
-  const [selectedBookingForRefund, setSelectedBookingForRefund] = useState(null);
 
+  // Fetch bookings helper
   const fetchBookings = async () => {
     try {
       setLoading(true);
@@ -50,19 +47,9 @@ const MyBookings = () => {
     }
   };
 
-  // Fetch bookings on load
   useEffect(() => {
     fetchBookings();
   }, []);
-
-  const handleOpenRefundModal = (booking) => {
-    setSelectedBookingForRefund(booking);
-    setIsRefundModalOpen(true);
-  };
-
-  const handleRefundSuccess = () => {
-    fetchBookings();
-  };
 
   // Format Date Helper
   const getFormattedDate = (dateStr) => {
@@ -138,8 +125,52 @@ const MyBookings = () => {
     }
   };
 
-  const handleCancelClick = () => {
-    toast.info("Please contact the event organizer directly to request a ticket cancellation or refund.");
+  const proceedCancelTicket = async (unCancelledTickets) => {
+    try {
+      toast.loading("Cancelling ticket(s)...", { id: "cancel-ticket-toast" });
+      let cancelledCount = 0;
+      for (const ticket of unCancelledTickets) {
+        if (ticket.ticketId) {
+          await cancelTicketApi(ticket.ticketId);
+          cancelledCount++;
+        }
+      }
+      if (cancelledCount > 0) {
+        toast.success("Ticket(s) cancelled successfully! Refund has been credited to your wallet.", { id: "cancel-ticket-toast" });
+        fetchBookings();
+      } else {
+        toast.error("Could not cancel ticket.", { id: "cancel-ticket-toast" });
+      }
+    } catch (err) {
+      console.error("Error cancelling ticket:", err);
+      toast.error(err.response?.data?.message || "Failed to cancel ticket. Please check cancellation deadline.", { id: "cancel-ticket-toast" });
+    }
+  };
+
+  const handleCancelClick = (booking) => {
+    if (!booking || !booking.tickets || booking.tickets.length === 0) {
+      toast.info("Please contact the event organizer directly to request a ticket cancellation or refund.");
+      return;
+    }
+
+    const unCancelledTickets = booking.tickets.filter((t) => t.status !== "cancelled");
+    if (unCancelledTickets.length === 0) {
+      toast.info("All tickets for this booking are already cancelled.");
+      return;
+    }
+
+    toast("Cancel Ticket Confirmation", {
+      description: "Are you sure you want to cancel your ticket(s) for this event?",
+      action: {
+        label: "Confirm Cancel",
+        onClick: () => proceedCancelTicket(unCancelledTickets),
+      },
+      cancel: {
+        label: "Dismiss",
+        onClick: () => {},
+      },
+      duration: 6000,
+    });
   };
 
   return (
@@ -370,11 +401,10 @@ const MyBookings = () => {
                               {booking.bookingStatus !== "cancelled" && (
                                 <div className="flex gap-2 w-full">
                                   <button 
-                                    onClick={() => handleOpenRefundModal(booking)}
-                                    className="flex-1 py-2 px-3 bg-purple-950/30 hover:bg-purple-900/50 border border-purple-500/30 text-purple-300 hover:text-purple-200 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                                    onClick={() => handleCancelClick(booking)}
+                                    className="flex-1 py-2 px-3 bg-rose-950/20 hover:bg-rose-900/40 border border-rose-500/20 hover:border-rose-500/40 text-rose-300 hover:text-rose-200 text-xs font-bold rounded-xl transition-all cursor-pointer"
                                   >
-                                    <RotateCcw className="w-3.5 h-3.5" />
-                                    Refund
+                                    Cancel
                                   </button>
                                   <button 
                                     onClick={() => handleActionClick("View Ticket QR", booking._id)}
@@ -404,14 +434,6 @@ const MyBookings = () => {
             )}
           </div>
         )}
-
-        {/* Refund Request Flow Modal */}
-        <RefundModal
-          isOpen={isRefundModalOpen}
-          onClose={() => setIsRefundModalOpen(false)}
-          booking={selectedBookingForRefund}
-          onSuccess={handleRefundSuccess}
-        />
       </main>
     </div>
   );

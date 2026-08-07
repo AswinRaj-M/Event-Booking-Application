@@ -102,7 +102,12 @@ router.put(
 )
 router.delete("/delete-event/:eventId", protect, requireRole("vendor"), asyncHandler(deleteEvent))
 
-router.post("/logout", protect, requireRole("vendor"), asyncHandler(vendorLogout))
+import {
+  getVendorWallet,
+  getVendorTransactions
+} from "../controllers/vendor/vendorWallet.controller.js"
+
+router.get("/logout", protect, requireRole("vendor"), asyncHandler(vendorLogout))
 router.get("/status", protect, requireRole("vendor"), (req, res) => {
   res.status(HTTP_STATUS.OK).json({
     success: true,
@@ -110,5 +115,8 @@ router.get("/status", protect, requireRole("vendor"), (req, res) => {
     isBlocked: req.user.isBlocked
   });
 })
+
+router.get("/wallet", protect, requireRole("vendor"), asyncHandler(getVendorWallet))
+router.get("/wallet/transactions", protect, requireRole("vendor"), asyncHandler(getVendorTransactions))
 
 export default router

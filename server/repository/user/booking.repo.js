@@ -1,17 +1,12 @@
-import mongoose from "mongoose";
 import Booking from "../../models/booking.model.js";
+import Event from "../../models/event.model.js";
 
 export const createBookingRepo = async(bookingData) =>{
  return await Booking.create(bookingData)
 }
 
 export const findBookingByIdRepo = async(bookingId) =>{
-  const isObjectId = mongoose.Types.ObjectId.isValid(bookingId);
-  const query = isObjectId 
-    ? { $or: [{ _id: bookingId }, { bookingId: bookingId }] } 
-    : { bookingId: bookingId };
-
-  return await Booking.findOne(query)
+  return await Booking.findById(bookingId)
   .populate({
     path : "eventId",
     select : "title description schedule venue address city thumbnail eventType"
@@ -52,17 +47,14 @@ export const saveBookingRepo = async(bookingDocument)=>{
 }
 
 
-export const decrementEventSoldCountRepo = async() =>{
-   const event = await Event.findById(eventId);
-  if (!event) return null;
-  if (event.soldTickets && event.soldTickets > 0) {
-    event.soldTickets -= 1;
+export const decrementEventSoldCountRepo = async(eventId, tierId) => {
+  if (!eventId) return null;
+  const update = { $inc: { soldTickets: -1 } };
+  if (tierId) {
+    return await Event.updateOne(
+      { _id: eventId, "ticketTiers._id": tierId },
+      { $inc: { soldTickets: -1, "ticketTiers.$.sold": -1 } }
+    );
   }
-  if (event.ticketTiers && event.ticketTiers.length > 0 && tierId) {
-    const tier = event.ticketTiers.find((t) => t._id.toString() === tierId.toString());
-    if (tier && tier.sold && tier.sold > 0) {
-      tier.sold -= 1;
-    }
-  }
-  return await event.save();
+  return await Event.findByIdAndUpdate(eventId, update, { new: true });
 }

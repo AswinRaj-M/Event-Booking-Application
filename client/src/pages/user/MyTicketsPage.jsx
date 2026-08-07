@@ -164,7 +164,7 @@ const MyTicketsPage = () => {
                     {booking.tickets && booking.tickets.length > 0 ? (
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                         {booking.tickets.map((ticket, idx) => (
-                          <TicketCard key={ticket.ticketId || idx} ticket={ticket} index={idx} />
+                          <TicketCard key={ticket.ticketId || ticket._id || `ticket-${idx}`} ticket={ticket} index={idx} />
                         ))}
                       </div>
                     ) : (

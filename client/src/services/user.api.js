@@ -89,18 +89,10 @@ export const getUserTickets = () => {
   return axiosInstance.get("/users/my-tickets");
 };
 
+export const cancelTicketApi = (ticketId) => {
+  return axiosInstance.patch(`/users/booking/cancel-ticket/${ticketId}`);
+};
+
 export const getPublicCouponsApi = () => {
   return axiosInstance.get("/users/public-coupons");
-};
-
-export const checkRefundEligibility = (bookingId) => {
-  return axiosInstance.get(`/users/refund/eligibility/${bookingId}`);
-};
-
-export const requestRefund = (data) => {
-  return axiosInstance.post("/users/refund/request", data);
-};
-
-export const getUserRefunds = () => {
-  return axiosInstance.get("/users/refund/my-requests");
 };

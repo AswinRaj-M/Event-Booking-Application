@@ -8,8 +8,7 @@ import {
   Download, 
   ArrowLeft,
   Loader2,
-  AlertTriangle,
-  RotateCcw
+  AlertTriangle
 } from "lucide-react";
 import { toPng } from "html-to-image";
 import { getBookingDetails } from "../../services/user.api.js";
@@ -17,7 +16,6 @@ import { USER_ROUTES } from "../../constants/Routes";
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
 import TicketCard from "../../components/user/TicketCard";
-import RefundModal from "../../components/user/RefundModal";
 import { toast } from "sonner";
 
 const TicketViewPage = () => {
@@ -25,7 +23,6 @@ const TicketViewPage = () => {
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const ticketRef = useRef(null);
 
@@ -184,30 +181,18 @@ const TicketViewPage = () => {
                 <p className="text-xs text-zinc-400">Order ID: #{booking.bookingId || id}</p>
               </div>
 
-              <div className="flex items-center gap-3 flex-wrap">
-                {booking.bookingStatus !== "cancelled" && booking.paymentStatus === "paid" && (
-                  <button
-                    onClick={() => setIsRefundModalOpen(true)}
-                    className="py-3 px-4 bg-purple-950/40 hover:bg-purple-900/60 border border-purple-500/30 text-purple-300 hover:text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-md flex items-center gap-2 cursor-pointer"
-                  >
-                    <RotateCcw className="w-4 h-4" />
-                    Request Refund
-                  </button>
+              <button 
+                onClick={handleDownloadFullBooking}
+                disabled={downloading}
+                className={`py-3 px-5 bg-gradient-to-r text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-lg flex items-center gap-2 cursor-pointer disabled:opacity-50 ${themeBgGradientClass}`}
+              >
+                {downloading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4" />
                 )}
-
-                <button 
-                  onClick={handleDownloadFullBooking}
-                  disabled={downloading}
-                  className={`py-3 px-5 bg-gradient-to-r text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-lg flex items-center gap-2 cursor-pointer disabled:opacity-50 ${themeBgGradientClass}`}
-                >
-                  {downloading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Download className="w-4 h-4" />
-                  )}
-                  Download Full Booking Pass
-                </button>
-              </div>
+                Download Full Booking Pass
+              </button>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 my-6">
@@ -262,7 +247,7 @@ const TicketViewPage = () => {
             {booking.tickets && booking.tickets.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {booking.tickets.map((ticket, idx) => (
-                  <TicketCard key={ticket.ticketId || `ticket-${idx}`} ticket={ticket} index={idx} />
+                  <TicketCard key={ticket.ticketId || ticket._id || `ticket-${idx}`} ticket={ticket} index={idx} />
                 ))}
               </div>
             ) : (
@@ -278,16 +263,6 @@ const TicketViewPage = () => {
           Back to My Bookings
         </Link>
       </main>
-
-      <RefundModal
-        isOpen={isRefundModalOpen}
-        onClose={() => setIsRefundModalOpen(false)}
-        booking={booking}
-        onSuccess={() => {
-          setIsRefundModalOpen(false);
-          toast.success("Refund requested. Refreshing details...");
-        }}
-      />
       
       <Footer />
     </div>

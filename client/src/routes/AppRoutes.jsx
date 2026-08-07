@@ -18,6 +18,7 @@ import MyTicketsPage from '../pages/user/MyTicketsPage.jsx';
 import TicketViewPage from '../pages/user/TicketViewPage.jsx';
 import PaymentCheckout from '../pages/user/PaymentCheckout.jsx';
 import PaymentStatusPage from '../pages/user/PaymentStatusPage.jsx';
+import UserWallet from '../pages/user/UserWallet.jsx';
 import { COMMON_ROUTES, USER_ROUTES } from '../constants/Routes';
 
 const AppRoutes = () => {
@@ -72,6 +73,11 @@ const AppRoutes = () => {
             <Route path={USER_ROUTES.TICKET_VIEW} element={
                 <ProtectedRoute role="user">
                     <TicketViewPage />
+                </ProtectedRoute>
+            } />
+            <Route path={USER_ROUTES.WALLET} element={
+                <ProtectedRoute role="user">
+                    <UserWallet />
                 </ProtectedRoute>
             } />
             <Route path={COMMON_ROUTES.LANDING} element={

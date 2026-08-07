@@ -99,3 +99,11 @@ export const verifyVendorEmailUpdateOtp = (data) => {
 export const resendVendorEmailUpdateOtp = () => {
   return axiosInstance.post("/vendor/resend-email-update-otp");
 };
+
+export const getVendorWalletApi = () => {
+  return axiosInstance.get("/vendor/wallet");
+};
+
+export const getVendorWalletTransactionsApi = (page = 1, limit = 20) => {
+  return axiosInstance.get(`/vendor/wallet/transactions?page=${page}&limit=${limit}`);
+};

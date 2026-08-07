@@ -80,8 +80,8 @@ export const getUserTickets = async(req,res) =>{
 
 
 export const cancelTicket = async(req,res) =>{
-  const userId = req.user._id
-  const ticketId = req.params;
+  const userId = req.user._id || req.user.userId;
+  const { ticketId } = req.params;
 
   if(!ticketId){
     return res.status(HTTP_STATUS.BAD_REQUEST).json({
@@ -90,11 +90,11 @@ export const cancelTicket = async(req,res) =>{
     })
   }
 
-  const result = await cancelTicketService(userId,ticketId)
+  const result = await cancelTicketService(userId, ticketId);
 
   return res.status(HTTP_STATUS.OK).json({
     success : true,
-    message : " Ticket Cancelled Successfully",
+    message : result.message || "Ticket Cancelled Successfully",
     data : result
   })
 }

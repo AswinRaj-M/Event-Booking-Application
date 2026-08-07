@@ -77,45 +77,6 @@ export const getUserTicketsThunk = createAsyncThunk(
   }
 );
 
-export const checkRefundEligibilityThunk = createAsyncThunk(
-  "users/check-refund-eligibility",
-  async (bookingId, thunkAPI) => {
-    try {
-      const response = await userAPI.checkRefundEligibility(bookingId);
-      return response.data.eligibility;
-    } catch (error) {
-      const errorMessage = error.response?.data?.message || "Booking is not eligible for refund";
-      return thunkAPI.rejectWithValue(errorMessage);
-    }
-  }
-);
-
-export const requestRefundThunk = createAsyncThunk(
-  "users/request-refund",
-  async ({ bookingId, reason }, thunkAPI) => {
-    try {
-      const response = await userAPI.requestRefund({ bookingId, reason });
-      return response.data.refund;
-    } catch (error) {
-      const errorMessage = error.response?.data?.message || "Failed to submit refund request";
-      return thunkAPI.rejectWithValue(errorMessage);
-    }
-  }
-);
-
-export const getUserRefundsThunk = createAsyncThunk(
-  "users/get-user-refunds",
-  async (_, thunkAPI) => {
-    try {
-      const response = await userAPI.getUserRefunds();
-      return response.data.refunds;
-    } catch (error) {
-      const errorMessage = error.response?.data?.message || "Failed to fetch refund requests";
-      return thunkAPI.rejectWithValue(errorMessage);
-    }
-  }
-);
-
 const userSlice = createSlice({
   name: "user",
   initialState: {
@@ -129,13 +90,6 @@ const userSlice = createSlice({
     tickets: [],
     ticketsLoading: false,
     ticketsError: null,
-    refunds: [],
-    refundLoading: false,
-    refundError: null,
-    refundSuccess: false,
-    eligibility: null,
-    eligibilityLoading: false,
-    eligibilityError: null,
   },
 
   reducers: {
@@ -149,22 +103,12 @@ const userSlice = createSlice({
       state.tickets = [];
       state.ticketsLoading = false;
       state.ticketsError = null;
-      state.refunds = [];
-      state.refundLoading = false;
-      state.refundError = null;
-      state.refundSuccess = false;
-      state.eligibility = null;
-      state.eligibilityLoading = false;
-      state.eligibilityError = null;
     },
     clearMessages: (state) => {
       state.error = null;
       state.success = false;
       state.unverified = false;
       state.ticketsError = null;
-      state.refundError = null;
-      state.refundSuccess = false;
-      state.eligibilityError = null;
     },
     setGoogleAuthData: (state, action) => {
       state.user = action.payload.user;
@@ -265,43 +209,6 @@ const userSlice = createSlice({
       .addCase(getUserTicketsThunk.rejected, (state, action) => {
         state.ticketsLoading = false;
         state.ticketsError = action.payload;
-      })
-
-      // Refund cases
-      .addCase(checkRefundEligibilityThunk.pending, (state) => {
-        state.eligibilityLoading = true;
-        state.eligibilityError = null;
-        state.eligibility = null;
-      })
-      .addCase(checkRefundEligibilityThunk.fulfilled, (state, action) => {
-        state.eligibilityLoading = false;
-        state.eligibility = action.payload;
-        state.eligibilityError = null;
-      })
-      .addCase(checkRefundEligibilityThunk.rejected, (state, action) => {
-        state.eligibilityLoading = false;
-        state.eligibilityError = action.payload;
-      })
-
-      .addCase(requestRefundThunk.pending, (state) => {
-        state.refundLoading = true;
-        state.refundError = null;
-        state.refundSuccess = false;
-      })
-      .addCase(requestRefundThunk.fulfilled, (state, action) => {
-        state.refundLoading = false;
-        state.refundSuccess = true;
-        state.refundError = null;
-        state.refunds.unshift(action.payload);
-      })
-      .addCase(requestRefundThunk.rejected, (state, action) => {
-        state.refundLoading = false;
-        state.refundSuccess = false;
-        state.refundError = action.payload;
-      })
-
-      .addCase(getUserRefundsThunk.fulfilled, (state, action) => {
-        state.refunds = action.payload;
       });
   }
 });

@@ -9,6 +9,7 @@ export const USER_ROUTES = {
   CHECKOUT: '/user/checkout',
   PAYMENT_STATUS: '/user/payment-status',
   TICKET_VIEW: '/user/booking/:id',
+  WALLET: '/user/wallet',
   SETTINGS: '/user/settings',
   SUPPORT: '/user/support',
 };

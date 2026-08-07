@@ -33,7 +33,7 @@ const UserSideBar = () => {
   const platformLinks = [
     { path: USER_ROUTES.HOME, icon: LayoutDashboard, label: "Dashboard" },
     { path: USER_ROUTES.BOOKINGS, icon: Ticket, label: "My Bookings" },
-    { path: "#", icon: Wallet, label: "Wallet" }
+    { path: USER_ROUTES.WALLET, icon: Wallet, label: "Wallet" }
   ];
 
   const accountLinks = [
@@ -68,7 +68,7 @@ const UserSideBar = () => {
 
               return (
                 <Link
-                  key={link.path}
+                  key={link.label}
                   to={link.path}
                   className={`flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-300 border ${
                     isActive
@@ -103,7 +103,7 @@ const UserSideBar = () => {
 
               return (
                 <Link
-                  key={link.path}
+                  key={link.label}
                   to={link.path}
                   className={`flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition-all duration-300 border ${
                     isActive
