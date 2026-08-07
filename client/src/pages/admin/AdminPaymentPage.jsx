@@ -26,10 +26,10 @@ import {
 
 const AdminPaymentPage = () => {
   // Financial KPI state
-  const [platformBalance, setPlatformBalance] = useState(142384.00);
+  const [platformBalance, setPlatformBalance] = useState(0);
   const [vendorPayouts, setVendorPayouts] = useState(0);
   const [pendingWithdrawalsAmount, setPendingWithdrawalsAmount] = useState(0);
-  const [commissionEarned, setCommissionEarned] = useState(28940.25);
+  const [commissionEarned, setCommissionEarned] = useState(0);
 
   // Add Funds Modal State
   const [showAddFundsModal, setShowAddFundsModal] = useState(false);
@@ -82,6 +82,8 @@ const AdminPaymentPage = () => {
           .filter((r) => r.status === "approved")
           .reduce((sum, r) => sum + r.amount, 0);
         setVendorPayouts(approvedTotal);
+        setCommissionEarned(approvedTotal * 0.1);
+        setPlatformBalance(approvedTotal > 0 ? approvedTotal * 0.2 : 0);
 
         // Build unique transactions log from real withdrawal requests
         const txLogs = mapped.map((req) => {
