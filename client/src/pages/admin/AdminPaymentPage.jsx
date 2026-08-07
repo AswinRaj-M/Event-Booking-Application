@@ -427,7 +427,7 @@ const AdminPaymentPage = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5 text-xs">
-                  {transactions.map((tx) => {
+                  {Array.from(new Map(transactions.map(t => [t.id, t])).values()).map((tx) => {
                     const isCredit = tx.type === "Credit";
 
                     return (

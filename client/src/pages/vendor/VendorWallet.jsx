@@ -56,51 +56,56 @@ const VendorWallet = () => {
         }
 
         if (txRes.data?.success && txRes.data.transactions) {
-          const formattedTx = txRes.data.transactions.map((tx) => {
-            const created = new Date(tx.createdTime || tx.createdAt);
-            const isEarnings = tx.transactionType === "earnings" || tx.transactionType === "credit";
-            const isRefund = tx.transactionType === "refund";
+          const uniqueTxMap = new Map();
+          txRes.data.transactions.forEach((tx) => {
+            // Deduplicate by transaction ID or bookingId + type
+            const dedupKey = tx._id || (tx.bookingId ? `${tx.bookingId._id || tx.bookingId}_${tx.transactionType}` : null);
+            if (dedupKey && !uniqueTxMap.has(dedupKey)) {
+              const created = new Date(tx.createdTime || tx.createdAt);
+              const isEarnings = tx.transactionType === "earnings" || tx.transactionType === "credit";
+              const isRefund = tx.transactionType === "refund";
 
-            let typeLabel = "Earnings";
-            let typeBg = "bg-purple-950/60 border-purple-500/30 text-purple-300";
-            let iconComp = TicketIcon;
-            let iconBg = "bg-purple-950/60 text-purple-400 border-purple-500/30";
+              let typeLabel = "Earnings";
+              let typeBg = "bg-purple-950/60 border-purple-500/30 text-purple-300";
+              let iconComp = TicketIcon;
+              let iconBg = "bg-purple-950/60 text-purple-400 border-purple-500/30";
 
-            if (isRefund) {
-              typeLabel = "Refund";
-              typeBg = "bg-rose-950/60 border-rose-500/30 text-rose-300";
-              iconComp = TicketIcon;
-              iconBg = "bg-rose-950/60 text-rose-400 border-rose-500/30";
-            } else if (!isEarnings) {
-              typeLabel = "Payout";
-              typeBg = "bg-amber-950/60 border-amber-500/30 text-amber-300";
-              iconComp = Building2;
-              iconBg = "bg-amber-950/60 text-amber-400 border-amber-500/30";
+              if (isRefund) {
+                typeLabel = "Refund";
+                typeBg = "bg-rose-950/60 border-rose-500/30 text-rose-300";
+                iconComp = TicketIcon;
+                iconBg = "bg-rose-950/60 text-rose-400 border-rose-500/30";
+              } else if (!isEarnings) {
+                typeLabel = "Payout";
+                typeBg = "bg-amber-950/60 border-amber-500/30 text-amber-300";
+                iconComp = Building2;
+                iconBg = "bg-amber-950/60 text-amber-400 border-amber-500/30";
+              }
+
+              let subtitle = tx.eventId?.title ? `Event: ${tx.eventId.title}` : "";
+              if (tx.bookingId) {
+                const bId = tx.bookingId.bookingId || tx.bookingId._id;
+                const qty = tx.bookingId.quantity;
+                subtitle = `Booking ID: ${bId}` + (qty ? ` • Quantity: ${qty} Ticket${qty > 1 ? "s" : ""}` : "");
+              }
+
+              uniqueTxMap.set(dedupKey, {
+                id: tx._id,
+                date: created.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+                time: created.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+                title: tx.description || (isEarnings ? "Event Ticket Sales Earnings" : (isRefund ? "Booking Cancellation Refund" : "Payout Request")),
+                subtitle: subtitle || "Booking Details",
+                type: typeLabel,
+                typeBg,
+                status: tx.status === "completed" ? "Completed" : "Pending",
+                statusBg: tx.status === "completed" ? "bg-emerald-950/60 border-emerald-500/30 text-emerald-400" : "bg-amber-950/60 border-amber-500/30 text-amber-400",
+                amount: isEarnings ? (tx.netAmount || tx.amount) : -Math.abs(tx.netAmount || tx.amount),
+                icon: iconComp,
+                iconBg
+              });
             }
-
-            let subtitle = tx.eventId?.title ? `Event: ${tx.eventId.title}` : "";
-            if (tx.bookingId) {
-              const bId = tx.bookingId.bookingId || tx.bookingId._id;
-              const qty = tx.bookingId.quantity;
-              subtitle = `Booking ID: ${bId}` + (qty ? ` • Quantity: ${qty} Ticket${qty > 1 ? "s" : ""}` : "");
-            }
-
-            return {
-              id: tx._id,
-              date: created.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-              time: created.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
-              title: tx.description || (isEarnings ? "Event Ticket Sales Earnings" : (isRefund ? "Booking Cancellation Refund" : "Payout Request")),
-              subtitle: subtitle || "Booking Details",
-              type: typeLabel,
-              typeBg,
-              status: tx.status === "completed" ? "Completed" : "Pending",
-              statusBg: tx.status === "completed" ? "bg-emerald-950/60 border-emerald-500/30 text-emerald-400" : "bg-amber-950/60 border-amber-500/30 text-amber-400",
-              amount: isEarnings ? (tx.netAmount || tx.amount) : -Math.abs(tx.netAmount || tx.amount),
-              icon: iconComp,
-              iconBg
-            };
           });
-          setTransactions(formattedTx);
+          setTransactions(Array.from(uniqueTxMap.values()));
         }
       } catch (err) {
         console.error("Error fetching vendor wallet data:", err);
