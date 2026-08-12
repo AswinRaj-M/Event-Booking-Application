@@ -61,7 +61,7 @@ const AdminPaymentPage = () => {
               vendorAvatar: r.vendorId?.profilePicture?.fileUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
               amount: r.amount,
               reqDate: new Date(r.requestedAt || r.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-              balance: `$${r.amount.toLocaleString()}`,
+              balance: `₹${r.amount.toLocaleString("en-IN")}`,
               status: r.status,
               destinationAccount: r.destinationAccount
             });
@@ -122,7 +122,7 @@ const AdminPaymentPage = () => {
       toast.loading("Approving withdrawal request...", { id: "admin-approve-toast" });
       const res = await approveWithdrawalApi(id);
       if (res.data?.success) {
-        toast.success(`Withdrawal request of $${amount.toLocaleString()} for ${vendorName} approved successfully!`, { id: "admin-approve-toast" });
+        toast.success(`Withdrawal request of ₹${amount.toLocaleString("en-IN")} for ${vendorName} approved successfully!`, { id: "admin-approve-toast" });
         await fetchWithdrawals();
       }
     } catch (err) {
@@ -167,7 +167,7 @@ const AdminPaymentPage = () => {
     setPlatformBalance(prev => prev + amt);
     setShowAddFundsModal(false);
     setAddAmount("");
-    toast.success(`Successfully added $${amt.toLocaleString("en-US", { minimumFractionDigits: 2 })} to Platform Balance!`);
+    toast.success(`Successfully added ₹${amt.toLocaleString("en-IN", { minimumFractionDigits: 2 })} to Platform Balance!`);
   };
 
   const handleExportReport = () => {
@@ -178,24 +178,24 @@ const AdminPaymentPage = () => {
   const pendingRequests = withdrawalRequests.filter(r => r.status === "pending");
 
   return (
-    <div className="flex h-screen bg-[#080614] text-white overflow-hidden font-sans">
-      {/* Admin Navigation Sidebar */}
+    <div className="flex min-h-screen bg-[#05040B] text-white font-sans selection:bg-purple-500/30">
+      {/* Sidebar Navigation */}
       <AdminSidebar />
 
-      {/* Main View Area */}
-      <main className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 bg-[#080614] scrollbar-thin scrollbar-thumb-purple-900/40">
+      {/* Main Content Area */}
+      <main className="flex-1 ml-64 p-8 min-h-screen relative z-10 flex flex-col space-y-8">
         
-        {/* Page Top Header Bar */}
+        {/* Header with Title & Action Controls */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-black tracking-tight text-white">Admin Wallet</h1>
-            <p className="text-xs text-zinc-400 font-medium mt-1">Platform financial overview and transactions</p>
+            <h1 className="text-3xl font-black tracking-tight text-white">Payment & Payouts</h1>
+            <p className="text-xs text-zinc-400 font-medium mt-1">Platform financial governance, vendor withdrawals, and earnings ledger</p>
           </div>
 
           <div className="flex items-center gap-3">
             <button 
               onClick={handleExportReport}
-              className="px-4 py-2.5 bg-[#120F24] hover:bg-[#1C1836] border border-white/10 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-2 cursor-pointer shadow-md"
+              className="px-4 py-2.5 bg-[#0D0A1F] hover:bg-[#1A1538] border border-white/10 text-zinc-300 hover:text-white text-xs font-bold rounded-xl transition-all flex items-center gap-2 cursor-pointer shadow-md"
             >
               <Download className="w-4 h-4 text-zinc-400" />
               Export Report
@@ -223,7 +223,7 @@ const AdminPaymentPage = () => {
               </div>
             </div>
             <div className="text-2xl md:text-3xl font-black text-white tracking-tight mb-2">
-              ${platformBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ₹{platformBalance.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             <div className="flex items-center gap-1 text-xs font-extrabold text-emerald-400">
               <div className="w-1.5 h-1.5 bg-emerald-400 rounded-sm" />
@@ -240,7 +240,7 @@ const AdminPaymentPage = () => {
               </div>
             </div>
             <div className="text-2xl md:text-3xl font-black text-white tracking-tight mb-2">
-              ${vendorPayouts.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ₹{vendorPayouts.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             <div className="text-xs font-medium text-zinc-400">
               Total disbursed YTD
@@ -256,7 +256,7 @@ const AdminPaymentPage = () => {
               </div>
             </div>
             <div className="text-2xl md:text-3xl font-black text-white tracking-tight mb-2">
-              ${pendingWithdrawalsAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ₹{pendingWithdrawalsAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             <div className="flex items-center gap-1.5 text-xs font-bold text-amber-400">
               <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
@@ -273,7 +273,7 @@ const AdminPaymentPage = () => {
               </div>
             </div>
             <div className="text-2xl md:text-3xl font-black text-white tracking-tight mb-2">
-              ${commissionEarned.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ₹{commissionEarned.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             <div className="flex items-center gap-1 text-xs font-extrabold text-emerald-400">
               <div className="w-1.5 h-1.5 bg-emerald-400 rounded-sm" />
@@ -324,7 +324,7 @@ const AdminPaymentPage = () => {
 
                         <div className="text-right">
                           <span className="text-base font-black text-white tracking-tight">
-                            ${req.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                            ₹{req.amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                           </span>
                         </div>
                       </div>
@@ -412,7 +412,7 @@ const AdminPaymentPage = () => {
                           </td>
 
                           <td className={`py-3.5 font-black text-xs whitespace-nowrap ${isCredit ? "text-emerald-400" : "text-rose-400"}`}>
-                            {isCredit ? `+$${tx.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}` : `-$${Math.abs(tx.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}`}
+                            {isCredit ? `+₹${tx.amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}` : `-₹${Math.abs(tx.amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`}
                           </td>
 
                           <td className="py-3.5 font-bold text-white whitespace-nowrap">
@@ -466,9 +466,9 @@ const AdminPaymentPage = () => {
 
               <form onSubmit={handleAddFundsSubmit} className="space-y-4">
                 <div>
-                  <label className="text-xs font-bold text-zinc-300 block mb-1.5">Amount to Add ($)</label>
+                  <label className="text-xs font-bold text-zinc-300 block mb-1.5">Amount to Add (₹)</label>
                   <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 font-bold text-sm">$</span>
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 font-bold text-sm">₹</span>
                     <input 
                       type="number" 
                       step="0.01"

@@ -225,31 +225,31 @@ export const confirmBookingAfterPaymentService = async (bookingId) => {
 
 
 export const getUserTicketsService = async(userId) =>{
-  const bookings = findUserBookingsRepo(userId)
+  const bookings = await findUserBookingsRepo(userId);
 
   const formattedBookings = await Promise.all(
     bookings.map(async(booking) =>{
-      const bookingObj = booking.toObject()
+      const bookingObj = booking.toObject ? booking.toObject() : booking;
 
-      if(bookingObj.tickets &&bookingObj.tickets.length > 0){
+      if(bookingObj.tickets && bookingObj.tickets.length > 0){
         bookingObj.tickets = await Promise.all(
           bookingObj.tickets.map(async(ticket) =>{
-            qrCodeImage = generateQRCode(ticket.qrCodeToken)
+            const qrCodeImage = generateQRCode(ticket.qrCodeToken);
 
             return {
               ticketId : ticket.ticketId,
               status : ticket.status,
               checkedInAt : ticket.checkedInAt,
               qrCodeImage
-            }
+            };
           })
-        )
+        );
       }
-      return bookingObj
+      return bookingObj;
     })
-  )
-  return formattedBookings
-}
+  );
+  return formattedBookings;
+};
 
 
 export const cancelTicketService = async(userId, ticketId, allowedLimitHours = 0) => {

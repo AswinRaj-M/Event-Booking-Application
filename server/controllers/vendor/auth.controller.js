@@ -195,10 +195,11 @@ export const vendorLogin = async (req, res) => {
 };
 
 export const vendorLogout = async (req, res) => {
-  const token = req.cookies.refreshToken;
+  const token = req.cookies?.refreshToken;
 
-
-  await vendorLogoutService(token);
+  if (token) {
+    await vendorLogoutService(token);
+  }
 
   res.clearCookie("refreshToken", {
     httpOnly: true,

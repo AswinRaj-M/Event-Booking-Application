@@ -83,21 +83,34 @@ const UserProfile = () => {
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
-    if (!fullName.trim()) {
-      toast.error("Name cannot be empty");
+    const trimmedFullName = fullName ? fullName.trim() : "";
+    if (!trimmedFullName) {
+      toast.error("Full name is required");
       return;
     }
-    if (fullName.trim().length < 3) {
+    if (fullName.includes("_")) {
+      toast.error("Full name cannot contain underscores");
+      return;
+    }
+    if (/\d/.test(fullName)) {
+      toast.error("Full name cannot contain numbers");
+      return;
+    }
+    if (/\s{2,}/.test(fullName)) {
+      toast.error("Full name cannot contain consecutive spaces");
+      return;
+    }
+    if (trimmedFullName.length < 3) {
       toast.error("Full name must be at least 3 characters");
       return;
     }
-    if (fullName.includes("__")) {
-      toast.error("Full name cannot contain consecutive underscores");
+    if (trimmedFullName.length > 50) {
+      toast.error("Full name cannot exceed 50 characters");
       return;
     }
-    const fullNameRegex = /^[a-zA-Z0-9]+(?:[ _-][a-zA-Z0-9]+)*$/;
-    if (!fullNameRegex.test(fullName.trim())) {
-      toast.error("Full name can only contain letters, numbers, and single spaces, hyphens, or underscores");
+    const fullNameRegex = /^[a-zA-Z]+(?: [a-zA-Z]+)*$/;
+    if (!fullNameRegex.test(trimmedFullName)) {
+      toast.error("Full name can only contain letters and single spaces");
       return;
     }
     if (!email.trim()) {
@@ -285,7 +298,7 @@ const UserProfile = () => {
               <div className="relative z-10 my-4">
                 <div className="text-xs text-zinc-400 font-semibold mb-1">Available Funds</div>
                 <div className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-purple-100 to-purple-300 tracking-tight flex items-baseline gap-1">
-                  <span className="text-2xl font-bold text-purple-400">$</span>
+                  <span className="text-2xl font-bold text-purple-400">₹</span>
                   <span>{(user?.walletBalance !== undefined ? user.walletBalance : 0.0).toFixed(2)}</span>
                 </div>
               </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { 
@@ -33,9 +33,11 @@ const MyBookings = () => {
   const fetchBookings = async () => {
     try {
       setLoading(true);
+      setError(null);
       const res = await getBookingHistory();
       if (res.data?.success) {
-        setBookings(res.data.history || []);
+        const rawList = res.data.history || res.data.bookings || [];
+        setBookings(Array.isArray(rawList) ? rawList : []);
       } else {
         setError("Failed to fetch booking history.");
       }
@@ -62,59 +64,126 @@ const MyBookings = () => {
     }
   };
 
+  // Helper to accurately determine when an event's schedule actually finishes
+  const getEventEndDateTime = (schedule) => {
+    if (!schedule?.date) return null;
+    const d = new Date(schedule.date);
+    if (isNaN(d.getTime())) return null;
+
+    const year = d.getFullYear();
+    const month = d.getMonth();
+    const date = d.getDate();
+
+    if (schedule.endTime) {
+      const match = String(schedule.endTime).trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+      if (match) {
+        let hours = parseInt(match[1], 10);
+        const minutes = parseInt(match[2], 10);
+        const period = match[3]?.toUpperCase();
+        if (period === "PM" && hours < 12) hours += 12;
+        if (period === "AM" && hours === 12) hours = 0;
+        return new Date(year, month, date, hours, minutes, 59, 999);
+      }
+    }
+    // If no endTime provided, consider it active until the end of that day (23:59:59)
+    return new Date(year, month, date, 23, 59, 59, 999);
+  };
+
+  // Calculate dynamic counts for each tab
+  const counts = useMemo(() => {
+    let upcoming = 0;
+    let past = 0;
+    let cancelled = 0;
+
+    const now = new Date();
+
+    bookings.forEach((booking) => {
+      if (booking.paymentStatus === "failed" || (booking.paymentStatus === "pending" && booking.bookingStatus === "pending")) {
+        return;
+      }
+
+      const isCancelled = booking.bookingStatus === "cancelled" || booking.eventId?.eventStatus === "cancelled";
+      const endDateTime = getEventEndDateTime(booking.eventId?.schedule);
+      const isCompleted = 
+        booking.bookingStatus === "checked-in" ||
+        booking.bookingStatus === "completed" ||
+        booking.eventId?.eventStatus === "completed" ||
+        (endDateTime && now > endDateTime);
+
+      if (isCancelled) {
+        cancelled++;
+      } else if (isCompleted) {
+        past++;
+      } else {
+        upcoming++;
+      }
+    });
+
+    return { upcoming, past, cancelled };
+  }, [bookings]);
+
   // Filter and process bookings based on activeTab and search query
   const filteredBookings = bookings.filter((booking) => {
     // Exclude failed or un-paid abandoned checkout attempts
-    if (booking.paymentStatus === "failed" || (booking.paymentStatus === "pending" && booking.bookingStatus !== "confirmed")) {
+    if (booking.paymentStatus === "failed" || (booking.paymentStatus === "pending" && booking.bookingStatus === "pending")) {
       return false;
     }
 
     const title = booking.eventId?.title || "";
     const matchesSearch = title.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const eventDate = booking.eventId?.schedule?.date ? new Date(booking.eventId.schedule.date) : null;
+    const endDateTime = getEventEndDateTime(booking.eventId?.schedule);
     const now = new Date();
+
+    const isCancelled = booking.bookingStatus === "cancelled" || booking.eventId?.eventStatus === "cancelled";
+    
+    // An event is completed/past ONLY if explicitly marked completed/checked-in OR its end time has truly elapsed
+    const isCompleted = 
+      booking.bookingStatus === "checked-in" ||
+      booking.bookingStatus === "completed" ||
+      booking.eventId?.eventStatus === "completed" ||
+      (endDateTime && now > endDateTime);
 
     // Determine booking tab
     let bookingTab = "upcoming";
-    if (booking.bookingStatus === "cancelled") {
+    if (isCancelled) {
       bookingTab = "cancelled";
-    } else if (booking.bookingStatus === "checked-in" || (eventDate && eventDate < now)) {
+    } else if (isCompleted) {
       bookingTab = "past";
+    } else {
+      bookingTab = "upcoming";
     }
 
     return bookingTab === activeTab && matchesSearch;
   });
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case "cancelled":
-        return (
-          <span className="px-3 py-1 rounded-full border border-rose-500/20 bg-rose-950/30 text-rose-400 text-[10px] font-extrabold uppercase tracking-wider backdrop-blur-md">
-            Cancelled
-          </span>
-        );
-      case "checked-in":
-      case "completed":
-        return (
-          <span className="px-3 py-1 rounded-full border border-zinc-800 bg-zinc-950/40 text-zinc-400 text-[10px] font-extrabold uppercase tracking-wider backdrop-blur-md">
-            Completed
-          </span>
-        );
-      case "confirmed":
-        return (
-          <span className="px-3 py-1 rounded-full border border-emerald-500/20 bg-emerald-950/30 text-emerald-400 text-[10px] font-extrabold uppercase tracking-wider backdrop-blur-md">
-            Confirmed
-          </span>
-        );
-      case "pending":
-      default:
-        return (
-          <span className="px-3 py-1 rounded-full border border-amber-500/20 bg-amber-950/30 text-amber-400 text-[10px] font-extrabold uppercase tracking-wider backdrop-blur-md">
-            Pending
-          </span>
-        );
+  const getStatusBadge = (status, eventStatus, endDateTime) => {
+    if (status === "cancelled" || eventStatus === "cancelled") {
+      return (
+        <span className="px-3 py-1 rounded-full border border-rose-500/20 bg-rose-950/30 text-rose-400 text-[10px] font-extrabold uppercase tracking-wider backdrop-blur-md">
+          Cancelled
+        </span>
+      );
     }
+    if (status === "checked-in" || status === "completed" || eventStatus === "completed" || (endDateTime && new Date() > endDateTime)) {
+      return (
+        <span className="px-3 py-1 rounded-full border border-zinc-800 bg-zinc-950/40 text-zinc-400 text-[10px] font-extrabold uppercase tracking-wider backdrop-blur-md">
+          Completed
+        </span>
+      );
+    }
+    if (status === "confirmed") {
+      return (
+        <span className="px-3 py-1 rounded-full border border-emerald-500/20 bg-emerald-950/30 text-emerald-400 text-[10px] font-extrabold uppercase tracking-wider backdrop-blur-md">
+          Confirmed
+        </span>
+      );
+    }
+    return (
+      <span className="px-3 py-1 rounded-full border border-amber-500/20 bg-amber-950/30 text-amber-400 text-[10px] font-extrabold uppercase tracking-wider backdrop-blur-md">
+        Pending
+      </span>
+    );
   };
 
   const handleActionClick = (actionName, bookingId) => {
@@ -220,33 +289,42 @@ const MyBookings = () => {
           <div className="flex items-center bg-[#0b0914] p-1.5 rounded-xl border border-zinc-850 w-full sm:w-auto">
             <button
               onClick={() => setActiveTab("upcoming")}
-              className={`flex-1 sm:flex-none px-5 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+              className={`flex-1 sm:flex-none px-4 sm:px-5 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 ${
                 activeTab === "upcoming"
                   ? "bg-[#1C1A30] text-purple-300 border border-purple-500/15"
                   : "text-zinc-500 hover:text-zinc-300"
               }`}
             >
-              Upcoming
+              <span>Upcoming</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${activeTab === "upcoming" ? "bg-purple-500/20 text-purple-300" : "bg-zinc-800 text-zinc-400"}`}>
+                {counts.upcoming}
+              </span>
             </button>
             <button
               onClick={() => setActiveTab("past")}
-              className={`flex-1 sm:flex-none px-5 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+              className={`flex-1 sm:flex-none px-4 sm:px-5 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 ${
                 activeTab === "past"
                   ? "bg-[#1C1A30] text-purple-300 border border-purple-500/15"
                   : "text-zinc-500 hover:text-zinc-300"
               }`}
             >
-              Past Events
+              <span>Past Events</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${activeTab === "past" ? "bg-purple-500/20 text-purple-300" : "bg-zinc-800 text-zinc-400"}`}>
+                {counts.past}
+              </span>
             </button>
             <button
               onClick={() => setActiveTab("cancelled")}
-              className={`flex-1 sm:flex-none px-5 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+              className={`flex-1 sm:flex-none px-4 sm:px-5 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 ${
                 activeTab === "cancelled"
                   ? "bg-[#1C1A30] text-purple-300 border border-purple-500/15"
                   : "text-zinc-500 hover:text-zinc-300"
               }`}
             >
-              Cancelled
+              <span>Cancelled</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${activeTab === "cancelled" ? "bg-rose-500/20 text-rose-300" : "bg-zinc-800 text-zinc-400"}`}>
+                {counts.cancelled}
+              </span>
             </button>
           </div>
         </div>
@@ -280,7 +358,13 @@ const MyBookings = () => {
                 const title = event?.title || "Untitled Event";
                 const category = event?.category?.name || (event?.eventType === "Online" ? "Online Event" : "In-person Event");
                 const imageUrl = event?.thumbnail?.fileUrl || "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=600&auto=format&fit=crop";
-                const isCompleted = activeTab === "past" || booking.bookingStatus === "checked-in";
+                const endDateTime = getEventEndDateTime(event?.schedule);
+                const isCompleted = 
+                  activeTab === "past" || 
+                  booking.bookingStatus === "checked-in" || 
+                  booking.bookingStatus === "completed" || 
+                  event?.eventStatus === "completed" || 
+                  (endDateTime && new Date() > endDateTime);
 
                 return (
                   <div 
@@ -355,7 +439,7 @@ const MyBookings = () => {
                       {/* Right Actions & Status */}
                       <div className="flex flex-col justify-between items-end md:w-48 gap-4">
                         {/* Status Badge */}
-                        {getStatusBadge(booking.bookingStatus)}
+                        {getStatusBadge(booking.bookingStatus, event?.eventStatus, endDateTime)}
 
                         {/* Actions Grid */}
                         <div className="w-full space-y-2 pt-4">

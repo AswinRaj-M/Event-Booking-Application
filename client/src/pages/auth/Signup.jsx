@@ -38,13 +38,25 @@ const Signup = () => {
     let errorMsg = "";
 
     switch (name) {
-      case "fullName":
-        if (!value.trim()) {
+      case "fullName": {
+        const trimmedName = value ? value.trim() : "";
+        if (!trimmedName) {
           errorMsg = "Full name is required";
-        } else if (value.trim().length < 3) {
+        } else if (value.includes("_")) {
+          errorMsg = "Full name cannot contain underscores";
+        } else if (/\d/.test(value)) {
+          errorMsg = "Full name cannot contain numbers";
+        } else if (/\s{2,}/.test(value)) {
+          errorMsg = "Full name cannot contain consecutive spaces";
+        } else if (trimmedName.length < 3) {
           errorMsg = "Full name must be at least 3 characters";
+        } else if (trimmedName.length > 50) {
+          errorMsg = "Full name cannot exceed 50 characters";
+        } else if (!/^[a-zA-Z]+(?: [a-zA-Z]+)*$/.test(trimmedName)) {
+          errorMsg = "Full name can only contain letters and single spaces";
         }
         break;
+      }
       case "email":
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!value.trim()) {
@@ -165,11 +177,11 @@ const Signup = () => {
 
     dispatch(
       registerUserThunk({
-        fullName,
-        email,
+        fullName: fullName.trim(),
+        email: email.trim(),
         password,
         confirmPassword,
-        phoneNumber,
+        phoneNumber: phoneNumber.trim(),
         agreeTermsAndConditions,
       }),
     );

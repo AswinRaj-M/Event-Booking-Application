@@ -5,16 +5,22 @@ export const registerValidation = [
     .trim()
     .notEmpty()
     .withMessage("Full name is required")
-    .isLength({ min: 3 })
-    .withMessage("Full name must be at least 3 characters")
-    .matches(/^[a-zA-Z0-9]+(?:[ _-][a-zA-Z0-9]+)*$/)
-    .withMessage("Full name can only contain letters, numbers, and single spaces, hyphens, or underscores")
+    .isLength({ min: 3, max: 50 })
+    .withMessage("Full name must be between 3 and 50 characters")
     .custom((value) => {
-      if (value.includes("__")) {
-        throw new Error("Full name cannot contain consecutive underscores");
+      if (value.includes("_")) {
+        throw new Error("Full name cannot contain underscores");
+      }
+      if (/\d/.test(value)) {
+        throw new Error("Full name cannot contain numbers");
+      }
+      if (/\s{2,}/.test(value)) {
+        throw new Error("Full name cannot contain consecutive spaces");
       }
       return true;
-    }),
+    })
+    .matches(/^[a-zA-Z]+(?: [a-zA-Z]+)*$/)
+    .withMessage("Full name can only contain letters and single spaces"),
 
   body("email")
     .trim()
@@ -123,16 +129,22 @@ export const userProfileUpdateValidation = [
     .trim()
     .notEmpty()
     .withMessage("Full name is required")
-    .isLength({ min: 3 })
-    .withMessage("Full name must be at least 3 characters")
-    .matches(/^[a-zA-Z0-9]+(?:[ _-][a-zA-Z0-9]+)*$/)
-    .withMessage("Full name can only contain letters, numbers, and single spaces, hyphens, or underscores")
+    .isLength({ min: 3, max: 50 })
+    .withMessage("Full name must be between 3 and 50 characters")
     .custom((value) => {
-      if (value.includes("__")) {
-        throw new Error("Full name cannot contain consecutive underscores");
+      if (value.includes("_")) {
+        throw new Error("Full name cannot contain underscores");
+      }
+      if (/\d/.test(value)) {
+        throw new Error("Full name cannot contain numbers");
+      }
+      if (/\s{2,}/.test(value)) {
+        throw new Error("Full name cannot contain consecutive spaces");
       }
       return true;
-    }),
+    })
+    .matches(/^[a-zA-Z]+(?: [a-zA-Z]+)*$/)
+    .withMessage("Full name can only contain letters and single spaces"),
 
   body("phoneNumber")
     .trim()

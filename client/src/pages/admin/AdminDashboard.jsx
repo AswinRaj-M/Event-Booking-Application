@@ -8,7 +8,7 @@ import {
   Settings,
   Bell,
   Sidebar,
-  DollarSign,
+  IndianRupee,
   ArrowUpRight,
   ShieldCheck
 } from 'lucide-react'
@@ -240,16 +240,16 @@ function AdminDashboard() {
             <div className="bg-[#151221] border border-gray-800/80 rounded-xl p-5 shadow-sm">
               <div className="flex justify-between items-start">
                 <p className="text-[13px] text-gray-300">Total Revenue</p>
-                <DollarSign className="w-4 h-4 text-amber-400" />
+                <IndianRupee className="w-4 h-4 text-amber-400" />
               </div>
               <div className="mt-2">
                 <h3 className="text-3xl font-bold text-white tracking-tight">
-                  ${stats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ₹{stats.totalRevenue.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </h3>
               </div>
               <div className="flex items-center gap-1.5 mt-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                <span className="text-emerald-500 text-xs font-semibold">Sales revenue</span>
+                <span className="text-emerald-500 text-xs font-semibold">Overall platform volume</span>
               </div>
             </div>
           </div>
@@ -271,7 +271,7 @@ function AdminDashboard() {
                       <div key={idx} className="flex-1 flex flex-col items-center group relative h-full justify-end z-10">
                         {/* Tooltip on hover */}
                         <div className="absolute bottom-full mb-2 hidden group-hover:block bg-gray-900 border border-gray-700 text-xs text-white px-2 py-1 rounded shadow-md z-20 whitespace-nowrap">
-                          ${val.toLocaleString()}
+                          ₹{val.toLocaleString("en-IN")}
                         </div>
                         {/* Bar */}
                         <div 
@@ -294,11 +294,11 @@ function AdminDashboard() {
 
                   {/* Y-axis labels */}
                   <div className="absolute -left-20 top-0 h-full flex flex-col justify-between text-[13px] text-gray-300 text-right pr-2 w-16">
-                    <div className="flex items-center justify-end w-full"><span className="mr-1.5">${formatCurrency(maxVal)}</span><div className="w-1.5 h-px bg-gray-600/50 absolute right-0"></div></div>
-                    <div className="flex items-center justify-end w-full"><span className="mr-1.5">${formatCurrency(maxVal * 0.75)}</span><div className="w-1.5 h-px bg-gray-600/50 absolute right-0"></div></div>
-                    <div className="flex items-center justify-end w-full"><span className="mr-1.5">${formatCurrency(maxVal * 0.5)}</span><div className="w-1.5 h-px bg-gray-600/50 absolute right-0"></div></div>
-                    <div className="flex items-center justify-end w-full"><span className="mr-1.5">${formatCurrency(maxVal * 0.25)}</span><div className="w-1.5 h-px bg-gray-600/50 absolute right-0"></div></div>
-                    <div className="flex items-center justify-end w-full mt-4"><span className="mr-1.5 translate-y-1">$0</span><div className="w-1.5 h-px bg-gray-600/50 absolute right-0 bottom-0"></div></div>
+                    <div className="flex items-center justify-end w-full"><span className="mr-1.5">₹{formatCurrency(maxVal)}</span><div className="w-1.5 h-px bg-gray-600/50 absolute right-0"></div></div>
+                    <div className="flex items-center justify-end w-full"><span className="mr-1.5">₹{formatCurrency(maxVal * 0.75)}</span><div className="w-1.5 h-px bg-gray-600/50 absolute right-0"></div></div>
+                    <div className="flex items-center justify-end w-full"><span className="mr-1.5">₹{formatCurrency(maxVal * 0.5)}</span><div className="w-1.5 h-px bg-gray-600/50 absolute right-0"></div></div>
+                    <div className="flex items-center justify-end w-full"><span className="mr-1.5">₹{formatCurrency(maxVal * 0.25)}</span><div className="w-1.5 h-px bg-gray-600/50 absolute right-0"></div></div>
+                    <div className="flex items-center justify-end w-full mt-4"><span className="mr-1.5 translate-y-1">₹0</span><div className="w-1.5 h-px bg-gray-600/50 absolute right-0 bottom-0"></div></div>
                   </div>
                 </div>
               </div>

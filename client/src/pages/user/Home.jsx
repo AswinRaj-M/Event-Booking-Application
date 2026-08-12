@@ -101,7 +101,7 @@ const Home = () => {
 
 
           <div className="flex flex-col sm:flex-row items-center gap-4 mb-12">
-            <Link to="#" className="px-8 py-3.5 bg-white text-black font-bold rounded-full hover:bg-gray-100 transition-colors shadow-[0_0_20px_rgba(255,255,255,0.2)]">
+            <Link to={USER_ROUTES.EXPLORE} className="px-8 py-3.5 bg-white text-black font-bold rounded-full hover:bg-gray-100 transition-colors shadow-[0_0_20px_rgba(255,255,255,0.2)]">
               Explore Events
             </Link>
             <Link to={VENDOR_ROUTES.APPLICATION} className="px-8 py-3.5 text-white font-medium hover:text-purple-400 transition-colors flex items-center gap-2 group">
@@ -277,7 +277,7 @@ const Home = () => {
                   ? "Sold Out"
                   : event.ticketType === "Free" || !event.ticketTiers || event.ticketTiers.length === 0
                   ? "Free"
-                  : `$${Math.min(...event.ticketTiers.map(t => t.price || 0))}`;
+                  : `₹${Math.min(...event.ticketTiers.map(t => t.price || 0))}`;
 
                 return (
                   <Link

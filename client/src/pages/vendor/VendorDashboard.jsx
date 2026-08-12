@@ -186,10 +186,10 @@ const VendorHome = () => {
             <div className="flex justify-between items-start mb-2">
               <div className="flex flex-col">
                 <span className="text-xs text-gray-400 mb-1">Total Earnings</span>
-                <span className="text-3xl font-bold">${totalEarnings.toLocaleString()}</span>
+                <span className="text-3xl font-bold">₹{totalEarnings.toLocaleString("en-IN")}</span>
               </div>
               <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-450">
-                <span className="font-bold text-lg text-emerald-450">$</span>
+                <span className="font-bold text-lg text-emerald-450">₹</span>
               </div>
             </div>
             <div className="flex items-center gap-1.5 mt-2">
@@ -214,11 +214,11 @@ const VendorHome = () => {
             <div className="flex-1 relative border-l border-b border-white/10 flex items-end ml-10 mb-6 mr-4">
               {/* Y axis labels */}
               <div className="absolute -left-10 bottom-0 top-0 flex flex-col justify-between text-[10px] text-gray-500 py-1 text-right pr-2">
-                <span>${maxRevenue.toLocaleString()}</span>
-                <span>${Math.round(maxRevenue * 0.75).toLocaleString()}</span>
-                <span>${Math.round(maxRevenue * 0.5).toLocaleString()}</span>
-                <span>${Math.round(maxRevenue * 0.25).toLocaleString()}</span>
-                <span>$0</span>
+                <span>₹{maxRevenue.toLocaleString("en-IN")}</span>
+                <span>₹{Math.round(maxRevenue * 0.75).toLocaleString("en-IN")}</span>
+                <span>₹{Math.round(maxRevenue * 0.5).toLocaleString("en-IN")}</span>
+                <span>₹{Math.round(maxRevenue * 0.25).toLocaleString("en-IN")}</span>
+                <span>₹0</span>
               </div>
 
               {/* Grid lines */}

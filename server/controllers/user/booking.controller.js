@@ -54,29 +54,30 @@ export const getBookingDetails = async(req,res) =>{
 }
 
 export const getBookingHistory =  async(req,res) =>{
-  const userId =  req.user._id
+  const userId = req.user?._id || req.user?.userId || req.user?.id;
     
-  const history  = await getBookingHistoryService(userId)
-
+  const history = await getBookingHistoryService(userId);
 
   return res.status(HTTP_STATUS.OK).json({
     success : true,
-    messgae : "Fetch Booking History Succesfuly!",
-    history
-  })
-}
+    message : "Fetch Booking History Successfully!",
+    history,
+    bookings: history
+  });
+};
 
 export const getUserTickets = async(req,res) =>{
-  const userId = req.user.userId
+  const userId = req.user?._id || req.user?.userId || req.user?.id;
   
-  const bookings = await getUserTicketsService(userId)
+  const bookings = await getUserTicketsService(userId);
 
   return res.status(HTTP_STATUS.OK).json({
     success : true,
-    message : ' User tickets fetched Successfully!',
-    bookings
-  })
-}
+    message : 'User tickets fetched Successfully!',
+    bookings,
+    history: bookings
+  });
+};
 
 
 export const cancelTicket = async(req,res) =>{

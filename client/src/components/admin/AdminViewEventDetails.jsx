@@ -147,7 +147,7 @@ const AdminViewEventDetails = ({ isOpen, selectedEvent, onClose }) => {
                   <div key={idx} className="bg-[#0B0914] border border-gray-800 rounded-xl p-4 space-y-2">
                     <div className="flex justify-between items-center">
                       <span className="font-extrabold text-white text-sm">{tier.name}</span>
-                      <span className="text-purple-400 text-sm font-extrabold">${tier.price}</span>
+                      <span className="text-purple-400 text-sm font-extrabold">₹{tier.price}</span>
                     </div>
                     <div className="text-[10px] text-zinc-400 flex justify-between">
                       <span>Capacity: {tier.capacity}</span>

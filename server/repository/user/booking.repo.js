@@ -1,5 +1,6 @@
 import Booking from "../../models/booking.model.js";
 import Event from "../../models/event.model.js";
+import { updateCompletedEvents } from "../../utils/eventStatusUpdater.js";
 
 export const createBookingRepo = async(bookingData) =>{
  return await Booking.create(bookingData)
@@ -9,7 +10,11 @@ export const findBookingByIdRepo = async(bookingId) =>{
   return await Booking.findById(bookingId)
   .populate({
     path : "eventId",
-    select : "title description schedule venue address city thumbnail eventType"
+    select : "title description schedule venue address city thumbnail eventType eventStatus isBlocked cancellationPolicy",
+    populate: {
+      path: "category",
+      select: "name"
+    }
   })
   .populate({
     path : "userId",
@@ -19,13 +24,18 @@ export const findBookingByIdRepo = async(bookingId) =>{
 
 
 export const findUserBookingsRepo = async(userId) => {
+  await updateCompletedEvents();
+
   return await Booking.find({
     userId,
-    paymentStatus: { $in: ["paid", "refunded"] }
+    $or: [
+      { paymentStatus: { $in: ["paid", "refunded", "completed", "success", "SUCCESS", "free"] } },
+      { bookingStatus: { $in: ["confirmed", "checked-in", "completed"] } }
+    ]
   })
     .populate({
       path : "eventId",
-      select : "title schedule venue city thumbnail eventType category",
+      select : "title schedule venue city thumbnail eventType category eventStatus isBlocked cancellationPolicy",
       populate: {
         path: "category",
         select: "name"

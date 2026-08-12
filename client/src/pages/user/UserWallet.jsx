@@ -176,11 +176,11 @@ const UserWallet = () => {
     e.preventDefault();
     const amt = parseFloat(withdrawAmount);
     if (!amt || amt < 10) {
-      toast.error("Minimum withdrawal amount is $10.00");
+      toast.error("Minimum withdrawal amount is ₹10.00");
       return;
     }
     if (amt > 5000) {
-      toast.error("Maximum withdrawal limit per transaction is $5,000.00");
+      toast.error("Maximum withdrawal limit per transaction is ₹5,000.00");
       return;
     }
     if (amt > balance) {
@@ -222,7 +222,7 @@ const UserWallet = () => {
       setWithdrawAmount("");
       setAccountDetails("");
       setWithdrawLoading(false);
-      toast.success(`Withdrawal of $${amt.toFixed(2)} requested successfully!`, { id: "withdraw-toast" });
+      toast.success(`Withdrawal of ₹${amt.toFixed(2)} requested successfully!`, { id: "withdraw-toast" });
     }, 1000);
   };
 
@@ -230,7 +230,7 @@ const UserWallet = () => {
     e.preventDefault();
     const amt = parseFloat(topUpAmount);
     if (!amt || amt < 5) {
-      toast.error("Minimum top-up amount is $5.00");
+      toast.error("Minimum top-up amount is ₹5.00");
       return;
     }
 
@@ -264,7 +264,7 @@ const UserWallet = () => {
       setTopUpAmount("");
       setTopUpLoading(false);
       setShowAddMoneyModal(false);
-      toast.success(`Successfully added $${amt.toFixed(2)} to your wallet!`, { id: "topup-toast" });
+      toast.success(`Successfully added ₹${amt.toFixed(2)} to your wallet!`, { id: "topup-toast" });
     }, 1000);
   };
 
@@ -347,7 +347,7 @@ const UserWallet = () => {
 
               <div className="flex items-baseline gap-3">
                 <span className="text-4xl md:text-5xl font-black text-white tracking-tight">
-                  ${balance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ₹{balance.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
 
@@ -501,7 +501,7 @@ const UserWallet = () => {
                             </td>
 
                             <td className={`py-4 font-extrabold ${isCredit ? "text-emerald-400" : "text-white"}`}>
-                              {isCredit ? `+$${Math.abs(tx.amount).toFixed(2)}` : `-$${Math.abs(tx.amount).toFixed(2)}`}
+                              {isCredit ? `+₹${Math.abs(tx.amount).toFixed(2)}` : `-₹${Math.abs(tx.amount).toFixed(2)}`}
                             </td>
 
                             <td className="py-4 text-right">
@@ -568,9 +568,9 @@ const UserWallet = () => {
             <form onSubmit={handleWithdrawSubmit} className="space-y-4">
               {/* Amount Input */}
               <div>
-                <label className="text-xs font-bold text-zinc-300 block mb-1.5">Amount (USD)</label>
+                <label className="text-xs font-bold text-zinc-300 block mb-1.5">Amount (INR)</label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 font-bold text-sm">$</span>
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 font-bold text-sm">₹</span>
                   <input 
                     id="withdraw-amount-input"
                     type="number" 
@@ -582,8 +582,8 @@ const UserWallet = () => {
                   />
                 </div>
                 <div className="flex justify-between items-center text-[11px] text-zinc-500 mt-1.5 px-1 font-medium">
-                  <span>Min: $10.00</span>
-                  <span>Max: $5,000.00</span>
+                  <span>Min: ₹10.00</span>
+                  <span>Max: ₹5,000.00</span>
                 </div>
               </div>
 
@@ -661,9 +661,9 @@ const UserWallet = () => {
 
             <form onSubmit={handleAddMoneySubmit} className="space-y-5">
               <div>
-                <label className="text-xs font-bold text-zinc-300 block mb-2">Enter Amount (USD)</label>
+                <label className="text-xs font-bold text-zinc-300 block mb-2">Enter Amount (INR)</label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 font-bold text-base">$</span>
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 font-bold text-base">₹</span>
                   <input 
                     type="number" 
                     step="0.01"
@@ -684,7 +684,7 @@ const UserWallet = () => {
                     onClick={() => setTopUpAmount(amt.toString())}
                     className="flex-1 py-2 bg-[#14102B] hover:bg-[#1F1840] border border-purple-500/20 text-purple-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
                   >
-                    +${amt}
+                    +₹{amt}
                   </button>
                 ))}
               </div>

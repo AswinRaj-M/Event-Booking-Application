@@ -705,7 +705,7 @@ const UserEventDetails = () => {
                   <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Ticket Price</span>
                   <div className="flex items-baseline gap-1 mt-1">
                     <span className={`text-3xl font-extrabold ${isFree ? "text-emerald-400" : "text-purple-400"}`}>
-                      {isFree ? "Free" : `$${ticketPrice}`}
+                      {isFree ? "Free" : `₹${ticketPrice}`}
                     </span>
                     {!isFree && <span className="text-zinc-500 text-xs font-medium">/ person</span>}
                   </div>
@@ -739,7 +739,7 @@ const UserEventDetails = () => {
                                 </span>
                               </div>
                               <span className="text-purple-400 font-extrabold text-base leading-none">
-                                ${tier.price}
+                                ₹{tier.price}
                               </span>
                             </div>
 
@@ -847,19 +847,19 @@ const UserEventDetails = () => {
                   <div className="space-y-2.5 text-xs text-zinc-400 border-t border-purple-950/40 pt-4 mb-6">
                     <div className="flex justify-between">
                       <span>Subtotal</span>
-                      <span className="text-white font-medium">${subtotal.toFixed(2)}</span>
+                      <span className="text-white font-medium">₹{subtotal.toFixed(2)}</span>
                     </div>
                     
                     {discountPercent > 0 && (
                       <div className="flex justify-between text-green-400">
                         <span>Discount ({discountPercent}%)</span>
-                        <span>-${discountAmount.toFixed(2)}</span>
+                        <span>-₹{discountAmount.toFixed(2)}</span>
                       </div>
                     )}
                     
                     <div className="flex justify-between">
                       <span>Service Fee</span>
-                      <span className="text-white font-medium">${serviceFee.toFixed(2)}</span>
+                      <span className="text-white font-medium">₹{serviceFee.toFixed(2)}</span>
                     </div>
 
                     <div className="border-t border-purple-950/40 my-1" />
@@ -867,7 +867,7 @@ const UserEventDetails = () => {
                     <div className="flex justify-between items-baseline text-sm font-bold text-white pt-1">
                       <span>Total Amount</span>
                       <span className="text-lg font-extrabold text-purple-400">
-                        ${totalAmount.toFixed(2)}
+                        ₹{totalAmount.toFixed(2)}
                       </span>
                     </div>
                   </div>

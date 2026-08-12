@@ -13,7 +13,9 @@ import {
   ChevronDown, 
   FileText, 
   MoreHorizontal,
-  Bell
+  Bell,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import VendorSidebar from '../../components/vendor/VendorSidebar';
 import { getVendorEventsApi, cancelEventApi, fetchCategories, deleteEventApi } from '../../services/vendor.api';
@@ -34,6 +36,12 @@ const VendorMyEvent = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [categories, setCategories] = useState([]);
   const [priceFilter, setPriceFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, categoryFilter, priceFilter]);
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -286,6 +294,10 @@ const VendorMyEvent = () => {
     return matchesSearch && matchesStatus && matchesCategory && matchesPrice;
   });
 
+  const totalPages = Math.ceil(filteredEvents.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedEvents = filteredEvents.slice(startIndex, startIndex + itemsPerPage);
+
   return (
     <div className="flex min-h-screen bg-[#070514] text-white font-sans selection:bg-purple-500/30">
       {/* Sidebar */}
@@ -396,166 +408,215 @@ const VendorMyEvent = () => {
             <div className="w-10 h-10 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mb-4" />
             <p className="text-zinc-400 text-sm font-medium">Loading your events...</p>
           </div>
-        ) : filteredEvents.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredEvents.map((event) => {
-              // Status Styling
-              let statusColor = 'bg-emerald-500';
-              let statusText = 'Upcoming';
-              let statusBadgeBg = 'bg-emerald-950/30 border-emerald-500/20 text-emerald-400';
-              
-              if (event.status === 'completed') {
-                statusColor = 'bg-zinc-500';
-                statusText = 'Completed';
-                statusBadgeBg = 'bg-zinc-900 border-zinc-800 text-zinc-400';
-              } else if (event.status === 'cancelled') {
-                statusColor = 'bg-rose-500';
-                statusText = 'Cancelled';
-                statusBadgeBg = 'bg-rose-950/30 border-rose-500/20 text-rose-400';
-              }
+        ) : paginatedEvents.length > 0 ? (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              {paginatedEvents.map((event) => {
+                // Status Styling
+                let statusColor = 'bg-emerald-500';
+                let statusText = 'Upcoming';
+                let statusBadgeBg = 'bg-emerald-950/30 border-emerald-500/20 text-emerald-400';
+                
+                if (event.status === 'completed') {
+                  statusColor = 'bg-zinc-500';
+                  statusText = 'Completed';
+                  statusBadgeBg = 'bg-zinc-900 border-zinc-800 text-zinc-400';
+                } else if (event.status === 'cancelled') {
+                  statusColor = 'bg-rose-500';
+                  statusText = 'Cancelled';
+                  statusBadgeBg = 'bg-rose-950/30 border-rose-500/20 text-rose-400';
+                }
 
-              return (
-                <div 
-                  key={event.id}
-                  className="bg-[#0B0A11] border border-white/5 rounded-2xl overflow-hidden hover:border-purple-500/20 hover:shadow-[0_0_20px_rgba(139,92,246,0.05)] transition-all flex flex-col h-full group"
-                >
-                  {/* Card Banner Section (Image or Empty Grid Pattern) */}
-                  <div className="relative h-44 w-full bg-[#12101F] border-b border-white/5 overflow-hidden">
-                    {event.hasImage ? (
-                      <img 
-                        src={event.image} 
-                        alt={event.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-[radial-gradient(#1E1B4B_1px,transparent_1px)] [background-size:16px_16px] opacity-60 flex items-center justify-center bg-gradient-to-br from-[#12101F] to-[#0D0A24]" />
-                    )}
+                return (
+                  <div 
+                    key={event.id}
+                    className="bg-[#0B0A11] border border-white/5 rounded-2xl overflow-hidden hover:border-purple-500/20 hover:shadow-[0_0_20px_rgba(139,92,246,0.05)] transition-all flex flex-col h-full group"
+                  >
+                    {/* Card Banner Section (Image or Empty Grid Pattern) */}
+                    <div className="relative h-44 w-full bg-[#12101F] border-b border-white/5 overflow-hidden">
+                      {event.hasImage ? (
+                        <img 
+                          src={event.image} 
+                          alt={event.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-[radial-gradient(#1E1B4B_1px,transparent_1px)] [background-size:16px_16px] opacity-60 flex items-center justify-center bg-gradient-to-br from-[#12101F] to-[#0D0A24]" />
+                      )}
 
-                    {/* Status Badge top right */}
-                    <div className={`absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider backdrop-blur-md ${statusBadgeBg}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${statusColor}`} />
-                      {statusText}
-                    </div>
-
-                    {/* Category (bottom left) & Price (bottom right) */}
-                    <div className="absolute bottom-4 left-4 right-4 flex justify-between items-center">
-                      <span className="px-2.5 py-1 bg-zinc-950/80 backdrop-blur-md border border-zinc-800/80 text-[10px] font-bold text-zinc-300 rounded-lg uppercase tracking-wide">
-                        {event.category}
-                      </span>
-                      <span className={`px-2.5 py-1 text-[10px] font-extrabold rounded-lg ${
-                        event.price === 'Free' 
-                          ? 'bg-emerald-950/80 border border-emerald-500/20 text-emerald-400' 
-                          : 'bg-purple-950/80 border border-purple-500/20 text-purple-400'
-                      }`}>
-                        {event.price}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Details Section */}
-                  <div className="p-6 flex-1 flex flex-col justify-between">
-                    <div className="space-y-4">
-                      {/* Title & Description */}
-                      <div className="space-y-1">
-                        <h3 className="text-lg font-bold text-white leading-snug group-hover:text-purple-400 transition-colors">
-                          {event.title}
-                        </h3>
-                        <p className="text-xs text-zinc-400 leading-relaxed font-medium">
-                          {event.description}
-                        </p>
+                      {/* Status Badge top right */}
+                      <div className={`absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider backdrop-blur-md ${statusBadgeBg}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${statusColor}`} />
+                        {statusText}
                       </div>
 
-                      {/* Details Rows */}
-                      <div className="space-y-3 pt-1">
-                        <div className="flex items-center gap-2.5 text-xs text-zinc-400 font-medium">
-                          <Calendar className="w-4 h-4 text-purple-400 shrink-0" />
-                          <span>{event.date}</span>
-                        </div>
-                        <div className="flex items-center gap-2.5 text-xs text-zinc-400 font-medium">
-                          <MapPin className="w-4 h-4 text-purple-400 shrink-0" />
-                          <span className="truncate">{event.location}</span>
+                      {/* Category (bottom left) & Price (bottom right) */}
+                      <div className="absolute bottom-4 left-4 right-4 flex justify-between items-center">
+                        <span className="px-2.5 py-1 bg-zinc-950/80 backdrop-blur-md border border-zinc-800/80 text-[10px] font-bold text-zinc-300 rounded-lg uppercase tracking-wide">
+                          {event.category}
+                        </span>
+                        <span className={`px-2.5 py-1 text-[10px] font-extrabold rounded-lg ${
+                          event.price === 'Free' 
+                            ? 'bg-emerald-950/80 border border-emerald-500/20 text-emerald-400' 
+                            : 'bg-purple-950/80 border border-purple-500/20 text-purple-400'
+                        }`}>
+                          {event.price}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Details Section */}
+                    <div className="p-6 flex-1 flex flex-col justify-between">
+                      <div className="space-y-4">
+                        {/* Title & Description */}
+                        <div className="space-y-1">
+                          <h3 className="text-lg font-bold text-white leading-snug group-hover:text-purple-400 transition-colors">
+                            {event.title}
+                          </h3>
+                          <p className="text-xs text-zinc-400 leading-relaxed font-medium">
+                            {event.description}
+                          </p>
                         </div>
 
-                        {/* Sold out parameters / progress bar OR status message */}
-                        {event.status === 'upcoming' ? (
-                          <div className="space-y-2 pt-1.5">
-                            <div className="flex items-center gap-2.5 text-xs text-zinc-400 font-medium">
-                              <Ticket className="w-4 h-4 text-purple-400 shrink-0" />
-                              <span>{event.ticketsSold.toLocaleString()} / {event.totalSeats.toLocaleString()} sold</span>
-                            </div>
-                            {/* Simple beautiful progress slider */}
-                            <div className="w-full h-1.5 bg-zinc-900 border border-white/5 rounded-full overflow-hidden">
-                              <div 
-                                className="h-full bg-purple-500 rounded-full" 
-                                style={{ width: `${event.progress}%` }} 
-                              />
-                            </div>
+                        {/* Details Rows */}
+                        <div className="space-y-3 pt-1">
+                          <div className="flex items-center gap-2.5 text-xs text-zinc-400 font-medium">
+                            <Calendar className="w-4 h-4 text-purple-400 shrink-0" />
+                            <span>{event.date}</span>
                           </div>
-                        ) : (
-                          <div className="flex items-center gap-2.5 text-xs pt-1.5">
-                            <span className={`w-2 h-2 rounded-full ${event.statusMsgColor}`} />
-                            <span className="text-zinc-400 font-semibold">{event.statusMsg}</span>
+                          <div className="flex items-center gap-2.5 text-xs text-zinc-400 font-medium">
+                            <MapPin className="w-4 h-4 text-purple-400 shrink-0" />
+                            <span className="truncate">{event.location}</span>
                           </div>
+
+                          {/* Sold out parameters / progress bar OR status message */}
+                          {event.status === 'upcoming' ? (
+                            <div className="space-y-2 pt-1.5">
+                              <div className="flex items-center gap-2.5 text-xs text-zinc-400 font-medium">
+                                <Ticket className="w-4 h-4 text-purple-400 shrink-0" />
+                                <span>{event.ticketsSold.toLocaleString()} / {event.totalSeats.toLocaleString()} sold</span>
+                              </div>
+                              {/* Simple beautiful progress slider */}
+                              <div className="w-full h-1.5 bg-zinc-900 border border-white/5 rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-purple-500 rounded-full" 
+                                  style={{ width: `${event.progress}%` }} 
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2.5 text-xs pt-1.5">
+                              <span className={`w-2 h-2 rounded-full ${event.statusMsgColor}`} />
+                              <span className="text-zinc-400 font-semibold">{event.statusMsg}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Footer Actions block */}
+                      <div className="flex gap-3 pt-5 border-t border-white/5 mt-6 items-center justify-between">
+                        {/* Report button */}
+                        {event.actions.includes('report') && (
+                          <button type="button" className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-bold rounded-xl transition-all cursor-pointer">
+                            <FileText className="w-3.5 h-3.5 text-zinc-400" />
+                            View Report
+                          </button>
+                        )}
+
+                        {/* Edit button */}
+                        {event.actions.includes('edit') && (
+                          <button 
+                            type="button" 
+                            onClick={() => handleEditClick(event)}
+                            className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
+                          >
+                            <Edit3 className="w-3.5 h-3.5 text-zinc-400" />
+                            Edit
+                          </button>
+                        )}
+
+                        {/* Cancel Event button */}
+                        {event.actions.includes('cancel') && (
+                          <button 
+                            type="button" 
+                            onClick={() => handleCancelEvent(event.id)}
+                            className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 bg-rose-950/20 hover:bg-rose-900/40 border border-rose-500/20 hover:border-rose-500/40 text-rose-300 hover:text-rose-200 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                          >
+                            Cancel Event
+                          </button>
+                        )}
+
+                        {/* More button */}
+                        {event.actions.includes('more') && (
+                          <button type="button" className="p-2 bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-400 hover:text-white rounded-xl transition-all cursor-pointer">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </button>
+                        )}
+
+                        {/* Delete button */}
+                        {event.actions.includes('delete') && (
+                          <button 
+                            type="button" 
+                            onClick={() => handleDeleteEvent(event.id)}
+                            className="p-2.5 bg-white/5 hover:bg-rose-950/20 border border-white/10 hover:border-rose-500/30 text-zinc-400 hover:text-rose-400 rounded-xl transition-all cursor-pointer"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         )}
                       </div>
                     </div>
-
-                    {/* Footer Actions block */}
-                    <div className="flex gap-3 pt-5 border-t border-white/5 mt-6 items-center justify-between">
-                      {/* Report button */}
-                      {event.actions.includes('report') && (
-                        <button type="button" className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-bold rounded-xl transition-all cursor-pointer">
-                          <FileText className="w-3.5 h-3.5 text-zinc-400" />
-                          View Report
-                        </button>
-                      )}
-
-                      {/* Edit button */}
-                      {event.actions.includes('edit') && (
-                        <button 
-                          type="button" 
-                          onClick={() => handleEditClick(event)}
-                          className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
-                        >
-                          <Edit3 className="w-3.5 h-3.5 text-zinc-400" />
-                          Edit
-                        </button>
-                      )}
-
-                      {/* Cancel Event button */}
-                      {event.actions.includes('cancel') && (
-                        <button 
-                          type="button" 
-                          onClick={() => handleCancelEvent(event.id)}
-                          className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 bg-rose-950/20 hover:bg-rose-900/40 border border-rose-500/20 hover:border-rose-500/40 text-rose-300 hover:text-rose-200 text-xs font-bold rounded-xl transition-all cursor-pointer"
-                        >
-                          Cancel Event
-                        </button>
-                      )}
-
-                      {/* More button */}
-                      {event.actions.includes('more') && (
-                        <button type="button" className="p-2 bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-400 hover:text-white rounded-xl transition-all cursor-pointer">
-                          <MoreHorizontal className="w-4 h-4" />
-                        </button>
-                      )}
-
-                      {/* Delete button */}
-                      {event.actions.includes('delete') && (
-                        <button 
-                          type="button" 
-                          onClick={() => handleDeleteEvent(event.id)}
-                          className="p-2.5 bg-white/5 hover:bg-rose-950/20 border border-white/10 hover:border-rose-500/30 text-zinc-400 hover:text-rose-400 rounded-xl transition-all cursor-pointer"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
                   </div>
+                );
+              })}
+            </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-[#0B0A11] border border-white/5 p-4 rounded-2xl">
+                <p className="text-xs text-zinc-400 font-medium">
+                  Showing <span className="text-white font-bold">{startIndex + 1}</span> to{" "}
+                  <span className="text-white font-bold">{Math.min(startIndex + itemsPerPage, filteredEvents.length)}</span> of{" "}
+                  <span className="text-purple-400 font-bold">{filteredEvents.length}</span> events
+                </p>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-400 hover:text-white text-xs font-bold transition-all disabled:opacity-40 disabled:pointer-events-none cursor-pointer flex items-center gap-1"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    Previous
+                  </button>
+
+                  <div className="flex items-center gap-1.5 px-2">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                      <button
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`w-8 h-8 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          currentPage === pageNum
+                            ? "bg-purple-600 text-white border border-purple-500 shadow-[0_0_12px_rgba(147,51,234,0.4)]"
+                            : "bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border border-white/5"
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-400 hover:text-white text-xs font-bold transition-all disabled:opacity-40 disabled:pointer-events-none cursor-pointer flex items-center gap-1"
+                  >
+                    Next
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            )}
+          </>
         ) : (
           <div className="bg-[#0B0A11] border border-white/5 rounded-2xl p-12 text-center">
             <p className="text-zinc-500 text-sm font-semibold">No events found matching your search criteria.</p>

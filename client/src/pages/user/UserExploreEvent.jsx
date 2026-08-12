@@ -300,7 +300,7 @@ const UserExploreEvent = () => {
                   : event.ticketType === "Free" 
                     ? "Free" 
                     : lowestPrice > 0 
-                      ? `$${lowestPrice}` 
+                      ? `₹${lowestPrice}` 
                       : "Paid";
 
                 // Show description if it exists (like Abstract Minds Exhibit in screenshot)

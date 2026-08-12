@@ -414,20 +414,20 @@ const PaymentCheckout = () => {
                       <span>
                         {selectedTier?.name || 'Access Ticket'} <span className="text-purple-400 font-bold">x{quantity}</span>
                       </span>
-                      <span className="font-semibold text-white">${subtotal.toFixed(2)}</span>
+                      <span className="font-semibold text-white">₹{subtotal.toFixed(2)}</span>
                     </div>
 
                     {serviceFee > 0 && (
                       <div className="flex justify-between items-center text-gray-400">
                         <span>Booking Fee</span>
-                        <span>${serviceFee.toFixed(2)}</span>
+                        <span>₹{serviceFee.toFixed(2)}</span>
                       </div>
                     )}
 
                     {initialDiscount > 0 && (
                       <div className="flex justify-between items-center text-emerald-400">
                         <span>Event Discount</span>
-                        <span>-${initialDiscount.toFixed(2)}</span>
+                        <span>-₹{initialDiscount.toFixed(2)}</span>
                       </div>
                     )}
 
@@ -436,7 +436,7 @@ const PaymentCheckout = () => {
                         <span className="flex items-center gap-1.5">
                           <Tag className="w-3.5 h-3.5" /> Coupon ({appliedCoupon.code})
                         </span>
-                        <span>-${couponDiscount.toFixed(2)}</span>
+                        <span>-₹{couponDiscount.toFixed(2)}</span>
                       </div>
                     )}
                   </div>
@@ -445,7 +445,7 @@ const PaymentCheckout = () => {
                   <div className="pt-4 border-t border-purple-500/30 flex justify-between items-center">
                     <span className="text-base font-bold text-white">Total Payable</span>
                     <span className="text-2xl font-black text-purple-400 drop-shadow-sm">
-                      ${currentTotal.toFixed(2)}
+                      ₹{currentTotal.toFixed(2)}
                     </span>
                   </div>
 

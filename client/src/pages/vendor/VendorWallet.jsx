@@ -244,7 +244,7 @@ const VendorWallet = () => {
               </div>
             </div>
             <div className="text-2xl md:text-3xl font-black text-white tracking-tight mb-2">
-              ${totalEarnings.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ₹{totalEarnings.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             <div className="flex items-center gap-1 text-xs font-extrabold text-emerald-400">
               <ArrowUpRight className="w-3.5 h-3.5" />
@@ -261,7 +261,7 @@ const VendorWallet = () => {
               </div>
             </div>
             <div className="text-2xl md:text-3xl font-black text-white tracking-tight mb-2">
-              ${availableBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ₹{availableBalance.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             <div className="text-xs font-medium text-zinc-500">
               Ready to withdraw
@@ -277,7 +277,7 @@ const VendorWallet = () => {
               </div>
             </div>
             <div className="text-2xl md:text-3xl font-black text-white tracking-tight mb-2">
-              ${pendingPayouts.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ₹{pendingPayouts.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             <div className="text-xs font-medium text-zinc-500">
               Processing within 24h
@@ -293,7 +293,7 @@ const VendorWallet = () => {
               </div>
             </div>
             <div className="text-2xl md:text-3xl font-black text-white tracking-tight mb-2">
-              ${totalWithdrawn.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ₹{totalWithdrawn.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             <div className="text-xs font-medium text-zinc-500">
               Lifetime earnings
@@ -372,7 +372,7 @@ const VendorWallet = () => {
                           </td>
 
                           <td className={`py-4 text-right font-black text-sm whitespace-nowrap ${isEarning ? "text-emerald-400" : "text-white"}`}>
-                            {isEarning ? `+$${tx.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}` : `-$${Math.abs(tx.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}`}
+                            {isEarning ? `+₹${tx.amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}` : `-₹${Math.abs(tx.amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`}
                           </td>
                         </tr>
                       );
@@ -401,7 +401,7 @@ const VendorWallet = () => {
               <div>
                 <label className="text-xs font-bold text-zinc-300 block mb-1.5">Amount to Withdraw</label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 font-bold text-sm">$</span>
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 font-bold text-sm">₹</span>
                   <input 
                     type="number" 
                     step="0.01"
@@ -412,7 +412,7 @@ const VendorWallet = () => {
                   />
                 </div>
                 <div className="flex justify-between items-center text-[11px] mt-1.5 px-1 font-medium">
-                  <span className="text-zinc-500">Available: ${availableBalance.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                  <span className="text-zinc-500">Available: ₹{availableBalance.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
                   <button 
                     type="button" 
                     onClick={handleMaxClick}
@@ -439,7 +439,7 @@ const VendorWallet = () => {
               <div className="bg-[#120F28]/80 border border-purple-500/20 rounded-2xl p-4 flex items-start gap-3 mt-2">
                 <Info className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
                 <p className="text-[11px] text-zinc-400 leading-relaxed font-medium">
-                  Minimum withdrawal is $50.00. Processing takes 24-48 business hours.
+                  Minimum withdrawal is ₹50.00. Processing takes 24-48 business hours.
                 </p>
               </div>
 

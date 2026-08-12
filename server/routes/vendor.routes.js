@@ -57,7 +57,7 @@ router.post("/verify-otp", asyncHandler(verifyVendorOTP))
 router.post("/resend-otp", asyncHandler(resendVendorOtp))
 
 router.post("/login", vendorLoginValidation, validate, asyncHandler(vendorLogin))
-router.get('/profile',protect,asyncHandler(vendorProfile),requireRole("vendor"))
+router.get('/profile', protect, requireRole("vendor"), asyncHandler(vendorProfile))
 router.patch('/profile/images',
   protect,
   requireRole("vendor"),
@@ -107,6 +107,7 @@ import {
   getVendorTransactions
 } from "../controllers/vendor/vendorWallet.controller.js"
 
+router.post("/logout", protect, requireRole("vendor"), asyncHandler(vendorLogout))
 router.get("/logout", protect, requireRole("vendor"), asyncHandler(vendorLogout))
 router.get("/status", protect, requireRole("vendor"), (req, res) => {
   res.status(HTTP_STATUS.OK).json({

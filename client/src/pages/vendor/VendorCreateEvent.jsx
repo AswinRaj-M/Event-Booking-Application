@@ -1224,7 +1224,7 @@ const VendorCreateEvent = () => {
                             
                             <div className="grid grid-cols-2 gap-4">
                               <div className="space-y-1.5">
-                                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Price ($)</label>
+                                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Price (₹)</label>
                                 <input
                                   type="number"
                                   placeholder="e.g. 99"
