@@ -23,24 +23,36 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import UserSideBar from "../../components/user/UserSideBar";
-import { getBookingHistory } from "../../services/user.api.js";
+import { 
+  getBookingHistory,
+  createUserWalletOrderApi,
+  verifyUserWalletPaymentApi,
+  recordUserWalletFailureApi,
+  getUserWalletDetailsApi,
+  requestUserWithdrawalApi
+} from "../../services/user.api.js";
+
+const loadRazorpayScript = () => {
+  return new Promise((resolve) => {
+    if (window.Razorpay) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
 
 const UserWallet = () => {
   const user = useSelector((state) => state.user?.user);
   const userId = user?._id || user?.id || "guest";
-  
-  const walletStorageKey = `wallet_balance_${userId}`;
-  const txStorageKey = `wallet_tx_${userId}`;
 
-  // Wallet Balance State (Default starting balance ₹0.00 or loaded from localStorage / user profile)
-  const [balance, setBalance] = useState(() => {
-    const saved = localStorage.getItem(walletStorageKey);
-    if (saved !== null) {
-      const parsed = parseFloat(saved);
-      return !isNaN(parsed) ? parsed : 0.00;
-    }
-    return Number(user?.walletBalance) || 0.00;
-  });
+  // Wallet Balance State (Default starting balance ₹0.00 or loaded from user profile)
+  const [balance, setBalance] = useState(() => Number(user?.walletBalance) || 0.00);
 
   const [activeTab, setActiveTab] = useState("all"); // 'all', 'credits', 'debits'
   const [searchQuery, setSearchQuery] = useState("");
@@ -61,113 +73,129 @@ const UserWallet = () => {
   const [userTransactions, setUserTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Save Balance to LocalStorage when changed
-  useEffect(() => {
-    localStorage.setItem(walletStorageKey, balance.toString());
-  }, [balance, walletStorageKey]);
-
   // Unique Wallet ID based on user ID
   const walletId = `WLT-${userId.toString().slice(-8).toUpperCase()}`;
 
-  // Fetch real booking history and construct unique real transactions
-  useEffect(() => {
-    const fetchRealData = async () => {
-      try {
-        setLoading(true);
-        const res = await getBookingHistory();
-        const bookings = res.data?.history || [];
+  // Fetch real wallet details, server transactions, and booking history
+  const fetchRealData = async () => {
+    try {
+      setLoading(true);
 
-        // Load custom user transactions (top-ups / withdrawals) saved in localStorage
-        const savedCustomTx = JSON.parse(localStorage.getItem(txStorageKey) || "[]");
+      // 1. Fetch server-side wallet details (real balance & transactions from DB)
+      const walletRes = await getUserWalletDetailsApi().catch(() => null);
+      const serverBalance = walletRes?.data?.data?.walletBalance;
+      const serverTransactions = walletRes?.data?.data?.transactions || [];
 
-        // Convert real bookings into transactions and track ticket refunds
-        const bookingTxList = [];
-        let totalRefunds = 0;
+      // 2. Fetch booking history
+      const res = await getBookingHistory().catch(() => ({ data: { history: [] } }));
+      const bookings = res.data?.history || [];
 
-        bookings.forEach((bk) => {
-          const title = bk.eventId?.title || "Event Booking";
-          const singleTicketPrice = bk.ticketPrice || (bk.quantity ? (bk.totalAmount / bk.quantity) : bk.totalAmount) || 0;
-          const totalBkAmount = bk.totalAmount || (singleTicketPrice * (bk.quantity || 1)) || 0;
-          const createdDate = bk.createdAt 
-            ? new Date(bk.createdAt) 
-            : (bk.eventId?.schedule?.date ? new Date(bk.eventId.schedule.date) : new Date());
+      // Convert DB user wallet transactions into standard list format
+      const dbTxList = serverTransactions.map((tx) => {
+        const createdDate = new Date(tx.createdAt || tx.createdTime || Date.now());
+        const isDeposit = tx.transactionType === "deposit";
+        const isWithdrawal = tx.transactionType === "withdrawal";
+        return {
+          id: `tx-db-${tx._id}`,
+          trxId: tx.razorpayPaymentId ? `#RZP-${tx.razorpayPaymentId.slice(-8).toUpperCase()}` : `#TX-${tx._id.slice(-8).toUpperCase()}`,
+          type: isDeposit || tx.amount > 0 ? "credit" : "debit",
+          title: isDeposit ? "Wallet Top-up (Razorpay)" : isWithdrawal ? "Withdrawal Request" : "Wallet Transaction",
+          subtitle: tx.description || (isDeposit ? "Via Razorpay Payment Gateway" : "Wallet Payout"),
+          date: createdDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+          time: createdDate.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+          timestamp: createdDate.getTime(),
+          amount: tx.amount,
+          status: tx.status === "completed" ? "Success" : tx.status === "pending" ? "Processing" : "Failed",
+          iconBg: isDeposit ? "bg-purple-950/60 border-purple-500/30 text-purple-400" : "bg-rose-950/60 border-rose-500/30 text-rose-400",
+          iconType: isDeposit ? "wallet" : "credit-card"
+        };
+      });
 
-          const formattedDate = createdDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-          const formattedTime = createdDate.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
-          const idCode = (bk.bookingId || bk._id || "0000").slice(-8).toUpperCase();
+      // Convert real bookings into transactions and track ticket refunds
+      const bookingTxList = [];
+      bookings.forEach((bk) => {
+        const title = bk.eventId?.title || "Event Booking";
+        const singleTicketPrice = bk.ticketPrice || (bk.quantity ? (bk.totalAmount / bk.quantity) : bk.totalAmount) || 0;
+        const totalBkAmount = bk.totalAmount || (singleTicketPrice * (bk.quantity || 1)) || 0;
+        const createdDate = bk.createdAt 
+          ? new Date(bk.createdAt) 
+          : (bk.eventId?.schedule?.date ? new Date(bk.eventId.schedule.date) : new Date());
 
-          const cancelledTickets = (bk.tickets || []).filter((t) => t.status === "cancelled");
-          
-          // 1. Credit transaction for refund if booking or ticket is cancelled
-          if (bk.bookingStatus === "cancelled" || cancelledTickets.length > 0) {
-            const refundCount = bk.bookingStatus === "cancelled" ? (bk.quantity || 1) : cancelledTickets.length;
-            const refundAmount = bk.bookingStatus === "cancelled" ? totalBkAmount : (singleTicketPrice * refundCount);
-            
-            totalRefunds += refundAmount;
+        const formattedDate = createdDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+        const formattedTime = createdDate.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+        const idCode = (bk.bookingId || bk._id || "0000").slice(-8).toUpperCase();
 
-            bookingTxList.push({
-              id: `tx-ref-${bk._id}`,
-              trxId: `#REF-${idCode}`,
-              type: "credit",
-              title: "Ticket Cancellation Refund",
-              subtitle: `Refund for ${title} (${refundCount} ticket${refundCount > 1 ? 's' : ''})`,
-              date: formattedDate,
-              time: formattedTime,
-              timestamp: createdDate.getTime() + 1000,
-              amount: refundAmount,
-              status: "Success",
-              iconBg: "bg-blue-950/60 border-blue-500/30 text-blue-400",
-              iconType: "refund"
-            });
-          }
+        const cancelledTickets = (bk.tickets || []).filter((t) => t.status === "cancelled");
+        
+        // 1. Credit transaction for refund if booking or ticket is cancelled
+        if (bk.bookingStatus === "cancelled" || cancelledTickets.length > 0) {
+          const refundCount = bk.bookingStatus === "cancelled" ? (bk.quantity || 1) : cancelledTickets.length;
+          const refundAmount = bk.bookingStatus === "cancelled" ? totalBkAmount : (singleTicketPrice * refundCount);
 
-          // 2. Debit transaction for ticket purchase
-          if (bk.paymentStatus === "paid" || bk.bookingStatus === "confirmed" || bk.bookingStatus === "checked-in" || bk.bookingStatus === "cancelled") {
-            bookingTxList.push({
-              id: `tx-bk-${bk._id}`,
-              trxId: `#BK-${idCode}`,
-              type: "debit",
-              title: "Ticket Purchase",
-              subtitle: title,
-              date: formattedDate,
-              time: formattedTime,
-              timestamp: createdDate.getTime(),
-              amount: -totalBkAmount,
-              status: bk.bookingStatus === "cancelled" ? "Cancelled" : "Success",
-              iconBg: "bg-purple-950/60 border-purple-500/30 text-purple-400",
-              iconType: "ticket"
-            });
-          }
-        });
+          bookingTxList.push({
+            id: `tx-ref-${bk._id}`,
+            trxId: `#REF-${idCode}`,
+            type: "credit",
+            title: "Ticket Cancellation Refund",
+            subtitle: `Refund for ${title} (${refundCount} ticket${refundCount > 1 ? 's' : ''})`,
+            date: formattedDate,
+            time: formattedTime,
+            timestamp: createdDate.getTime() + 1000,
+            amount: refundAmount,
+            status: "Success",
+            iconBg: "bg-blue-950/60 border-blue-500/30 text-blue-400",
+            iconType: "refund"
+          });
+        }
 
-        // Compute total wallet balance: User Wallet Balance + Custom Top-ups - Withdrawals + Total Refunded Ticket Money
-        const baseBalance = Number(user?.walletBalance) || 0.00;
-        const customTxSum = savedCustomTx.reduce((acc, tx) => acc + (tx.amount || 0), 0);
-        const calculatedBalance = Math.max(0, baseBalance + customTxSum + totalRefunds);
-        setBalance(calculatedBalance);
+        // 2. Debit transaction for ticket purchase
+        if (bk.paymentStatus === "paid" || bk.bookingStatus === "confirmed" || bk.bookingStatus === "checked-in" || bk.bookingStatus === "cancelled") {
+          bookingTxList.push({
+            id: `tx-bk-${bk._id}`,
+            trxId: `#BK-${idCode}`,
+            type: "debit",
+            title: "Ticket Purchase",
+            subtitle: title,
+            date: formattedDate,
+            time: formattedTime,
+            timestamp: createdDate.getTime(),
+            amount: -totalBkAmount,
+            status: bk.bookingStatus === "cancelled" ? "Cancelled" : "Success",
+            iconBg: "bg-purple-950/60 border-purple-500/30 text-purple-400",
+            iconType: "ticket"
+          });
+        }
+      });
 
-        // Combine and deduplicate by transaction id
-        const combined = [...savedCustomTx, ...bookingTxList];
-        const uniqueMap = new Map();
-        combined.forEach((tx) => {
-          if (!uniqueMap.has(tx.id)) {
-            uniqueMap.set(tx.id, tx);
-          }
-        });
-
-        // Sort by timestamp descending
-        const sortedTx = Array.from(uniqueMap.values()).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-        setUserTransactions(sortedTx);
-
-      } catch (err) {
-        console.error("Error fetching wallet data:", err);
-      } finally {
-        setLoading(false);
+      if (serverBalance !== undefined && serverBalance !== null) {
+        setBalance(serverBalance);
+      } else {
+        setBalance(Number(user?.walletBalance) || 0.00);
       }
-    };
 
+      // Combine DB transactions and booking transactions
+      const combined = [...dbTxList, ...bookingTxList];
+      const uniqueMap = new Map();
+      combined.forEach((tx) => {
+        if (!uniqueMap.has(tx.id)) {
+          uniqueMap.set(tx.id, tx);
+        }
+      });
+
+      // Sort by timestamp descending
+      const sortedTx = Array.from(uniqueMap.values()).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+      setUserTransactions(sortedTx);
+
+    } catch (err) {
+      console.error("Error fetching wallet data:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchRealData();
-  }, [txStorageKey]);
+  }, [userId]);
 
   const handleCopyId = () => {
     navigator.clipboard.writeText(walletId);
@@ -176,7 +204,7 @@ const UserWallet = () => {
     setTimeout(() => setCopiedId(false), 2000);
   };
 
-  const handleWithdrawSubmit = (e) => {
+  const handleWithdrawSubmit = async (e) => {
     e.preventDefault();
     const amt = parseFloat(withdrawAmount);
     if (!amt || amt < 10) {
@@ -196,80 +224,149 @@ const UserWallet = () => {
       return;
     }
 
-    setWithdrawLoading(true);
-    toast.loading("Processing withdrawal request...", { id: "withdraw-toast" });
+    try {
+      setWithdrawLoading(true);
+      toast.loading("Processing withdrawal request...", { id: "withdraw-toast" });
 
-    setTimeout(() => {
-      const newBal = balance - amt;
-      setBalance(newBal);
+      const res = await requestUserWithdrawalApi({
+        amount: amt,
+        payoutMethod,
+        accountDetails,
+      });
 
-      const now = new Date();
-      const newTx = {
-        id: `tx-wdr-${Date.now()}`,
-        trxId: `#WDR-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(10 + Math.random() * 90)}`,
-        type: "debit",
-        title: `Withdrawal (${payoutMethod.split(" ")[0]})`,
-        subtitle: accountDetails || payoutMethod,
-        date: now.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-        time: now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
-        timestamp: now.getTime(),
-        amount: -amt,
-        status: "Processing",
-        iconBg: "bg-rose-950/60 border-rose-500/30 text-rose-400",
-        iconType: "credit-card"
-      };
-
-      const updatedCustom = [newTx, ...JSON.parse(localStorage.getItem(txStorageKey) || "[]")];
-      localStorage.setItem(txStorageKey, JSON.stringify(updatedCustom));
-
-      setUserTransactions((prev) => [newTx, ...prev]);
-      setWithdrawAmount("");
-      setAccountDetails("");
+      toast.dismiss("withdraw-toast");
+      if (res.data && res.data.success) {
+        toast.success(res.data.message || `Withdrawal of ₹${amt.toFixed(2)} requested successfully!`);
+        if (res.data.data?.newBalance !== undefined) {
+          setBalance(res.data.data.newBalance);
+        }
+        setWithdrawAmount("");
+        setAccountDetails("");
+        fetchRealData();
+      }
+    } catch (err) {
+      console.error("Withdrawal error:", err);
+      toast.dismiss("withdraw-toast");
+      toast.error(err.response?.data?.message || "Failed to process withdrawal request.");
+    } finally {
       setWithdrawLoading(false);
-      toast.success(`Withdrawal of ₹${amt.toFixed(2)} requested successfully!`, { id: "withdraw-toast" });
-    }, 1000);
+    }
   };
 
-  const handleAddMoneySubmit = (e) => {
+  // Real Razorpay Add Money Handler
+  const handleAddMoneySubmit = async (e) => {
     e.preventDefault();
     const amt = parseFloat(topUpAmount);
-    if (!amt || amt < 5) {
-      toast.error("Minimum top-up amount is ₹5.00");
+    if (!amt || amt < 1) {
+      toast.error("Minimum top-up amount is ₹1.00");
+      return;
+    }
+    if (amt > 100000) {
+      toast.error("Maximum top-up amount is ₹1,00,000.00");
       return;
     }
 
-    setTopUpLoading(true);
-    toast.loading("Processing wallet top-up...", { id: "topup-toast" });
+    try {
+      setTopUpLoading(true);
+      toast.loading("Initiating Razorpay payment...", { id: "topup-toast" });
 
-    setTimeout(() => {
-      const newBal = balance + amt;
-      setBalance(newBal);
+      // Step 1: Create Razorpay Order on Backend
+      const res = await createUserWalletOrderApi(amt);
+      const orderData = res.data?.data;
 
-      const now = new Date();
-      const newTx = {
-        id: `tx-top-${Date.now()}`,
-        trxId: `#TOP-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(10 + Math.random() * 90)}`,
-        type: "credit",
-        title: "Wallet Top-up",
-        subtitle: "Via Payment Gateway",
-        date: now.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-        time: now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
-        timestamp: now.getTime(),
-        amount: amt,
-        status: "Success",
-        iconBg: "bg-purple-950/60 border-purple-500/30 text-purple-400",
-        iconType: "wallet"
+      if (!orderData || !orderData.order_id) {
+        toast.error(res.data?.message || "Failed to create payment order.", { id: "topup-toast" });
+        setTopUpLoading(false);
+        return;
+      }
+
+      // Step 2: Load Razorpay SDK Script
+      const isLoaded = await loadRazorpayScript();
+      if (!isLoaded) {
+        toast.error("Razorpay SDK failed to load. Please check your internet connection.", { id: "topup-toast" });
+        setTopUpLoading(false);
+        return;
+      }
+
+      toast.dismiss("topup-toast");
+
+      // Step 3: Open Razorpay Modal
+      const options = {
+        key: orderData.key,
+        amount: orderData.amount,
+        currency: orderData.currency || "INR",
+        name: "Festivo Wallet Top-up",
+        description: `Add ₹${amt.toFixed(2)} to your Festivo Wallet`,
+        image: "/logo.jpeg",
+        order_id: orderData.order_id,
+        prefill: {
+          name: user?.fullName || "",
+          email: user?.email || "",
+          contact: user?.phoneNumber || "",
+        },
+        handler: async function (response) {
+          try {
+            toast.loading("Verifying payment with bank...", { id: "wallet-verify-toast" });
+            const verifyRes = await verifyUserWalletPaymentApi({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            });
+
+            toast.dismiss("wallet-verify-toast");
+            if (verifyRes.data && verifyRes.data.success) {
+              toast.success(verifyRes.data.message || `₹${amt.toFixed(2)} added to your wallet!`);
+              setShowAddMoneyModal(false);
+              setTopUpAmount("");
+              if (verifyRes.data.data?.newBalance !== undefined) {
+                setBalance(verifyRes.data.data.newBalance);
+              }
+              fetchRealData();
+            }
+          } catch (verifyErr) {
+            console.error("Payment verification error:", verifyErr);
+            toast.dismiss("wallet-verify-toast");
+            toast.error(verifyErr.response?.data?.message || "Payment verification failed.");
+          } finally {
+            setTopUpLoading(false);
+          }
+        },
+        modal: {
+          ondismiss: async function () {
+            setTopUpLoading(false);
+            try {
+              await recordUserWalletFailureApi({
+                razorpay_order_id: orderData.order_id,
+                reason: "User closed Razorpay modal",
+              });
+            } catch (e) {}
+          },
+        },
+        theme: {
+          color: "#8B5CF6",
+        },
       };
 
-      const updatedCustom = [newTx, ...JSON.parse(localStorage.getItem(txStorageKey) || "[]")];
-      localStorage.setItem(txStorageKey, JSON.stringify(updatedCustom));
+      const razorpayInstance = new window.Razorpay(options);
+      razorpayInstance.on("payment.failed", async function (response) {
+        toast.error(`Payment Failed: ${response.error?.description || "Transaction failed"}`);
+        setTopUpLoading(false);
+        try {
+          await recordUserWalletFailureApi({
+            razorpay_order_id: orderData.order_id,
+            reason: response.error?.description || "Payment failed at gateway",
+          });
+        } catch (e) {}
+      });
 
-      setUserTransactions((prev) => [newTx, ...prev]);
-      setTopUpAmount("");
+      razorpayInstance.open();
+
+    } catch (err) {
+      console.error("Add money error:", err);
+      toast.dismiss("topup-toast");
+      toast.error(err.response?.data?.message || "Failed to initialize payment gateway.");
       setTopUpLoading(false);
-      setShowAddMoneyModal(false);
-      toast.success(`Successfully added ₹${amt.toFixed(2)} to your wallet!`, { id: "topup-toast" });
-    }, 1000);
+    }
   };
 
   // Filter transactions
@@ -659,7 +756,7 @@ const UserWallet = () => {
               </div>
               <div>
                 <h3 className="text-xl font-black text-white">Add Funds to Wallet</h3>
-                <p className="text-xs text-zinc-400">Top up your balance instantly via payment gateway</p>
+                <p className="text-xs text-zinc-400">Top up your balance instantly via Razorpay</p>
               </div>
             </div>
 
@@ -671,11 +768,18 @@ const UserWallet = () => {
                   <input 
                     type="number" 
                     step="0.01"
+                    min="1"
+                    max="100000"
                     placeholder="100.00"
                     value={topUpAmount}
                     onChange={(e) => setTopUpAmount(e.target.value)}
-                    className="w-full bg-[#080612] border border-zinc-800 rounded-2xl pl-9 pr-4 py-3 text-base font-bold text-white focus:outline-none focus:border-purple-500"
+                    disabled={topUpLoading}
+                    className="w-full bg-[#080612] border border-zinc-800 rounded-2xl pl-9 pr-4 py-3 text-base font-bold text-white focus:outline-none focus:border-purple-500 disabled:opacity-60"
                   />
+                </div>
+                <div className="flex justify-between items-center text-[11px] text-zinc-500 mt-1.5 px-1 font-medium">
+                  <span>Min: ₹1.00</span>
+                  <span>Max: ₹1,00,000.00</span>
                 </div>
               </div>
 
@@ -685,8 +789,9 @@ const UserWallet = () => {
                   <button
                     key={amt}
                     type="button"
+                    disabled={topUpLoading}
                     onClick={() => setTopUpAmount(amt.toString())}
-                    className="flex-1 py-2 bg-[#14102B] hover:bg-[#1F1840] border border-purple-500/20 text-purple-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                    className="flex-1 py-2 bg-[#14102B] hover:bg-[#1F1840] border border-purple-500/20 text-purple-300 text-xs font-bold rounded-xl transition-all cursor-pointer disabled:opacity-50"
                   >
                     +₹{amt}
                   </button>
@@ -695,10 +800,17 @@ const UserWallet = () => {
 
               <button 
                 type="submit"
-                disabled={topUpLoading}
-                className="w-full py-3.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-black uppercase tracking-wider rounded-2xl transition-all shadow-lg cursor-pointer disabled:opacity-50"
+                disabled={topUpLoading || !topUpAmount}
+                className="w-full py-3.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-black uppercase tracking-wider rounded-2xl transition-all shadow-[0_0_20px_rgba(139,92,246,0.35)] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {topUpLoading ? "Processing Top-up..." : "Proceed to Add Funds"}
+                {topUpLoading ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Processing with Razorpay...</span>
+                  </>
+                ) : (
+                  <span>Proceed to Pay with Razorpay</span>
+                )}
               </button>
             </form>
           </div>

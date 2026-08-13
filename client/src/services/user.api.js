@@ -96,3 +96,24 @@ export const cancelTicketApi = (ticketId) => {
 export const getPublicCouponsApi = () => {
   return axiosInstance.get("/users/public-coupons");
 };
+
+// User Wallet API Endpoints
+export const createUserWalletOrderApi = (amount) => {
+  return axiosInstance.post("/users/wallet/create-order", { amount });
+};
+
+export const verifyUserWalletPaymentApi = (data) => {
+  return axiosInstance.post("/users/wallet/verify-payment", data);
+};
+
+export const recordUserWalletFailureApi = (data) => {
+  return axiosInstance.post("/users/wallet/record-failure", data);
+};
+
+export const getUserWalletDetailsApi = (params) => {
+  return axiosInstance.get("/users/wallet/details", { params });
+};
+
+export const requestUserWithdrawalApi = (data) => {
+  return axiosInstance.post("/users/wallet/withdraw", data);
+};

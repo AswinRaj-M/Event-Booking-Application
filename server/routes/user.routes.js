@@ -31,6 +31,13 @@ import {
   cancelTicket,
 } from "../controllers/user/booking.controller.js"
 import { validateCoupon, getPublicCoupons } from "../controllers/user/coupon.controller.js"
+import {
+  createUserWalletOrder,
+  verifyUserWalletPayment,
+  recordUserWalletFailure,
+  getUserWalletDetails,
+  requestUserWithdrawal,
+} from "../controllers/user/userWallet.controller.js"
 import passport from "passport"
 import upload from "../middleware/upload.js"
 import { protect } from "../middleware/auth.middleware.js"
@@ -90,5 +97,12 @@ router.get('/public-coupons', asyncHandler(getPublicCoupons))
 router.get('/my-tickets',protect,requireRole("user"),asyncHandler(getUserTickets))
 router.patch('/booking/cancel-ticket/:ticketId',protect,requireRole("user"),asyncHandler(cancelTicket))
 router.get('/booking/cancel-ticket/:ticketId',protect,requireRole("user"),asyncHandler(cancelTicket))
+
+// User Wallet Routes (Razorpay Deposit, Verification, Ledger Details, and Withdrawal)
+router.post('/wallet/create-order', protect, requireRole("user"), asyncHandler(createUserWalletOrder))
+router.post('/wallet/verify-payment', protect, requireRole("user"), asyncHandler(verifyUserWalletPayment))
+router.post('/wallet/record-failure', protect, requireRole("user"), asyncHandler(recordUserWalletFailure))
+router.get('/wallet/details', protect, requireRole("user"), asyncHandler(getUserWalletDetails))
+router.post('/wallet/withdraw', protect, requireRole("user"), asyncHandler(requestUserWithdrawal))
 
 export default router

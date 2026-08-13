@@ -13,7 +13,7 @@ const paymentSchema = new mongoose.Schema({
   },
   paymentType: {
     type: String,
-    enum: ["booking", "admin-wallet-deposit"],
+    enum: ["booking", "admin-wallet-deposit", "user-wallet-deposit"],
     default: "booking",
     index: true
   },
