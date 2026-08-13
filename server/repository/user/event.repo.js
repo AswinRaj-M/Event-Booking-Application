@@ -78,3 +78,79 @@ export const findEventById = async (id) => {
   await updateCompletedEvents();
   return await Event.findById(id).populate("category").populate("vendorId");
 };
+
+export const getOrganizersRepo = async (limit = 8) => {
+  await updateCompletedEvents();
+
+  const organizers = await Event.aggregate([
+    {
+      $match: {
+        isDeleted: { $ne: true },
+        eventStatus: { $nin: ["draft", "cancelled"] }
+      }
+    },
+    {
+      $group: {
+        _id: "$vendorId",
+        totalEvents: { $sum: 1 },
+        avgRating: {
+          $avg: {
+            $cond: [
+              { $gt: ["$averageRating", 0] },
+              "$averageRating",
+              "$$REMOVE"
+            ]
+          }
+        },
+        totalReviews: { $sum: "$totalReviews" }
+      }
+    },
+    {
+      $match: {
+        totalEvents: { $gte: 1 }
+      }
+    },
+    {
+      $lookup: {
+        from: "vendors",
+        localField: "_id",
+        foreignField: "_id",
+        as: "vendor"
+      }
+    },
+    {
+      $unwind: "$vendor"
+    },
+    {
+      $match: {
+        "vendor.applicationStatus": "approved",
+        "vendor.isBlocked": { $ne: true }
+      }
+    },
+    {
+      $project: {
+        _id: "$vendor._id",
+        organizerName: "$vendor.organizerName",
+        businessName: "$vendor.businessName",
+        profilePicture: "$vendor.profilePicture",
+        eventCategory: "$vendor.eventCategory",
+        location: "$vendor.location",
+        description: "$vendor.description",
+        totalEvents: 1,
+        rating: { $ifNull: [{ $round: ["$avgRating", 1] }, 0] },
+        totalReviews: 1
+      }
+    },
+    {
+      $sort: {
+        totalEvents: -1,
+        rating: -1
+      }
+    },
+    {
+      $limit: Number(limit) || 8
+    }
+  ]);
+
+  return organizers;
+};

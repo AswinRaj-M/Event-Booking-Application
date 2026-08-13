@@ -18,7 +18,7 @@ import {
 import { toast } from "sonner";
 import UserSideBar from "../../components/user/UserSideBar";
 import { USER_ROUTES } from "../../constants/Routes";
-import { getBookingHistory, cancelTicketApi } from "../../services/user.api.js";
+import { getBookingHistory, cancelTicketApi, cancelBookingApi } from "../../services/user.api.js";
 
 const MyBookings = () => {
   const navigate = useNavigate();
@@ -194,25 +194,23 @@ const MyBookings = () => {
     }
   };
 
-  const proceedCancelTicket = async (unCancelledTickets) => {
+  const proceedCancelBooking = async (booking) => {
     try {
-      toast.loading("Cancelling ticket(s)...", { id: "cancel-ticket-toast" });
-      let cancelledCount = 0;
-      for (const ticket of unCancelledTickets) {
-        if (ticket.ticketId) {
-          await cancelTicketApi(ticket.ticketId);
-          cancelledCount++;
-        }
-      }
-      if (cancelledCount > 0) {
-        toast.success("Ticket(s) cancelled successfully! Refund has been credited to your wallet.", { id: "cancel-ticket-toast" });
-        fetchBookings();
-      } else {
-        toast.error("Could not cancel ticket.", { id: "cancel-ticket-toast" });
-      }
+      toast.loading("Processing booking refund...", { id: "cancel-ticket-toast" });
+      const bookingId = booking._id || booking.id;
+      const res = await cancelBookingApi(bookingId);
+      
+      toast.success(
+        res.data?.message || "Booking cancelled successfully! Refund has been credited to your wallet.",
+        { id: "cancel-ticket-toast" }
+      );
+      fetchBookings();
     } catch (err) {
-      console.error("Error cancelling ticket:", err);
-      toast.error(err.response?.data?.message || "Failed to cancel ticket. Please check cancellation deadline.", { id: "cancel-ticket-toast" });
+      console.error("Error cancelling booking:", err);
+      toast.error(
+        err.response?.data?.message || "Failed to cancel booking. Please check cancellation deadline.",
+        { id: "cancel-ticket-toast" }
+      );
     }
   };
 
@@ -223,16 +221,17 @@ const MyBookings = () => {
     }
 
     const unCancelledTickets = booking.tickets.filter((t) => t.status !== "cancelled");
-    if (unCancelledTickets.length === 0) {
+    if (unCancelledTickets.length === 0 || booking.bookingStatus === "cancelled") {
       toast.info("All tickets for this booking are already cancelled.");
       return;
     }
 
-    toast("Cancel Ticket Confirmation", {
-      description: "Are you sure you want to cancel your ticket(s) for this event?",
+    const bookingCode = booking.bookingId || "Booking";
+    toast("Cancel Booking Confirmation", {
+      description: `Are you sure you want to cancel your booking (${bookingCode}) and refund the amount to your wallet?`,
       action: {
         label: "Confirm Cancel",
-        onClick: () => proceedCancelTicket(unCancelledTickets),
+        onClick: () => proceedCancelBooking(booking),
       },
       cancel: {
         label: "Dismiss",

@@ -1,6 +1,7 @@
 import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
 
 import {
+  cancelBookingService,
   cancelTicketService,
   createPendingBookingService,
   getBookingDetailsService,
@@ -99,3 +100,23 @@ export const cancelTicket = async(req,res) =>{
     data : result
   })
 }
+
+export const cancelBooking = async (req, res) => {
+  const userId = req.user._id || req.user.userId;
+  const { bookingId } = req.params;
+
+  if (!bookingId) {
+    return res.status(HTTP_STATUS.BAD_REQUEST).json({
+      success: false,
+      message: "Booking Id required for Cancellation!"
+    });
+  }
+
+  const result = await cancelBookingService(userId, bookingId);
+
+  return res.status(HTTP_STATUS.OK).json({
+    success: true,
+    message: result.message || "Booking Cancelled Successfully",
+    data: result
+  });
+};

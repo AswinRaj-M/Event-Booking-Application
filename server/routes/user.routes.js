@@ -22,6 +22,7 @@ import {
 import {
   getExploreEvents,
   getEventById,
+  getOrganizers,
 } from "../controllers/user/event.controller.js"
 import {
   createBooking,
@@ -29,6 +30,7 @@ import {
   getBookingDetails,
   getUserTickets,
   cancelTicket,
+  cancelBooking,
 } from "../controllers/user/booking.controller.js"
 import { validateCoupon, getPublicCoupons } from "../controllers/user/coupon.controller.js"
 import {
@@ -79,6 +81,7 @@ router.post('/logout', protect, requireRole("user"), asyncHandler(logoutUser))
 
 router.get('/explore-events', protect, requireRole("user"), asyncHandler(getExploreEvents))
 router.get('/events/:id', protect, requireRole("user"), asyncHandler(getEventById))
+router.get('/organizers', protect, requireRole("user"), asyncHandler(getOrganizers))
 
 router.get('/profile', protect, requireRole("user"), asyncHandler(getUserProfile))
 router.put('/update-profile', protect, requireRole("user"), userProfileUpdateValidation, validate, asyncHandler(updateUserProfile))
@@ -97,6 +100,7 @@ router.get('/public-coupons', asyncHandler(getPublicCoupons))
 router.get('/my-tickets',protect,requireRole("user"),asyncHandler(getUserTickets))
 router.patch('/booking/cancel-ticket/:ticketId',protect,requireRole("user"),asyncHandler(cancelTicket))
 router.get('/booking/cancel-ticket/:ticketId',protect,requireRole("user"),asyncHandler(cancelTicket))
+router.patch('/booking/cancel-booking/:bookingId',protect,requireRole("user"),asyncHandler(cancelBooking))
 
 // User Wallet Routes (Razorpay Deposit, Verification, Ledger Details, and Withdrawal)
 router.post('/wallet/create-order', protect, requireRole("user"), asyncHandler(createUserWalletOrder))

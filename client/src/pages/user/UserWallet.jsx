@@ -60,9 +60,13 @@ const UserWallet = () => {
 
   // Withdrawal Form State
   const [withdrawAmount, setWithdrawAmount] = useState("");
-  const [payoutMethod, setPayoutMethod] = useState("");
+  const [payoutMethod, setPayoutMethod] = useState("UPI / GPay");
   const [accountDetails, setAccountDetails] = useState("");
   const [withdrawLoading, setWithdrawLoading] = useState(false);
+
+  // Pagination State for Transaction History
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
 
   // Add Money Modal State
   const [showAddMoneyModal, setShowAddMoneyModal] = useState(false);
@@ -72,6 +76,11 @@ const UserWallet = () => {
   // Transactions State
   const [userTransactions, setUserTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Reset pagination when active tab or search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, searchQuery]);
 
   // Unique Wallet ID based on user ID
   const walletId = `WLT-${userId.toString().slice(-8).toUpperCase()}`;
@@ -95,23 +104,47 @@ const UserWallet = () => {
         const createdDate = new Date(tx.createdAt || tx.createdTime || Date.now());
         const isDeposit = tx.transactionType === "deposit";
         const isWithdrawal = tx.transactionType === "withdrawal";
+        const isRefund = tx.transactionType === "refund";
+
+        let title = "Wallet Transaction";
+        let iconType = "wallet";
+        let iconBg = "bg-purple-950/60 border-purple-500/30 text-purple-400";
+
+        if (isDeposit) {
+          title = "Wallet Top-up (Razorpay)";
+          iconType = "wallet";
+          iconBg = "bg-purple-950/60 border-purple-500/30 text-purple-400";
+        } else if (isWithdrawal) {
+          title = "Withdrawal Request";
+          iconType = "credit-card";
+          iconBg = "bg-rose-950/60 border-rose-500/30 text-rose-400";
+        } else if (isRefund) {
+          title = tx.metadata?.bookingCode ? `Booking Refund - ${tx.metadata.bookingCode}` : "Booking Refund";
+          iconType = "refund";
+          iconBg = "bg-blue-950/60 border-blue-500/30 text-blue-400";
+        }
+
+        const idCode = tx.metadata?.bookingCode
+          ? tx.metadata.bookingCode.slice(-8).toUpperCase()
+          : (tx.razorpayPaymentId ? tx.razorpayPaymentId.slice(-8).toUpperCase() : tx._id.slice(-8).toUpperCase());
+
         return {
           id: `tx-db-${tx._id}`,
-          trxId: tx.razorpayPaymentId ? `#RZP-${tx.razorpayPaymentId.slice(-8).toUpperCase()}` : `#TX-${tx._id.slice(-8).toUpperCase()}`,
-          type: isDeposit || tx.amount > 0 ? "credit" : "debit",
-          title: isDeposit ? "Wallet Top-up (Razorpay)" : isWithdrawal ? "Withdrawal Request" : "Wallet Transaction",
-          subtitle: tx.description || (isDeposit ? "Via Razorpay Payment Gateway" : "Wallet Payout"),
+          trxId: isRefund ? `#REF-${idCode}` : tx.razorpayPaymentId ? `#RZP-${idCode}` : `#TX-${idCode}`,
+          type: isDeposit || isRefund || tx.amount > 0 ? "credit" : "debit",
+          title,
+          subtitle: tx.description || (isDeposit ? "Via Razorpay Payment Gateway" : isRefund ? "Booking cancellation refund" : "Wallet Payout"),
           date: createdDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
           time: createdDate.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
           timestamp: createdDate.getTime(),
           amount: tx.amount,
-          status: tx.status === "completed" ? "Success" : tx.status === "pending" ? "Processing" : "Failed",
-          iconBg: isDeposit ? "bg-purple-950/60 border-purple-500/30 text-purple-400" : "bg-rose-950/60 border-rose-500/30 text-rose-400",
-          iconType: isDeposit ? "wallet" : "credit-card"
+          status: tx.status === "completed" ? "Success" : tx.status === "pending" ? "Processing" : "Cancelled",
+          iconBg,
+          iconType
         };
       });
 
-      // Convert real bookings into transactions and track ticket refunds
+      // Convert real bookings into transactions for ticket purchases
       const bookingTxList = [];
       bookings.forEach((bk) => {
         const title = bk.eventId?.title || "Event Booking";
@@ -125,30 +158,7 @@ const UserWallet = () => {
         const formattedTime = createdDate.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
         const idCode = (bk.bookingId || bk._id || "0000").slice(-8).toUpperCase();
 
-        const cancelledTickets = (bk.tickets || []).filter((t) => t.status === "cancelled");
-        
-        // 1. Credit transaction for refund if booking or ticket is cancelled
-        if (bk.bookingStatus === "cancelled" || cancelledTickets.length > 0) {
-          const refundCount = bk.bookingStatus === "cancelled" ? (bk.quantity || 1) : cancelledTickets.length;
-          const refundAmount = bk.bookingStatus === "cancelled" ? totalBkAmount : (singleTicketPrice * refundCount);
-
-          bookingTxList.push({
-            id: `tx-ref-${bk._id}`,
-            trxId: `#REF-${idCode}`,
-            type: "credit",
-            title: "Ticket Cancellation Refund",
-            subtitle: `Refund for ${title} (${refundCount} ticket${refundCount > 1 ? 's' : ''})`,
-            date: formattedDate,
-            time: formattedTime,
-            timestamp: createdDate.getTime() + 1000,
-            amount: refundAmount,
-            status: "Success",
-            iconBg: "bg-blue-950/60 border-blue-500/30 text-blue-400",
-            iconType: "refund"
-          });
-        }
-
-        // 2. Debit transaction for ticket purchase
+        // Debit transaction for ticket purchase
         if (bk.paymentStatus === "paid" || bk.bookingStatus === "confirmed" || bk.bookingStatus === "checked-in" || bk.bookingStatus === "cancelled") {
           bookingTxList.push({
             id: `tx-bk-${bk._id}`,
@@ -384,6 +394,11 @@ const UserWallet = () => {
     return matchesTab && matchesSearch;
   });
 
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage) || 1;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedTransactions = filteredTransactions.slice(startIndex, startIndex + itemsPerPage);
+
   return (
     <div className="flex min-h-screen bg-[#05050C] text-white font-sans selection:bg-purple-500/30">
       {/* Sidebar Navigation */}
@@ -566,8 +581,8 @@ const UserWallet = () => {
                           Loading your transactions...
                         </td>
                       </tr>
-                    ) : filteredTransactions.length > 0 ? (
-                      filteredTransactions.map((tx) => {
+                    ) : paginatedTransactions.length > 0 ? (
+                      paginatedTransactions.map((tx) => {
                         const isCredit = tx.type === "credit";
                         
                         // Helper to safely select icon component
@@ -601,7 +616,8 @@ const UserWallet = () => {
                               {tx.trxId}
                             </td>
 
-                            <td className={`py-4 font-extrabold ${isCredit ? "text-emerald-400" : "text-white"}`}>
+                            {/* Amount in Red for Debits, Green for Credits */}
+                            <td className={`py-4 font-extrabold ${isCredit ? "text-emerald-400" : "text-rose-400"}`}>
                               {isCredit ? `+₹${Math.abs(tx.amount).toFixed(2)}` : `-₹${Math.abs(tx.amount).toFixed(2)}`}
                             </td>
 
@@ -612,7 +628,7 @@ const UserWallet = () => {
                                 </span>
                               )}
                               {tx.status === "Processing" && (
-                                <span className="inline-block px-3 py-1 rounded-full text-[10px] font-extrabold uppercase bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                                <span className="inline-block px-3 py-1 rounded-full text-[10px] font-extrabold uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20">
                                   Processing
                                 </span>
                               )}
@@ -636,15 +652,62 @@ const UserWallet = () => {
                 </table>
               </div>
 
-              {/* Table Footer */}
-              <div className="flex items-center justify-between pt-6 border-t border-white/5 mt-2 text-xs text-zinc-500">
-                <span>Showing {filteredTransactions.length} transaction{filteredTransactions.length !== 1 ? 's' : ''}</span>
+              {/* Table Footer with Interactive Pagination */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-6 border-t border-white/5 mt-2 text-xs text-zinc-500">
+                <span>
+                  Showing {filteredTransactions.length === 0 ? 0 : startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredTransactions.length)} of {filteredTransactions.length} transaction{filteredTransactions.length !== 1 ? 's' : ''}
+                </span>
 
-                <div className="flex items-center gap-2">
-                  <button className="p-2 bg-[#0E0C1C] border border-zinc-800 rounded-xl text-zinc-400 hover:text-white cursor-pointer disabled:opacity-50">
+                <div className="flex items-center gap-1.5">
+                  <button 
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="p-2 bg-[#0E0C1C] border border-zinc-800 rounded-xl text-zinc-400 hover:text-white cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                    title="Previous Page"
+                  >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
-                  <button className="p-2 bg-[#0E0C1C] border border-zinc-800 rounded-xl text-zinc-400 hover:text-white cursor-pointer">
+
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                    if (
+                      totalPages <= 5 ||
+                      page === 1 ||
+                      page === totalPages ||
+                      Math.abs(page - currentPage) <= 1
+                    ) {
+                      return (
+                        <button
+                          key={page}
+                          onClick={() => setCurrentPage(page)}
+                          className={`w-8 h-8 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            currentPage === page
+                              ? "bg-purple-600 text-white shadow-md shadow-purple-600/30"
+                              : "bg-[#0E0C1C] border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800"
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      );
+                    }
+                    if (
+                      (page === 2 && currentPage > 3) ||
+                      (page === totalPages - 1 && currentPage < totalPages - 2)
+                    ) {
+                      return (
+                        <span key={page} className="px-1 text-zinc-600 font-bold">
+                          ...
+                        </span>
+                      );
+                    }
+                    return null;
+                  })}
+
+                  <button 
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages || totalPages === 0}
+                    className="p-2 bg-[#0E0C1C] border border-zinc-800 rounded-xl text-zinc-400 hover:text-white cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                    title="Next Page"
+                  >
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -662,7 +725,7 @@ const UserWallet = () => {
                 </div>
                 <h3 className="text-lg font-black text-white tracking-tight">Withdraw Funds</h3>
               </div>
-              <p className="text-xs text-zinc-400 font-medium mt-1.5">Transfer money to your bank account.</p>
+              <p className="text-xs text-zinc-400 font-medium mt-1.5">Transfer money directly to your UPI ID / GPay account.</p>
             </div>
 
             {/* Form */}
@@ -688,7 +751,7 @@ const UserWallet = () => {
                 </div>
               </div>
 
-              {/* Payout Method Selector */}
+              {/* Payout Method Selector — Only UPI / GPay */}
               <div>
                 <label className="text-xs font-bold text-zinc-300 block mb-1.5">Payout Method</label>
                 <select 
@@ -696,19 +759,16 @@ const UserWallet = () => {
                   onChange={(e) => setPayoutMethod(e.target.value)}
                   className="w-full bg-[#080612] border border-zinc-800/90 rounded-2xl px-4 py-3 text-xs text-white focus:outline-none focus:border-purple-500 transition-colors cursor-pointer"
                 >
-                  <option value="">Select method</option>
-                  <option value="Bank Account">Bank Account</option>
                   <option value="UPI / GPay">UPI / GPay</option>
-                  <option value="Debit Card">Debit / Credit Card</option>
                 </select>
               </div>
 
               {/* Account Details Input */}
               <div>
-                <label className="text-xs font-bold text-zinc-300 block mb-1.5">Account Details</label>
+                <label className="text-xs font-bold text-zinc-300 block mb-1.5">UPI ID / GPay Number</label>
                 <input 
                   type="text" 
-                  placeholder="Enter Account No. / UPI ID"
+                  placeholder="e.g. username@okhdfcbank or 9876543210@upi"
                   value={accountDetails}
                   onChange={(e) => setAccountDetails(e.target.value)}
                   className="w-full bg-[#080612] border border-zinc-800/90 rounded-2xl px-4 py-3 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-purple-500 transition-colors"

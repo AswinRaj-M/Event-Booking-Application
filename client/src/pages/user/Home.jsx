@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
-import { Search, MapPin, Calendar, Clock, ArrowRight, Ticket, Star, Users, Tag, Copy, Check } from 'lucide-react';
+import { Search, MapPin, Calendar, Clock, ArrowRight, Ticket, Star, Users, Tag, Copy, Check, Award } from 'lucide-react';
 import { VENDOR_ROUTES, USER_ROUTES } from '../../constants/Routes';
-import { getExploreEvents, getPublicCouponsApi } from '../../services/user.api.js';
+import { getExploreEvents, getPublicCouponsApi, getOrganizersApi } from '../../services/user.api.js';
 import { getAllCategories } from '../../services/common.api.js';
 import { toast } from 'sonner';
 
@@ -24,19 +24,26 @@ const Home = () => {
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [categories, setCategories] = useState([]);
   const [publicCoupons, setPublicCoupons] = useState([]);
+  const [organizers, setOrganizers] = useState([]);
   const [copiedCode, setCopiedCode] = useState("");
   const [stats, setStats] = useState({ totalEvents: 0, totalUsers: 0, rating: 0 });
   const [loading, setLoading] = useState(true);
+  const [organizersLoading, setOrganizersLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchHomeData = async () => {
       try {
         setLoading(true);
-        const [eventsRes, catsRes, couponsRes] = await Promise.all([
+        setOrganizersLoading(true);
+        const [eventsRes, catsRes, couponsRes, organizersRes] = await Promise.all([
           getExploreEvents({ limit: 4 }),
           getAllCategories(),
-          getPublicCouponsApi().catch(() => ({ data: { success: false } }))
+          getPublicCouponsApi().catch(() => ({ data: { success: false } })),
+          getOrganizersApi({ limit: 8 }).catch((err) => {
+            console.error("Error fetching organizers:", err);
+            return { data: { success: false } };
+          })
         ]);
 
         if (eventsRes.data && eventsRes.data.success) {
@@ -65,11 +72,16 @@ const Home = () => {
         if (couponsRes.data && couponsRes.data.success) {
           setPublicCoupons(couponsRes.data.coupons || []);
         }
+
+        if (organizersRes.data && organizersRes.data.success) {
+          setOrganizers(organizersRes.data.organizers || []);
+        }
       } catch (err) {
         console.error("Error fetching home data:", err);
         setError(err.response?.data?.message || "Failed to load home data");
       } finally {
         setLoading(false);
+        setOrganizersLoading(false);
       }
     };
 
@@ -333,6 +345,134 @@ const Home = () => {
                       </button>
                     </div>
                   </Link>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* Event Organizers Section */}
+        <section className="max-w-7xl mx-auto px-6 py-16 mb-16 relative">
+          {/* Background Glow */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2/3 h-2/3 bg-indigo-900/10 rounded-full blur-[140px] -z-10 pointer-events-none" />
+
+          <div className="flex flex-col md:flex-row justify-between items-end mb-10 gap-4 border-b border-white/5 pb-4">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-xs font-semibold uppercase tracking-wider mb-3">
+                <Award className="w-3.5 h-3.5" />
+                <span>Verified Curators</span>
+              </div>
+              <h2 className="text-3xl font-bold mb-2 text-white">Event Organizers</h2>
+              <p className="text-gray-400">Discover the passionate teams and creators bringing unforgettable events to life.</p>
+            </div>
+            <Link to={USER_ROUTES.EXPLORE} className="text-purple-500 hover:text-purple-400 text-sm font-medium flex items-center gap-1 group">
+              Explore events <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </Link>
+          </div>
+
+          {organizersLoading && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="bg-[#0A0A0A] border border-white/5 rounded-2xl p-6 flex flex-col items-center text-center animate-pulse h-[280px] justify-between">
+                  <div className="w-20 h-20 rounded-full bg-zinc-900 mb-4" />
+                  <div className="h-5 bg-zinc-900 w-32 rounded mb-2" />
+                  <div className="h-3 bg-zinc-900 w-24 rounded mb-4" />
+                  <div className="h-12 bg-zinc-900 w-full rounded-xl mb-4" />
+                  <div className="h-9 bg-zinc-900 w-full rounded-xl mt-auto" />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!organizersLoading && organizers.length === 0 && (
+            <div className="text-center py-12 bg-[#0A0A0A] border border-white/5 rounded-2xl p-8 max-w-md mx-auto">
+              <div className="w-12 h-12 rounded-full bg-purple-950/40 border border-purple-500/20 flex items-center justify-center mx-auto mb-3 text-purple-400">
+                <Users className="w-6 h-6" />
+              </div>
+              <h3 className="text-base font-bold text-white mb-1">No Organizers Found</h3>
+              <p className="text-zinc-500 text-xs leading-relaxed">Active event organizers will be showcased here once events are published.</p>
+            </div>
+          )}
+
+          {!organizersLoading && organizers.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {organizers.map((org) => {
+                const name = org.organizerName || org.businessName || "Event Organizer";
+                const initial = name.charAt(0).toUpperCase();
+                const avatar = org.profilePicture?.fileUrl;
+                const hasRating = org.rating && org.rating > 0;
+                const locationStr = [org.location?.city, org.location?.state].filter(Boolean).join(", ");
+                const categoryOrLocation = org.eventCategory || locationStr || "Verified Organizer";
+
+                return (
+                  <div
+                    key={org._id}
+                    className="bg-[#0A0A0A] border border-white/5 rounded-2xl p-6 flex flex-col items-center text-center hover:border-purple-500/30 transition-all duration-300 group hover:-translate-y-1 shadow-xl hover:shadow-[0_10px_30px_rgba(147,51,234,0.1)] relative overflow-hidden"
+                  >
+                    {/* Background subtle hover glow */}
+                    <div className="absolute inset-0 bg-gradient-to-b from-purple-950/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+
+                    {/* Avatar Container */}
+                    <div className="relative mb-4">
+                      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-900/40 via-indigo-950/40 to-black border-2 border-purple-500/30 overflow-hidden flex items-center justify-center shadow-lg group-hover:border-purple-400/60 transition-colors select-none">
+                        {avatar ? (
+                          <img
+                            src={avatar}
+                            alt={name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <span className="text-2xl font-black text-purple-300">
+                            {initial}
+                          </span>
+                        )}
+                      </div>
+                      <div className="absolute -bottom-1 -right-1 bg-green-500 text-white p-1 rounded-full border-2 border-[#0A0A0A] shadow" title="Verified Organizer">
+                        <Check className="w-3 h-3 stroke-[3]" />
+                      </div>
+                    </div>
+
+                    {/* Organizer Name & Category/Location */}
+                    <h3 className="font-bold text-base text-white group-hover:text-purple-300 transition-colors line-clamp-1 mb-1">
+                      {name}
+                    </h3>
+                    <p className="text-xs text-zinc-400 mb-4 line-clamp-1 font-medium">
+                      {categoryOrLocation}
+                    </p>
+
+                    {/* Metrics Row (Rating & Events Count) */}
+                    <div className="w-full grid grid-cols-2 gap-2 bg-white/[0.03] border border-white/5 rounded-xl p-2.5 mb-5 text-xs">
+                      <div className="flex flex-col items-center justify-center border-r border-white/5 pr-1">
+                        <div className="flex items-center gap-1 text-amber-400 font-bold">
+                          <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                          <span>{hasRating ? org.rating.toFixed(1) : "New"}</span>
+                        </div>
+                        <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold mt-0.5">
+                          {org.totalReviews > 0 ? `${org.totalReviews} Reviews` : "Rating"}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-col items-center justify-center pl-1">
+                        <div className="flex items-center gap-1 text-purple-300 font-bold">
+                          <Ticket className="w-3.5 h-3.5 text-purple-400" />
+                          <span>{org.totalEvents}</span>
+                        </div>
+                        <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold mt-0.5">
+                          {org.totalEvents === 1 ? "Event" : "Events"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Explore Events Button */}
+                    <Link
+                      to={USER_ROUTES.EXPLORE}
+                      className="w-full py-2 bg-white/5 hover:bg-purple-600 text-white text-xs font-bold rounded-xl border border-white/10 hover:border-transparent transition-all shadow-sm flex items-center justify-center gap-1 group/btn mt-auto"
+                    >
+                      <span>Explore Events</span>
+                      <ArrowRight className="w-3 h-3 group-hover/btn:translate-x-0.5 transition-transform" />
+                    </Link>
+                  </div>
                 );
               })}
             </div>

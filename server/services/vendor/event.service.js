@@ -3,6 +3,11 @@ import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
 import Event from "../../models/event.model.js";
 import Booking from "../../models/booking.model.js";
 import { processVendorBookingRefund } from "./vendorWallet.service.js";
+import {
+  updateUserWalletBalanceRepo,
+  createUserWalletTransactionRepo
+} from "../../repository/user/userWallet.repo.js";
+import UserWalletTransaction from "../../models/userWalletTransaction.model.js";
 
 import {
   createEventRepo,
@@ -185,7 +190,57 @@ export const cancelEventService = async (eventId, vendorId) => {
   let refundedCount = 0;
   for (const booking of paidBookings) {
     try {
+      // 1. Process vendor wallet deduction
       await processVendorBookingRefund(booking);
+
+      // 2. Calculate remaining uncancelled tickets refund amount
+      const uncancelledTickets = (booking.tickets || []).filter(t => t.status !== "cancelled");
+      const uncancelledCount = uncancelledTickets.length > 0 ? uncancelledTickets.length : (booking.quantity || 1);
+      const totalTickets = Number(booking.quantity) || (booking.tickets ? booking.tickets.length : 1) || 1;
+      const refundAmount = Number(((Number(booking.totalAmount) || 0) * (uncancelledCount / totalTickets)).toFixed(2));
+
+      // 3. Mark all tickets and booking as cancelled & refunded
+      (booking.tickets || []).forEach(t => { 
+        t.status = "cancelled";
+        t.cancelledAt = new Date();
+      });
+      booking.bookingStatus = "cancelled";
+      booking.paymentStatus = "refunded";
+      await booking.save();
+
+      // 4. Atomically credit User Wallet and create Wallet Transaction (with Idempotency check)
+      if (refundAmount > 0 && booking.userId) {
+        const bookingUserId = booking.userId?._id ? booking.userId._id : booking.userId;
+        const existingUserRefund = await UserWalletTransaction.findOne({
+          "metadata.bookingId": booking._id,
+          "metadata.eventCancellation": true,
+          transactionType: "refund",
+          status: "completed"
+        });
+
+        if (!existingUserRefund) {
+          const updatedUser = await updateUserWalletBalanceRepo(bookingUserId, refundAmount);
+          await createUserWalletTransactionRepo({
+            userId: bookingUserId,
+            transactionType: "refund",
+            amount: refundAmount,
+            currency: "INR",
+            balanceAfter: updatedUser?.walletBalance || refundAmount,
+            status: "completed",
+            paymentMethod: "wallet",
+            description: `Event cancellation automatic refund for "${event.title}"`,
+            metadata: {
+              bookingId: booking._id,
+              bookingCode: booking.bookingId,
+              eventId: event._id,
+              eventTitle: event.title,
+              eventCancellation: true,
+              refundAmount
+            }
+          });
+        }
+      }
+
       refundedCount++;
     } catch (refundErr) {
       console.error(`Refund failed for booking ${booking._id} on event cancellation:`, refundErr);

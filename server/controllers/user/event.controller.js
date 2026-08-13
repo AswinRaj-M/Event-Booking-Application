@@ -4,6 +4,7 @@ import { AppError } from "../../utils/AppError.js";
 import {
   getExploreEventsService,
   getEventByIdService,
+  getOrganizersService,
 } from "../../services/user/event.service.js";
 
 export const getExploreEvents = async (req, res) => {
@@ -24,5 +25,14 @@ export const getEventById = async (req, res) => {
   return res.status(HTTP_STATUS.OK).json({
     success: true,
     event
+  });
+};
+
+export const getOrganizers = async (req, res) => {
+  const { limit } = req.query;
+  const organizers = await getOrganizersService(limit ? parseInt(limit, 10) : 8);
+  return res.status(HTTP_STATUS.OK).json({
+    success: true,
+    organizers
   });
 };

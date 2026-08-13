@@ -69,6 +69,10 @@ export const getEventById = (id) => {
   return axiosInstance.get(`/users/events/${id}`);
 };
 
+export const getOrganizersApi = (params) => {
+  return axiosInstance.get("/users/organizers", { params });
+};
+
 export const changePassword = (data) => {
   return axiosInstance.put("/users/change-password", data);
 };
@@ -91,6 +95,10 @@ export const getUserTickets = () => {
 
 export const cancelTicketApi = (ticketId) => {
   return axiosInstance.patch(`/users/booking/cancel-ticket/${ticketId}`);
+};
+
+export const cancelBookingApi = (bookingId) => {
+  return axiosInstance.patch(`/users/booking/cancel-booking/${bookingId}`);
 };
 
 export const getPublicCouponsApi = () => {
