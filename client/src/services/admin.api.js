@@ -102,3 +102,20 @@ export const approveWithdrawalApi = (id) => {
 export const rejectWithdrawalApi = (id, rejectionReason) => {
   return axiosInstance.patch(`/admin/withdrawals/${id}/reject`, { rejectionReason });
 };
+
+// Admin Wallet APIs
+export const createAdminWalletOrderApi = (amount) => {
+  return axiosInstance.post("/admin/wallet/create-order", { amount });
+};
+
+export const verifyAdminWalletPaymentApi = (paymentData) => {
+  return axiosInstance.post("/admin/wallet/verify-payment", paymentData);
+};
+
+export const recordAdminWalletPaymentFailureApi = (data) => {
+  return axiosInstance.post("/admin/wallet/record-failure", data);
+};
+
+export const getAdminWalletDetailsApi = (params = {}) => {
+  return axiosInstance.get("/admin/wallet/details", { params });
+};

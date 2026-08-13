@@ -86,17 +86,19 @@ export const createPendingBookingService = async (userId, eventId, tierId, quant
      }
    }
 
+   const originalAmount = Math.max(0, subtotal - discountAmount);
+
    let couponDiscount = 0;
    let validatedCoupon = null;
 
    if (couponCode && couponCode.trim() !== "") {
-     const result = await validateAndApplyCoupon(couponCode, userId, eventId, subtotal, quantity);
+     const result = await validateAndApplyCoupon(couponCode, userId, eventId, originalAmount, quantity);
      validatedCoupon = result.coupon;
      couponDiscount = result.discountAmount;
    }
 
    const serviceFee = event.ticketType === "Free" ? 0 : 14.90;
-   const totalAmount = Math.max(0, subtotal - discountAmount - couponDiscount + serviceFee);
+   const totalAmount = Math.max(0, originalAmount - couponDiscount + serviceFee);
 
    // Generate unique bookingId
    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
@@ -114,9 +116,12 @@ export const createPendingBookingService = async (userId, eventId, tierId, quant
      tierName: selectedTier.name || "Standard",
      ticketPrice,
      quantity,
+     originalAmount,
+     eventDiscount: discountAmount,
+     couponDiscount,
+     serviceFee,
      totalAmount,
      couponCode: validatedCoupon ? validatedCoupon.code : undefined,
-     couponDiscount: couponDiscount,
      paymentStatus: "pending",
      bookingStatus: "pending",
      qrCodeToken: generateQrToken(),

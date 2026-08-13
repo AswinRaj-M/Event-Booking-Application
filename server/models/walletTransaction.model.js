@@ -47,6 +47,10 @@ const walletTransactionSchema = new mongoose.Schema(
       required: true,
       default: 0,
     },
+    adminCouponDiscount: {
+      type: Number,
+      default: 0,
+    },
     netAmount: {
       type: Number,
       required: true,

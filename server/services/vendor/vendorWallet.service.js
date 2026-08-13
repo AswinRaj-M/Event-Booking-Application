@@ -78,8 +78,12 @@ export const processVendorBookingEarnings = async (booking) => {
     return null;
   }
 
-  // STEP 78 & 79: Calculate Gross Earnings, Platform Commission, & Net Vendor Earnings
-  const grossAmount = booking.totalAmount || (booking.ticketPrice * (booking.quantity || 1)) || 0;
+  // STEP 78 & 79: Calculate Vendor Gross Earnings from the ORIGINAL booking amount (before admin coupon discount)
+  // The coupon discount is funded by the Admin/Platform and must NEVER reduce the Vendor's earnings.
+  const grossAmount = Number(booking.originalAmount) > 0 
+    ? Number(booking.originalAmount) 
+    : (booking.ticketPrice * (booking.quantity || 1)) || (Number(booking.totalAmount) + Number(booking.couponDiscount || 0));
+
   const earningsData = calculatePlatformCommission(grossAmount);
 
   // STEP 80: Find or Create Vendor Wallet & Update Available Balance & Total Earnings
@@ -100,6 +104,7 @@ export const processVendorBookingEarnings = async (booking) => {
     transactionType: "earnings",
     amount: earningsData.grossAmount,
     platformCommission: earningsData.platformCommission,
+    adminCouponDiscount: Number(booking.couponDiscount) || 0,
     netAmount: earningsData.netEarnings,
     status: "completed",
     description: `Ticket sales earnings for event: ${event.title}`,
@@ -144,8 +149,11 @@ export const processVendorBookingRefund = async (booking) => {
 
   const vendorId = event.vendorId?._id || event.vendorId;
 
-  // 2. Calculate Total Booking Refund Amount & Commission
-  const grossAmount = booking.totalAmount || (booking.ticketPrice * (booking.quantity || 1)) || 0;
+  // 2. Calculate Total Booking Refund Amount & Commission based on the original booking amount
+  const grossAmount = Number(booking.originalAmount) > 0 
+    ? Number(booking.originalAmount) 
+    : (booking.ticketPrice * (booking.quantity || 1)) || (Number(booking.totalAmount) + Number(booking.couponDiscount || 0));
+
   const earningsData = calculatePlatformCommission(grossAmount);
 
   const wallet = await findOrCreateWalletRepo(vendorId);
@@ -158,7 +166,6 @@ export const processVendorBookingRefund = async (booking) => {
   });
 
   // 4. Create ONLY ONE WalletTransaction record for the entire booking refund
-  const bookingCode = booking.bookingId || booking._id;
   const transaction = await createWalletTransactionRepo({
     walletId: wallet._id,
     vendorId: vendorId,
@@ -167,6 +174,7 @@ export const processVendorBookingRefund = async (booking) => {
     transactionType: "refund",
     amount: -earningsData.grossAmount,
     platformCommission: -earningsData.platformCommission,
+    adminCouponDiscount: -(Number(booking.couponDiscount) || 0),
     netAmount: -earningsData.netEarnings,
     status: "completed",
     description: `Booking cancellation refund for "${event.title}"`,

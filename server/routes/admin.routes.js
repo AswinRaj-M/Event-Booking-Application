@@ -83,9 +83,21 @@ import {
   approveWithdrawal,
   rejectWithdrawal,
 } from "../controllers/admin/withdrawal.controller.js"
+import {
+  createAdminWalletOrder,
+  verifyAdminWalletPayment,
+  recordAdminWalletPaymentFailure,
+  getAdminWalletDetails,
+} from "../controllers/admin/adminWallet.controller.js"
 
 router.get('/withdrawals', protect, requireRole("admin"), asyncHandler(getAdminWithdrawalRequests))
 router.patch('/withdrawals/:id/approve', protect, requireRole("admin"), asyncHandler(approveWithdrawal))
 router.patch('/withdrawals/:id/reject', protect, requireRole("admin"), asyncHandler(rejectWithdrawal))
 
-export default router
+// Admin Wallet Routes
+router.post('/wallet/create-order', protect, requireRole("admin"), asyncHandler(createAdminWalletOrder))
+router.post('/wallet/verify-payment', protect, requireRole("admin"), asyncHandler(verifyAdminWalletPayment))
+router.post('/wallet/record-failure', protect, requireRole("admin"), asyncHandler(recordAdminWalletPaymentFailure))
+router.get('/wallet/details', protect, requireRole("admin"), asyncHandler(getAdminWalletDetails))
+
+export default router

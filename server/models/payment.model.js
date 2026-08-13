@@ -9,7 +9,13 @@ const paymentSchema = new mongoose.Schema({
   orderId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Booking",
-    required: true
+    required: false
+  },
+  paymentType: {
+    type: String,
+    enum: ["booking", "admin-wallet-deposit"],
+    default: "booking",
+    index: true
   },
   razorpayOrderId: {
     type: String,
@@ -46,9 +52,14 @@ const paymentSchema = new mongoose.Schema({
   signature: {
     type: String,
     default: ""
+  },
+  notes: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
   }
 }, { timestamps: true });
 
 const Payment = mongoose.model("Payment", paymentSchema);
 
 export default Payment;
+

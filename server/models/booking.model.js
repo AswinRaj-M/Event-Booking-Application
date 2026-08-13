@@ -62,6 +62,26 @@ export const bookingSchema = new mongoose.Schema({
     required : true,
   },
 
+  originalAmount: {
+    type: Number,
+    required: false,
+  },
+
+  eventDiscount: {
+    type: Number,
+    default: 0,
+  },
+
+  couponDiscount: {
+    type: Number,
+    default: 0,
+  },
+
+  serviceFee: {
+    type: Number,
+    default: 0,
+  },
+
   totalAmount :{
     type : Number,
     required : true,
@@ -105,10 +125,6 @@ export const bookingSchema = new mongoose.Schema({
     trim : true
   },
   tickets : [ticketSchema],
-  couponDiscount : {
-    type : Number,
-    default :0 
-  },
 },{timestamps : true});
 
 const Booking = mongoose.model("Booking",bookingSchema);
