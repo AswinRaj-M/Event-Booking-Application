@@ -1,5 +1,6 @@
 import { 
   createCouponService,
+  updateCouponService,
   getAllCouponsService,
   toggleCouponStatusService,
   deleteCouponService
@@ -11,6 +12,16 @@ export const createCoupon = async (req, res) => {
   return res.status(HTTP_STATUS.CREATED).json({
     success: true,
     message: "Coupon created successfully!",
+    coupon
+  });
+};
+
+export const updateCoupon = async (req, res) => {
+  const { id } = req.params;
+  const coupon = await updateCouponService(id, req.body);
+  return res.status(HTTP_STATUS.OK).json({
+    success: true,
+    message: "Coupon updated successfully!",
     coupon
   });
 };

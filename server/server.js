@@ -30,6 +30,7 @@ app.use(cors({
 app.use("/api/users", userRoutes)
 app.use("/api/admin", adminRoutes)
 app.use("/api/vendor", vendorRoutes)
+app.use("/api/vendors", vendorRoutes)
 app.use('/api/common', commonRoutes)
 app.use("/api/payments", paymentRoutes)
 

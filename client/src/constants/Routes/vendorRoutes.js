@@ -7,4 +7,5 @@ export const VENDOR_ROUTES = {
   EVENTS: '/vendor/events',
   DRAFTS: '/vendor/events/drafts',
   WALLET: '/vendor/wallet',
+  SCANNER: '/vendor/scanner',
 };

@@ -75,6 +75,10 @@ export const createCouponApi = (data) => {
   return axiosInstance.post("/admin/coupons", data);
 };
 
+export const updateCouponApi = (id, data) => {
+  return axiosInstance.put(`/admin/coupons/${id}`, data);
+};
+
 export const getAllCouponsApi = (params = {}) => {
   return axiosInstance.get("/admin/coupons", { params });
 };

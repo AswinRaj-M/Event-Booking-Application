@@ -8,6 +8,7 @@ import VendorCreateEvent from "../pages/vendor/VendorCreateEvent.jsx"
 import VendorMyEvent from "../pages/vendor/VendorMyEvent.jsx"
 import VendorDraft from "../pages/vendor/VendorDraft.jsx"
 import VendorWallet from "../pages/vendor/VendorWallet.jsx"
+import VendorTicketScanner from "../pages/vendor/VendorTicketScanner.jsx"
 import { ProtectedRoute } from '../auth/ProtectedRoute.jsx'
 import { VENDOR_ROUTES } from '../constants/Routes'
 
@@ -49,6 +50,11 @@ function VendorRoutes() {
       <Route path={VENDOR_ROUTES.WALLET.replace('/vendor/', '')} element={
         <ProtectedRoute role="vendor">
           <VendorWallet />
+        </ProtectedRoute>
+      } />
+      <Route path={VENDOR_ROUTES.SCANNER.replace('/vendor/', '')} element={
+        <ProtectedRoute role="vendor">
+          <VendorTicketScanner />
         </ProtectedRoute>
       } />
     </Routes>

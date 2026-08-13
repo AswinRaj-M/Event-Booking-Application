@@ -81,7 +81,7 @@ const VendorDraft = () => {
     const hasTickets = (event.ticketTiers && event.ticketTiers.length > 0) || (event.totalTickets && event.totalTickets > 0);
 
     // Check if event has all required fields to publish
-    if (!event.title || !event.description || !event.category || !event.schedule?.date || 
+    if (!event.title || !event.description || !event.category || !(event.schedule?.date || event.date) || 
         !hasLocation || !hasTickets || !event.thumbnail?.fileUrl) {
       
       toast.error("Please fill in all required fields in the edit modal before publishing");
@@ -96,7 +96,7 @@ const VendorDraft = () => {
       
       const response = await updateEventApi(event._id, formData);
       if (response.data && response.data.success) {
-        toast.success("Draft published successfully! (Pending Admin approval)");
+        toast.success("Draft published successfully!");
         setDrafts(prev => prev.filter(item => item._id !== event._id));
       } else {
         toast.error(response.data?.message || "Failed to publish draft");

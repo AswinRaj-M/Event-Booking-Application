@@ -167,9 +167,11 @@ const UserEventDetails = () => {
 
   
   const formattedDates = useMemo(() => {
-    if (!event?.schedule?.date) return { short: "Date TBA", full: "Date TBA", monthDay: "Date TBA" };
+    const rawDate = event?.schedule?.date || event?.date;
+    if (!rawDate) return { short: "Date TBA", full: "Date TBA", monthDay: "Date TBA" };
     try {
-      const d = new Date(event.schedule.date);
+      const d = new Date(rawDate);
+      if (isNaN(d.getTime())) return { short: "Date TBA", full: "Date TBA", monthDay: "Date TBA" };
       const short = d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
       const full = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
       const monthDay = d.toLocaleDateString('en-US', { month: 'short', day: '2-digit' }).toUpperCase();
@@ -453,7 +455,9 @@ const UserEventDetails = () => {
                 <div className="flex flex-col min-w-0">
                   <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-semibold">Time</span>
                   <span className="text-white text-xs sm:text-sm font-bold truncate">
-                    {event.schedule?.startTime || "TBA"} - {event.schedule?.endTime || "TBA"}
+                    {(event.schedule?.startTime || event.startTime) && (event.schedule?.endTime || event.endTime)
+                      ? `${event.schedule?.startTime || event.startTime} - ${event.schedule?.endTime || event.endTime}`
+                      : (event.schedule?.startTime || event.startTime || event.schedule?.endTime || event.endTime || "TBA")}
                   </span>
                 </div>
               </div>

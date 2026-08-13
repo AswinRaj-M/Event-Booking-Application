@@ -8,6 +8,7 @@ import {
     PlusCircle,
     Ticket,
     Wallet,
+    ScanLine,
     UserCircle,
     Settings,
     LogOut
@@ -38,7 +39,7 @@ const VendorSidebar = () => {
         { path: VENDOR_ROUTES.EVENTS, icon: CalendarDays, label: "My Events" },
         { path: VENDOR_ROUTES.DRAFTS, icon: FileEdit, label: "Draft Events" },
         { path: VENDOR_ROUTES.CREATE_EVENT, icon: PlusCircle, label: "Create Event" },
-        { path: "#", icon: Ticket, label: "Bookings" },
+        { path: VENDOR_ROUTES.SCANNER, icon: ScanLine, label: "Gate Scanner" },
         { path: VENDOR_ROUTES.WALLET, icon: Wallet, label: "Revenue & Payouts" },
     ];
 

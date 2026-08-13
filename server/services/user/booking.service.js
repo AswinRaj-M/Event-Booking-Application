@@ -21,83 +21,97 @@ import {
 } from "../../repository/user/booking.repo.js";
 
 export const createPendingBookingService = async (userId, eventId, tierId, quantity, couponCode) => {
-   const event = await Event.findOne({_id : eventId, isDeleted : false, isBlocked : false})
+   const event = await Event.findOne({ _id: eventId, isDeleted: false });
 
-   if(!event){
-    throw new AppError("Event is Not Found or Currently Unavailable!",HTTP_STATUS.NOT_FOUND)
+   if (!event) {
+     throw new AppError("Event not found or is currently unavailable", HTTP_STATUS.NOT_FOUND);
    }
 
-
-   let selectedTier = null
-   if(event.ticketType?.toLowerCase() === "free"){
-    selectedTier = event.ticketTiers?.[0] ||
-     {name : "General Admmission",price : 0,capacity : event.totalTickets || 100, sold : event.soldTickets ||0}
-   }
-   else {
-    selectedTier = event.ticketTiers.find((tier) => tier._id.toString() === tierId)
+   let selectedTier = null;
+   if (event.ticketType?.toLowerCase() === "free") {
+     selectedTier = event.ticketTiers?.[0] ||
+       { name: "General Admission", price: 0, capacity: event.totalTickets || 1000, sold: event.soldTickets || 0 };
+   } else if (tierId && event.ticketTiers && event.ticketTiers.length > 0) {
+     selectedTier = event.ticketTiers.find((tier) => tier._id?.toString() === tierId?.toString());
    }
 
-   if(!selectedTier){
-    throw new AppError("Selected Ticket Tier Does Not Exists!",HTTP_STATUS.BAD_REQUEST)
+   if (!selectedTier && event.ticketTiers && event.ticketTiers.length > 0) {
+     selectedTier = event.ticketTiers[0];
    }
 
-   const availableSeats = selectedTier.capacity - (selectedTier.sold || 0);
-
-   if (availableSeats <= 0) {
-    throw new AppError("This event or ticket tier is sold out!", HTTP_STATUS.BAD_REQUEST);
+   if (!selectedTier) {
+     selectedTier = {
+       _id: new mongoose.Types.ObjectId(),
+       name: "Standard",
+       price: event.ticketPrice || 0,
+       capacity: event.totalTickets || 1000,
+       sold: event.soldTickets || 0
+     };
    }
 
-   if (availableSeats < quantity) {
-    throw new AppError(`Insufficient tickets available! Only ${availableSeats} tickets left.`, HTTP_STATUS.BAD_REQUEST);
+   const tierCapacity = Number(selectedTier?.capacity) || Number(event.totalTickets) || 1000;
+   const tierSold = Number(selectedTier?.sold) || Number(event.soldTickets) || 0;
+   const availableSeats = Math.max(0, tierCapacity - tierSold);
+
+   if (availableSeats <= 0 && tierCapacity > 0) {
+     throw new AppError("This event or ticket tier is sold out!", HTTP_STATUS.BAD_REQUEST);
    }
 
-   const ticketPrice = selectedTier.price || 0
-   const subtotal = ticketPrice * quantity
+   if (quantity > availableSeats && availableSeats > 0) {
+     throw new AppError(`Insufficient tickets available! Only ${availableSeats} tickets left.`, HTTP_STATUS.BAD_REQUEST);
+   }
 
-   let discountAmount = 0
+   const ticketPrice = selectedTier.price || 0;
+   const subtotal = ticketPrice * quantity;
 
-   if(event.offer?.enabled && quantity >= (event.offer.minTicketsRequired ||0)){
-     const now = new Date()
-     let isOfferValid = true
+   let discountAmount = 0;
 
-     if(event.offer.validFrom){
-       const fromDate = new Date(event.offer.validFrom)
-       fromDate.setHours(0, 0, 0, 0)
-       if(fromDate > now) isOfferValid = false
+   if (event.offer?.enabled && quantity >= (event.offer.minTicketsRequired || 0)) {
+     const now = new Date();
+     let isOfferValid = true;
+
+     if (event.offer.validFrom) {
+       const fromDate = new Date(event.offer.validFrom);
+       fromDate.setHours(0, 0, 0, 0);
+       if (fromDate > now) isOfferValid = false;
      }
-     if(event.offer.validUntil){
-       const untilDate = new Date(event.offer.validUntil)
-       untilDate.setHours(23, 59, 59, 999)
-       if(untilDate < now) isOfferValid = false
+     if (event.offer.validUntil) {
+       const untilDate = new Date(event.offer.validUntil);
+       untilDate.setHours(23, 59, 59, 999);
+       if (untilDate < now) isOfferValid = false;
      }
 
-     if(isOfferValid){
-       discountAmount = (subtotal * (event.offer.discountValue) || 0) / 100
+     if (isOfferValid) {
+       discountAmount = (subtotal * (event.offer.discountValue || 0)) / 100;
      }
-    }
+   }
 
    let couponDiscount = 0;
    let validatedCoupon = null;
 
    if (couponCode && couponCode.trim() !== "") {
-     const result = await validateAndApplyCoupon(couponCode, userId, eventId, subtotal);
+     const result = await validateAndApplyCoupon(couponCode, userId, eventId, subtotal, quantity);
      validatedCoupon = result.coupon;
      couponDiscount = result.discountAmount;
    }
 
-   const serviceFee = event.ticketType === "Free" ? 0 : 14.90
+   const serviceFee = event.ticketType === "Free" ? 0 : 14.90;
    const totalAmount = Math.max(0, subtotal - discountAmount - couponDiscount + serviceFee);
 
-   // to generate unique bookingId
+   // Generate unique bookingId
    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
    const bookingIdString = `BK-${Date.now().toString().slice(-6)}-${randomSuffix}`;
+
+   const validTierId = (tierId && mongoose.isValidObjectId(tierId))
+     ? new mongoose.Types.ObjectId(tierId)
+     : (selectedTier?._id && mongoose.isValidObjectId(selectedTier._id) ? selectedTier._id : new mongoose.Types.ObjectId());
 
    const bookingPayload = {
      bookingId: bookingIdString,
      eventId,
      userId,
-     tierId: tierId || selectedTier?._id || new mongoose.Types.ObjectId(),
-     tierName: selectedTier.name,
+     tierId: validTierId,
+     tierName: selectedTier.name || "Standard",
      ticketPrice,
      quantity,
      totalAmount,
@@ -105,44 +119,47 @@ export const createPendingBookingService = async (userId, eventId, tierId, quant
      couponDiscount: couponDiscount,
      paymentStatus: "pending",
      bookingStatus: "pending",
-     tickets : []
+     qrCodeToken: generateQrToken(),
+     tickets: []
    };
 
    const newBooking = await createBookingRepo(bookingPayload);
    return newBooking;
-}
+};
 
 
-export const getBookingDetailsService = async(userId,userRole,bookingId) =>{
-  const booking = await findBookingByIdRepo(bookingId)
+export const getBookingDetailsService = async(userId, userRole, bookingId) => {
+  const booking = await findBookingByIdRepo(bookingId);
 
   if(!booking){
-    throw new AppError("Booking Not Found!",HTTP_STATUS.NOT_FOUND)
+    throw new AppError("Booking Not Found!", HTTP_STATUS.NOT_FOUND);
   }
 
-  const isBooker = booking.userId._id.toString() === userId.toString()
-  const isEventOwner = booking.eventId?.vendorId?.toString() === userId.toString()
-  const isAdmin = userRole === "admin"
+  const isBooker = booking.userId._id.toString() === userId.toString();
+  const isEventOwner = booking.eventId?.vendorId?.toString() === userId.toString();
+  const isAdmin = userRole === "admin";
 
-  if(!isBooker && !isEventOwner && isAdmin){
-    throw new AppError("You are not authorized to view this Booking!", HTTP_STATUS.FORBIDDEN)
+  if(!isBooker && !isEventOwner && !isAdmin){
+    throw new AppError("You are not authorized to view this Booking!", HTTP_STATUS.FORBIDDEN);
   }
 
-  const bookingObj = booking.toObject()
-
-  if(bookingObj.tickets && bookingObj.tickets.length > 0){
-    bookingObj.tickets = await Promise.all(
-      bookingObj.tickets.map(async(ticket) =>{
-        const qrCodeImage = await generateQRCode(ticket.qrCodeToken)
-        return {
-          ...ticket,
-          qrCodeImage
-        }
-      })
-    )
+  // Safe migration for legacy bookings missing booking-level QR token
+  if (!booking.qrCodeToken && (booking.paymentStatus === "paid" || booking.bookingStatus === "confirmed")) {
+    booking.qrCodeToken = booking.tickets?.[0]?.qrCodeToken || generateQrToken();
+    await booking.save();
   }
-  return bookingObj
-}
+
+  const bookingObj = booking.toObject();
+
+  // Generate SINGLE booking-level QR Code image
+  if (booking.qrCodeToken) {
+    bookingObj.qrCodeImage = await generateQRCode(booking.qrCodeToken);
+  } else {
+    bookingObj.qrCodeImage = null;
+  }
+
+  return bookingObj;
+};
 
 export const getBookingHistoryService = async(userId) => {
   return await findUserBookingsRepo(userId);
@@ -152,28 +169,30 @@ export const confirmBookingAfterPaymentService = async (bookingId) => {
   const booking = await Booking.findById(bookingId);
   if (!booking) return null;
 
-
   booking.paymentStatus = "paid";
   booking.bookingStatus = "confirmed";
 
+  // Generate exactly ONE booking-level QR token
+  if (!booking.qrCodeToken) {
+    booking.qrCodeToken = generateQrToken();
+  }
 
-  if (!booking.tickets||booking.tickets.length === 0) {
-    const generatedTickets =  []
-    for(let i = 0; i<booking.quantity; i++){
+  // Generate individual ticket items for tracking ticket quantity and status without separate QR tokens
+  if (!booking.tickets || booking.tickets.length === 0) {
+    const generatedTickets = [];
+    for (let i = 0; i < booking.quantity; i++) {
       generatedTickets.push({
-        ticketId : generateTicketNumber(),
-        qrCodeToken : generateQrToken(),
-        status : "valid",
-        checkedInAt : null,
-        checkedInBy : null
-      })
+        ticketId: generateTicketNumber(),
+        status: "valid",
+        checkedInAt: null,
+        checkedInBy: null
+      });
     }
     booking.tickets = generatedTickets;
   }
 
   await booking.save();
 
-  
   try {
     if (booking.tierId) {
       await Event.updateOne(
@@ -224,27 +243,23 @@ export const confirmBookingAfterPaymentService = async (bookingId) => {
 };
 
 
-export const getUserTicketsService = async(userId) =>{
+export const getUserTicketsService = async(userId) => {
   const bookings = await findUserBookingsRepo(userId);
 
   const formattedBookings = await Promise.all(
-    bookings.map(async(booking) =>{
+    bookings.map(async(booking) => {
       const bookingObj = booking.toObject ? booking.toObject() : booking;
 
-      if(bookingObj.tickets && bookingObj.tickets.length > 0){
-        bookingObj.tickets = await Promise.all(
-          bookingObj.tickets.map(async(ticket) =>{
-            const qrCodeImage = generateQRCode(ticket.qrCodeToken);
-
-            return {
-              ticketId : ticket.ticketId,
-              status : ticket.status,
-              checkedInAt : ticket.checkedInAt,
-              qrCodeImage
-            };
-          })
-        );
+      // Safe migration for legacy bookings missing booking-level QR token
+      let qrToken = bookingObj.qrCodeToken;
+      if (!qrToken && (bookingObj.paymentStatus === "paid" || bookingObj.bookingStatus === "confirmed")) {
+        qrToken = bookingObj.tickets?.[0]?.qrCodeToken || generateQrToken();
+        await Booking.updateOne({ _id: bookingObj._id }, { $set: { qrCodeToken: qrToken } });
       }
+
+      // Generate single booking-level QR code image
+      bookingObj.qrCodeImage = qrToken ? await generateQRCode(qrToken) : null;
+
       return bookingObj;
     })
   );

@@ -3,8 +3,8 @@ import { useParams, Link } from "react-router-dom";
 import { 
   Calendar, 
   MapPin, 
-  Ticket, 
-  User, 
+  Ticket as TicketIcon, 
+  Users, 
   Download, 
   ArrowLeft,
   Loader2,
@@ -15,7 +15,6 @@ import { getBookingDetails } from "../../services/user.api.js";
 import { USER_ROUTES } from "../../constants/Routes";
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
-import TicketCard from "../../components/user/TicketCard";
 import { toast } from "sonner";
 
 const TicketViewPage = () => {
@@ -24,7 +23,7 @@ const TicketViewPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [downloading, setDownloading] = useState(false);
-  const ticketRef = useRef(null);
+  const ticketPassRef = useRef(null);
 
   useEffect(() => {
     const fetchBookingDetails = async () => {
@@ -49,30 +48,30 @@ const TicketViewPage = () => {
     }
   }, [id]);
 
-  const handleDownloadFullBooking = async () => {
-    if (!ticketRef.current) return;
+  const handleDownloadTicket = async () => {
+    if (!ticketPassRef.current) return;
     try {
       setDownloading(true);
-      toast.loading("Generating full ticket download pass...", { id: "download-booking" });
+      toast.loading("Generating your entry pass...", { id: "download-pass" });
 
-      const dataUrl = await toPng(ticketRef.current, {
+      const dataUrl = await toPng(ticketPassRef.current, {
         cacheBust: true,
-        backgroundColor: "#05050C",
-        quality: 0.95,
+        backgroundColor: "#07060F",
+        quality: 0.98,
         pixelRatio: 2,
       });
 
       const link = document.createElement("a");
       link.href = dataUrl;
-      link.download = `Booking-${booking?.bookingId || id}-FullPass.png`;
+      link.download = `Pass-${booking?.bookingId || id}.png`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
 
-      toast.success("Full booking pass downloaded successfully!", { id: "download-booking" });
+      toast.success("Entry pass downloaded successfully!", { id: "download-pass" });
     } catch (err) {
-      console.error("Error capturing ticket image:", err);
-      toast.error("Failed to download full booking pass", { id: "download-booking" });
+      console.error("Error downloading pass:", err);
+      toast.error("Failed to download entry pass", { id: "download-pass" });
     } finally {
       setDownloading(false);
     }
@@ -80,11 +79,11 @@ const TicketViewPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#05050C] text-white flex flex-col justify-between">
+      <div className="min-h-screen bg-[#07060F] text-white flex flex-col justify-between">
         <Navbar />
-        <div className="flex-grow flex flex-col items-center justify-center py-20">
+        <div className="flex-grow flex flex-col items-center justify-center py-24">
           <Loader2 className="w-12 h-12 text-purple-500 animate-spin mb-4" />
-          <p className="text-zinc-400 text-sm font-medium">Retrieving ticket details & generating QR codes...</p>
+          <p className="text-zinc-400 text-sm font-medium">Generating your official entry pass...</p>
         </div>
         <Footer />
       </div>
@@ -93,13 +92,13 @@ const TicketViewPage = () => {
 
   if (error || !booking) {
     return (
-      <div className="min-h-screen bg-[#05050C] text-white flex flex-col justify-between">
+      <div className="min-h-screen bg-[#07060F] text-white flex flex-col justify-between">
         <Navbar />
         <div className="flex-grow flex flex-col items-center justify-center py-20 px-4">
           <div className="bg-rose-950/20 border border-rose-500/20 rounded-3xl p-8 max-w-md w-full text-center">
             <AlertTriangle className="w-16 h-16 text-rose-500 mx-auto mb-4" />
             <h2 className="text-xl font-bold text-white mb-2">Failed to load ticket</h2>
-            <p className="text-zinc-400 text-sm mb-6">Failed to fetch tickets</p>
+            <p className="text-zinc-400 text-sm mb-6">{error || "Ticket not found"}</p>
             <Link to={USER_ROUTES.BOOKINGS}>
               <button className="flex items-center gap-2 mx-auto px-6 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white text-xs font-bold rounded-xl transition-all shadow-[0_0_15px_rgba(139,92,246,0.2)] cursor-pointer">
                 <ArrowLeft className="w-4 h-4" />
@@ -113,157 +112,226 @@ const TicketViewPage = () => {
     );
   }
 
+  const event = booking.eventId || {};
   const isPending = booking.bookingStatus === "pending";
-  const event = booking.eventId;
-  
-  const themeColorClass = isPending ? "text-amber-400" : "text-purple-400";
-  const themeBorderClass = isPending ? "border-amber-500/20 hover:border-amber-500/30" : "border-purple-500/20 hover:border-purple-500/30";
-  const themeBgGradientClass = isPending ? "from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800" : "from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700";
-  const themeLogoGlow = isPending ? "shadow-[0_0_25px_rgba(245,158,11,0.5)] border-amber-500/30" : "shadow-[0_0_25px_rgba(139,92,246,0.5)] border-purple-500/30";
-  const themeDotColor = isPending ? "bg-amber-500" : "bg-purple-500";
 
   const formatEventDate = (dateString) => {
     if (!dateString) return "Date TBA";
     try {
       const date = new Date(dateString);
       return date.toLocaleDateString("en-US", { 
-        weekday: 'short', 
-        month: 'short', 
-        day: 'numeric', 
-        year: 'numeric' 
+        month: "short", 
+        day: "2-digit", 
+        year: "numeric" 
       });
     } catch (e) {
       return "Date TBA";
     }
   };
 
+  const formatEventTime = (schedule) => {
+    if (!schedule) return "Time TBA";
+    const start = schedule.startTime || "08:00 PM";
+    const end = schedule.endTime || "02:00 AM";
+    return `${start} - ${end}`;
+  };
+
+  const eventBannerUrl = event.thumbnail?.fileUrl || event.thumbnail || "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?q=80&w=1000&auto=format&fit=crop";
+  const holderName = booking.userId?.fullName || "Ticket Holder";
+  const quantity = booking.quantity || 1;
+
   return (
-    <div className="min-h-screen bg-[#05050C] text-white flex flex-col justify-between font-sans relative overflow-hidden">
-      <div className={`absolute top-[10%] left-1/2 -translate-x-1/2 w-[600px] h-[350px] rounded-full blur-[120px] pointer-events-none -z-10 transition-all duration-500 ${isPending ? 'bg-amber-500/5' : 'bg-purple-500/5'}`} />
+    <div className="min-h-screen bg-[#07060F] text-white flex flex-col justify-between font-sans relative overflow-hidden selection:bg-purple-500/30">
+      {/* Background ambient lighting */}
+      <div className="absolute top-[5%] left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-purple-600/10 rounded-full blur-[150px] pointer-events-none -z-10" />
+      <div className="absolute bottom-[10%] right-[10%] w-[500px] h-[500px] bg-indigo-900/10 rounded-full blur-[180px] pointer-events-none -z-10" />
       
       <Navbar />
 
-      <main className="flex-grow pt-28 pb-20 px-4 md:px-8 max-w-5xl mx-auto w-full relative z-10 flex flex-col items-center">
+      <main className="flex-grow pt-24 pb-16 px-4 sm:px-6 max-w-5xl mx-auto w-full relative z-10 flex flex-col items-center">
         
-        {/* Full Capturable Ticket Area */}
-        <div ref={ticketRef} className="w-full max-w-5xl p-6 bg-[#05050C] rounded-3xl flex flex-col items-center">
-          
-          {/* Status Header */}
-          <div className="text-center mb-8 flex flex-col items-center">
-            <div className={`w-16 h-16 rounded-full border-2 flex items-center justify-center mb-5 bg-[#05050C] ${themeLogoGlow}`}>
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center bg-opacity-20 animate-pulse ${isPending ? 'bg-amber-500' : 'bg-purple-500'}`}>
-                <div className={`w-3.5 h-3.5 rounded-full ${themeDotColor}`} />
+        {/* Top Header Glow Badge & Confirmation Title */}
+        <div className="text-center mb-8 flex flex-col items-center">
+          {/* Glowing concentric rings icon */}
+          <div className="w-20 h-20 rounded-full bg-[#120B2E] border border-purple-500/30 flex items-center justify-center mb-5 shadow-[0_0_40px_rgba(139,92,246,0.4)] relative">
+            <div className="w-12 h-12 rounded-full bg-purple-600/30 border border-purple-400/50 flex items-center justify-center">
+              <div className="w-4 h-4 rounded-full bg-white shadow-[0_0_15px_#ffffff]" />
+            </div>
+          </div>
+
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-white mb-3">
+            {isPending ? "Booking Pending!" : "Booking Confirmed!"}
+          </h1>
+
+          <p className="text-zinc-400 text-xs sm:text-sm md:text-base max-w-md mx-auto font-medium leading-relaxed">
+            {isPending
+              ? "Your booking is currently pending confirmation. Please check back shortly."
+              : "Your tickets are successfully booked and sent to your email. Get ready for an amazing experience!"
+            }
+          </p>
+        </div>
+
+        {/* The Exact Ticket Card UI from Design */}
+        <div 
+          ref={ticketPassRef}
+          className="w-full max-w-4xl bg-[#0D0B1C] border border-purple-500/20 rounded-[2rem] shadow-[0_25px_70px_rgba(0,0,0,0.85)] overflow-hidden relative"
+        >
+          <div className="grid grid-cols-1 lg:grid-cols-12 relative">
+            
+            {/* Left Side: Event Details */}
+            <div className="lg:col-span-7 p-6 sm:p-8 flex flex-col justify-between relative z-10">
+              
+              {/* Event Hero Banner */}
+              <div className="relative rounded-2xl overflow-hidden mb-6 h-48 sm:h-52 w-full bg-zinc-950 border border-white/5">
+                <img 
+                  src={eventBannerUrl} 
+                  alt={event.title || "Event Banner"} 
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0D0B1C] via-[#0D0B1C]/40 to-transparent" />
+                
+                <div className="absolute bottom-4 left-4 right-4 space-y-2">
+                  <span className="inline-block px-3 py-1 bg-black/60 backdrop-blur-md rounded-full text-[11px] font-bold text-white border border-white/10">
+                    Upcoming
+                  </span>
+                  <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-tight drop-shadow-md">
+                    {event.title || "Neon Nights Festival"}
+                  </h2>
+                </div>
+              </div>
+
+              {/* 2x2 Event Meta Grid */}
+              <div className="grid grid-cols-2 gap-y-6 gap-x-4 mb-6">
+                
+                {/* Date & Time */}
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5 text-zinc-400 text-xs font-semibold">
+                    <Calendar className="w-3.5 h-3.5 text-zinc-400" />
+                    <span>Date & Time</span>
+                  </div>
+                  <p className="text-sm font-bold text-white">{formatEventDate(event.schedule?.date)}</p>
+                  <p className="text-xs text-zinc-400 font-medium">{formatEventTime(event.schedule)}</p>
+                </div>
+
+                {/* Venue */}
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5 text-zinc-400 text-xs font-semibold">
+                    <MapPin className="w-3.5 h-3.5 text-zinc-400" />
+                    <span>Venue</span>
+                  </div>
+                  <p className="text-sm font-bold text-white line-clamp-1">{event.venue || "Skyline Arena"}</p>
+                  <p className="text-xs text-zinc-400 font-medium line-clamp-1">
+                    {event.city ? `${event.city}${event.address ? `, ${event.address}` : ''}` : "Brooklyn, New York"}
+                  </p>
+                </div>
+
+                {/* Ticket Type */}
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5 text-zinc-400 text-xs font-semibold">
+                    <TicketIcon className="w-3.5 h-3.5 text-zinc-400" />
+                    <span>Ticket Type</span>
+                  </div>
+                  <p className="text-sm font-bold text-white">{booking.tierName || "VIP Access"}</p>
+                  <p className="text-xs text-zinc-400 font-medium">Row A, Seat 12-14</p>
+                </div>
+
+                {/* Guests */}
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5 text-zinc-400 text-xs font-semibold">
+                    <Users className="w-3.5 h-3.5 text-zinc-400" />
+                    <span>Guests</span>
+                  </div>
+                  <p className="text-sm font-bold text-white">{quantity} {quantity > 1 ? "Adults" : "Adult"}</p>
+                </div>
+              </div>
+
+              {/* Order ID & Total Paid Footer */}
+              <div className="border-t border-zinc-800/80 pt-4 mt-2 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider block">Order ID</span>
+                  <span className="text-xs sm:text-sm font-extrabold text-white font-mono mt-0.5 block">
+                    #{booking.bookingId || (id ? id.slice(-10).toUpperCase() : "EVT-8823-99X")}
+                  </span>
+                </div>
+
+                <div className="text-right">
+                  <span className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider block">Total Paid</span>
+                  <span className="text-xl sm:text-2xl font-black text-[#A855F7] tracking-tight mt-0.5 block">
+                    ₹{Number(booking.totalAmount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
               </div>
             </div>
 
-            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-3">
-              {isPending ? "Booking Pending!" : "Booking Confirmed!"}
-            </h1>
+            {/* Perforation Divider Notches for Desktop */}
+            <div className="hidden lg:block absolute -top-3.5 left-7/12 -translate-x-1/2 w-7 h-7 bg-[#07060F] rounded-full border border-purple-500/20 z-20" />
+            <div className="hidden lg:block absolute -bottom-3.5 left-7/12 -translate-x-1/2 w-7 h-7 bg-[#07060F] rounded-full border border-purple-500/20 z-20" />
+            <div className="hidden lg:block absolute top-4 bottom-4 left-7/12 -translate-x-1/2 w-[1px] border-r border-dashed border-zinc-800/80 pointer-events-none z-10" />
 
-            <p className="text-zinc-400 text-sm md:text-base max-w-lg mx-auto font-medium leading-relaxed">
-              {isPending 
-                ? "Your booking is currently pending. Please wait for authorization or payment clearance."
-                : "Your tickets are successfully booked. Present your QR tickets at event entrance."
-              }
-            </p>
-          </div>
-
-          {/* Main Booking Details Card */}
-          <div className={`w-full bg-[#0b0914]/80 border backdrop-blur-md rounded-3xl p-6 md:p-8 shadow-2xl mb-10 transition-all duration-500 ${themeBorderClass}`}>
-            <div className="flex flex-col md:flex-row gap-6 items-start justify-between pb-6 border-b border-zinc-800/80">
-              <div>
-                <span className={`px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider backdrop-blur-md bg-[#05050C]/80 border ${isPending ? 'border-amber-500/30 text-amber-400' : 'border-purple-500/30 text-purple-400'}`}>
-                  {booking.bookingStatus}
-                </span>
-                <h2 className="text-2xl md:text-3xl font-extrabold text-white mt-3 mb-2 leading-tight">
-                  {event?.title}
-                </h2>
-                <p className="text-xs text-zinc-400">Order ID: #{booking.bookingId || id}</p>
+            {/* Right Side: QR Entry Pass & Buttons */}
+            <div className="lg:col-span-5 p-6 sm:p-8 bg-[#0F0C22]/90 border-t lg:border-t-0 lg:border-l border-zinc-800/60 flex flex-col items-center justify-between text-center relative z-10">
+              
+              {/* Header */}
+              <div className="w-full">
+                <h3 className="text-base sm:text-lg font-bold text-white">Entry Pass</h3>
+                <p className="text-xs text-zinc-400 font-medium mt-0.5">Scan at the gate</p>
               </div>
 
-              <button 
-                onClick={handleDownloadFullBooking}
-                disabled={downloading}
-                className={`py-3 px-5 bg-gradient-to-r text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-lg flex items-center gap-2 cursor-pointer disabled:opacity-50 ${themeBgGradientClass}`}
-              >
-                {downloading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+              {/* QR Code Container */}
+              <div className="my-6 p-3 sm:p-3.5 bg-white rounded-2xl shadow-2xl flex items-center justify-center">
+                {booking.qrCodeImage ? (
+                  <img 
+                    src={booking.qrCodeImage} 
+                    alt="Entry Pass QR Code" 
+                    className="w-44 h-44 sm:w-48 sm:h-48 object-contain rounded-lg"
+                  />
                 ) : (
-                  <Download className="w-4 h-4" />
+                  <div className="w-44 h-44 sm:w-48 sm:h-48 flex flex-col items-center justify-center text-zinc-400 text-xs">
+                    <Loader2 className="w-8 h-8 animate-spin text-purple-600 mb-2" />
+                    <span className="font-bold text-zinc-700">Generating QR...</span>
+                  </div>
                 )}
-                Download Full Booking Pass
-              </button>
+              </div>
+
+              {/* Ticket Holder Name */}
+              <div className="w-full mb-6">
+                <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block">Ticket Holder</span>
+                <span className="text-base font-bold text-white mt-0.5 block">{holderName}</span>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="w-full space-y-3">
+                <button
+                  type="button"
+                  onClick={handleDownloadTicket}
+                  disabled={downloading}
+                  className="w-full py-3 px-4 bg-gradient-to-r from-[#8B5CF6] to-[#7C3AED] hover:from-[#7C3AED] hover:to-[#6D28D9] text-white text-xs font-bold rounded-xl shadow-[0_0_20px_rgba(139,92,246,0.35)] transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] disabled:opacity-50"
+                >
+                  {downloading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4" />
+                  )}
+                  Download Ticket
+                </button>
+
+                <Link to={USER_ROUTES.BOOKINGS} className="block w-full">
+                  <button
+                    type="button"
+                    className="w-full py-3 px-4 bg-[#141126] hover:bg-[#1C1838] border border-white/5 text-zinc-300 hover:text-white text-xs font-semibold rounded-xl transition-all cursor-pointer"
+                  >
+                    View My Bookings
+                  </button>
+                </Link>
+              </div>
+
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 my-6">
-              <div className="flex gap-3 items-start">
-                <div className={`p-2 rounded-xl bg-zinc-950 border border-zinc-800/80 ${themeColorClass}`}>
-                  <Calendar className="w-4 h-4" />
-                </div>
-                <div>
-                  <span className="text-[9px] text-zinc-550 uppercase tracking-widest font-bold block mb-0.5">Date</span>
-                  <p className="text-white text-xs font-bold">{formatEventDate(event?.schedule?.date)}</p>
-                </div>
-              </div>
-
-              <div className="flex gap-3 items-start">
-                <div className={`p-2 rounded-xl bg-zinc-950 border border-zinc-800/80 ${themeColorClass}`}>
-                  <MapPin className="w-4 h-4" />
-                </div>
-                <div>
-                  <span className="text-[9px] text-zinc-550 uppercase tracking-widest font-bold block mb-0.5">Venue</span>
-                  <p className="text-white text-xs font-bold line-clamp-1">{event?.venue}</p>
-                </div>
-              </div>
-
-              <div className="flex gap-3 items-start">
-                <div className={`p-2 rounded-xl bg-zinc-950 border border-zinc-800/80 ${themeColorClass}`}>
-                  <Ticket className="w-4 h-4" />
-                </div>
-                <div>
-                  <span className="text-[9px] text-zinc-550 uppercase tracking-widest font-bold block mb-0.5">Ticket Tier</span>
-                  <p className="text-white text-xs font-bold">{booking.tierName || "Standard"}</p>
-                </div>
-              </div>
-
-              <div className="flex gap-3 items-start">
-                <div className={`p-2 rounded-xl bg-zinc-950 border border-zinc-800/80 ${themeColorClass}`}>
-                  <User className="w-4 h-4" />
-                </div>
-                <div>
-                  <span className="text-[9px] text-zinc-550 uppercase tracking-widest font-bold block mb-0.5">Total Tickets</span>
-                  <p className="text-white text-xs font-bold">{booking.quantity} Ticket{booking.quantity > 1 ? 's' : ''}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* QR Tickets Display Section */}
-          <div className="w-full">
-            <h3 className="text-lg font-black text-white mb-4">
-              Your QR Entry Passes ({booking.tickets?.length || 0})
-            </h3>
-
-            {booking.tickets && booking.tickets.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {booking.tickets.map((ticket, idx) => (
-                  <TicketCard key={ticket.ticketId || ticket._id || `ticket-${idx}`} ticket={ticket} index={idx} />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 bg-[#0b0914]/60 border border-zinc-800/80 rounded-2xl text-zinc-400 text-xs">
-                No QR tickets generated yet.
-              </div>
-            )}
           </div>
         </div>
 
-        <Link to={USER_ROUTES.BOOKINGS} className="mt-10 flex items-center gap-2 text-zinc-500 hover:text-white text-xs font-semibold transition-colors">
-          <ArrowLeft className="w-4 h-4" />
-          Back to My Bookings
-        </Link>
       </main>
-      
+
       <Footer />
     </div>
   );

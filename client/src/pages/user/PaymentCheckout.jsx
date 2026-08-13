@@ -107,7 +107,8 @@ const PaymentCheckout = () => {
       const res = await axiosInstance.post('/users/booking/validate-coupon', {
         couponCode: couponInput.trim(),
         eventId: event._id,
-        subtotal: subtotal
+        subtotal: subtotal,
+        quantity: Number(quantity) || 1
       });
 
       if (res.data && res.data.success) {
@@ -115,7 +116,9 @@ const PaymentCheckout = () => {
         setAppliedCoupon({
           code: res.data.couponCode || couponInput.trim().toUpperCase(),
           discountType: res.data.discountType,
-          discountValue: res.data.discountValue
+          discountValue: res.data.discountValue,
+          maxDiscountAmount: res.data.maxDiscountAmount,
+          minTickets: res.data.minTickets
         });
         setCouponDiscount(discountVal);
         toast.success(res.data.message || `Coupon "${res.data.couponCode}" applied successfully!`);
@@ -153,7 +156,8 @@ const PaymentCheckout = () => {
 
   // Final Payment Submission & Razorpay Integration
   const handleFinalPayment = async () => {
-    if (!event?._id) {
+    const targetEventId = event?._id || event?.id;
+    if (!targetEventId) {
       toast.error('Booking information is invalid');
       return;
     }
@@ -163,10 +167,10 @@ const PaymentCheckout = () => {
 
       // Step 1: Create Razorpay order on backend
       const orderPayload = {
-        eventId: event._id,
-        tierId: tierId || undefined,
+        eventId: targetEventId,
+        tierId: (tierId && tierId !== "undefined" && tierId !== "null") ? tierId : (selectedTier?._id || undefined),
         quantity: Number(quantity) || 1,
-        couponCode: appliedCoupon?.code || undefined
+        couponCode: appliedCoupon?.code ? appliedCoupon.code.trim().toUpperCase() : undefined
       };
 
       const orderRes = await axiosInstance.post('/payments/create-order', orderPayload);
@@ -434,7 +438,7 @@ const PaymentCheckout = () => {
                     {appliedCoupon && (
                       <div className="flex justify-between items-center text-emerald-400 font-semibold">
                         <span className="flex items-center gap-1.5">
-                          <Tag className="w-3.5 h-3.5" /> Coupon ({appliedCoupon.code})
+                          <Tag className="w-3.5 h-3.5" /> Coupon ({appliedCoupon.code} {appliedCoupon.discountType === 'percentage' ? `• ${appliedCoupon.discountValue}% OFF` : `• ₹${appliedCoupon.discountValue} OFF`})
                         </span>
                         <span>-₹{couponDiscount.toFixed(2)}</span>
                       </div>

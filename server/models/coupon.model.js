@@ -33,6 +33,11 @@ const couponSchema = new mongoose.Schema({
     default : 0,
     min : 0
   },
+  minTickets : {
+    type : Number,
+    default : 1,
+    min : [1, "Minimum tickets must be at least 1"]
+  },
   maxDiscountAmount : {
     type : Number,
     min :0

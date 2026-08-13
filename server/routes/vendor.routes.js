@@ -122,9 +122,12 @@ import {
   getVendorWithdrawalsController
 } from "../controllers/vendor/withdrawal.controller.js"
 
-router.get("/wallet", protect, requireRole("vendor"), asyncHandler(getVendorWallet))
-router.get("/wallet/transactions", protect, requireRole("vendor"), asyncHandler(getVendorTransactions))
-router.post("/wallet/withdraw", protect, requireRole("vendor"), asyncHandler(requestWithdrawalController))
-router.get("/wallet/withdrawals", protect, requireRole("vendor"), asyncHandler(getVendorWithdrawalsController))
+import {
+  checkInTicket,
+  getRecentCheckIns
+} from "../controllers/vendor/checkIn.controller.js";
 
-export default router
+router.post("/check-in", protect, requireRole("vendor"), asyncHandler(checkInTicket));
+router.get("/check-ins/recent", protect, requireRole("vendor"), asyncHandler(getRecentCheckIns));
+
+export default router;

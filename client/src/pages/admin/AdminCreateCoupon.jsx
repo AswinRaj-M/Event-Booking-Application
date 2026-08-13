@@ -29,6 +29,7 @@ function AdminCreateCoupon() {
   const [discountValue, setDiscountValue] = useState("");
   const [maxDiscountAmount, setMaxDiscountAmount] = useState("");
   const [minOrderValue, setMinOrderValue] = useState("");
+  const [minTickets, setMinTickets] = useState("1");
 
   // Scope & Category Dynamic Data
   const [scope, setScope] = useState("All Events");
@@ -92,19 +93,37 @@ function AdminCreateCoupon() {
       return;
     }
 
-    if (discountType === "percentage" && discountVal > 100) {
-      toast.error("Percentage discount cannot exceed 100%");
-      return;
-    }
+    if (discountType === "fixed") {
+      const minOrderVal = Number(minOrderValue);
+      if (!minOrderValue || isNaN(minOrderVal) || minOrderVal <= 0) {
+        toast.error("Minimum order value is required and must be greater than 0 for fixed amount coupons");
+        return;
+      }
 
-    if (minOrderValue && Number(minOrderValue) < 0) {
-      toast.error("Minimum order value cannot be negative");
-      return;
-    }
+      if (discountVal >= minOrderVal) {
+        toast.error(`Discount Value (₹${discountVal}) must be strictly less than Minimum Order Value (₹${minOrderVal})`);
+        return;
+      }
+    } else if (discountType === "percentage") {
+      if (discountVal > 100) {
+        toast.error("Percentage discount cannot exceed 100%");
+        return;
+      }
 
-    if (maxDiscountAmount && Number(maxDiscountAmount) < 0) {
-      toast.error("Maximum discount amount cannot be negative");
-      return;
+      if (minOrderValue && Number(minOrderValue) < 0) {
+        toast.error("Minimum order value cannot be negative");
+        return;
+      }
+
+      if (maxDiscountAmount && Number(maxDiscountAmount) < 0) {
+        toast.error("Maximum discount amount cannot be negative");
+        return;
+      }
+
+      if (minTickets && (Number(minTickets) < 1 || !Number.isInteger(Number(minTickets)))) {
+        toast.error("Minimum tickets required must be an integer of at least 1");
+        return;
+      }
     }
 
     if (totalUses) {
@@ -142,6 +161,7 @@ function AdminCreateCoupon() {
       discountType: discountType,
       discountValue: Number(discountValue),
       minPurchaseAmount: effectiveMinPurchase,
+      minTickets: discountType === "fixed" ? 1 : (Number(minTickets) || 1),
       startDate: startDate || new Date(),
       endDate: endDate,
       usagelimit: Number(totalUses) || 100,
@@ -152,7 +172,7 @@ function AdminCreateCoupon() {
       description: description.trim()
     };
 
-    if (maxDiscountAmount && Number(maxDiscountAmount) > 0) {
+    if (discountType === "percentage" && maxDiscountAmount && Number(maxDiscountAmount) > 0) {
       payload.maxDiscountAmount = Number(maxDiscountAmount);
     }
 
@@ -314,7 +334,7 @@ function AdminCreateCoupon() {
                     maxLength={150}
                     onChange={(e) => setDescription(e.target.value)}
                     className="w-full bg-[#0B0914] border border-gray-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-purple-500 transition-all"
-                    placeholder="Get 20% off on all weekend passes for the Summer Festival."
+                    placeholder="Get discount on all weekend passes for the Festival."
                   ></textarea>
                   <div className="text-right text-[10px] text-gray-500 mt-1">
                     {description.length}/150 characters
@@ -387,59 +407,115 @@ function AdminCreateCoupon() {
                   </div>
                 </div>
 
-                {/* 3 Column Value Inputs */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-400 mb-1.5">
-                      Discount Value
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs font-bold">
-                        {discountType === "percentage" ? "%" : "₹"}
-                      </span>
-                      <input
-                        type="number"
-                        value={discountValue}
-                        onChange={(e) => setDiscountValue(e.target.value)}
-                        className="w-full bg-[#0B0914] border border-gray-800 rounded-xl pl-7 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-purple-500 font-bold"
-                        placeholder="20"
-                      />
+                {/* Conditional Dynamic Value Inputs */}
+                {discountType === "fixed" ? (
+                  /* Fixed Amount Inputs: Only Discount Value & Minimum Order Value */
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-gray-400 mb-1.5">
+                        Fixed Discount Value <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs font-bold">₹</span>
+                        <input
+                          type="number"
+                          value={discountValue}
+                          onChange={(e) => setDiscountValue(e.target.value)}
+                          className="w-full bg-[#0B0914] border border-gray-800 rounded-xl pl-7 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-purple-500 font-bold"
+                          placeholder="500"
+                        />
+                      </div>
+                      <p className="text-[10px] text-gray-500 mt-1">Exact amount deducted from order</p>
                     </div>
-                  </div>
 
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-400 mb-1.5">
-                      Max Discount Amount
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs font-bold">₹</span>
-                      <input
-                        type="number"
-                        value={maxDiscountAmount}
-                        onChange={(e) => setMaxDiscountAmount(e.target.value)}
-                        className="w-full bg-[#0B0914] border border-gray-800 rounded-xl pl-7 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-purple-500 font-bold"
-                        placeholder="50"
-                      />
+                    <div>
+                      <label className="block text-[11px] font-semibold text-gray-400 mb-1.5">
+                        Minimum Order Value <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs font-bold">₹</span>
+                        <input
+                          type="number"
+                          value={minOrderValue}
+                          onChange={(e) => setMinOrderValue(e.target.value)}
+                          className="w-full bg-[#0B0914] border border-gray-800 rounded-xl pl-7 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-purple-500 font-bold"
+                          placeholder="2000"
+                        />
+                      </div>
+                      <p className="text-[10px] text-purple-400/80 mt-1">Must be strictly greater than Discount Value</p>
                     </div>
-                    <p className="text-[10px] text-gray-500 mt-1">Leave empty for no limit</p>
                   </div>
+                ) : (
+                  /* Percentage Inputs: Discount %, Max Discount, Min Order, Min Tickets */
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-gray-400 mb-1.5">
+                        Discount Percentage <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs font-bold">%</span>
+                        <input
+                          type="number"
+                          max="100"
+                          value={discountValue}
+                          onChange={(e) => setDiscountValue(e.target.value)}
+                          className="w-full bg-[#0B0914] border border-gray-800 rounded-xl pl-7 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-purple-500 font-bold"
+                          placeholder="20"
+                        />
+                      </div>
+                    </div>
 
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-400 mb-1.5">
-                      Min Order Value
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs font-bold">₹</span>
-                      <input
-                        type="number"
-                        value={minOrderValue}
-                        onChange={(e) => setMinOrderValue(e.target.value)}
-                        className="w-full bg-[#0B0914] border border-gray-800 rounded-xl pl-7 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-purple-500 font-bold"
-                        placeholder="100"
-                      />
+                    <div>
+                      <label className="block text-[11px] font-semibold text-gray-400 mb-1.5">
+                        Max Discount Amount
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs font-bold">₹</span>
+                        <input
+                          type="number"
+                          value={maxDiscountAmount}
+                          onChange={(e) => setMaxDiscountAmount(e.target.value)}
+                          className="w-full bg-[#0B0914] border border-gray-800 rounded-xl pl-7 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-purple-500 font-bold"
+                          placeholder="500"
+                        />
+                      </div>
+                      <p className="text-[10px] text-gray-500 mt-1">Leave empty for no limit</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-gray-400 mb-1.5">
+                        Min Order Value
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs font-bold">₹</span>
+                        <input
+                          type="number"
+                          value={minOrderValue}
+                          onChange={(e) => setMinOrderValue(e.target.value)}
+                          className="w-full bg-[#0B0914] border border-gray-800 rounded-xl pl-7 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-purple-500 font-bold"
+                          placeholder="1000"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-gray-400 mb-1.5">
+                        Min Tickets Required
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="1"
+                          value={minTickets}
+                          onChange={(e) => setMinTickets(e.target.value)}
+                          className="w-full bg-[#0B0914] border border-gray-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-purple-500 font-bold"
+                          placeholder="1"
+                        />
+                      </div>
+                      <p className="text-[10px] text-gray-500 mt-1">Default 1 ticket</p>
                     </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* STEP 3 & 4 (2 Column Row) */}

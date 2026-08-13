@@ -32,10 +32,14 @@ const UserWallet = () => {
   const walletStorageKey = `wallet_balance_${userId}`;
   const txStorageKey = `wallet_tx_${userId}`;
 
-  // Wallet Balance State (Default starting balance $500.00 or loaded from localStorage)
+  // Wallet Balance State (Default starting balance ₹0.00 or loaded from localStorage / user profile)
   const [balance, setBalance] = useState(() => {
     const saved = localStorage.getItem(walletStorageKey);
-    return saved !== null ? parseFloat(saved) : 500.00;
+    if (saved !== null) {
+      const parsed = parseFloat(saved);
+      return !isNaN(parsed) ? parsed : 0.00;
+    }
+    return Number(user?.walletBalance) || 0.00;
   });
 
   const [activeTab, setActiveTab] = useState("all"); // 'all', 'credits', 'debits'
@@ -136,8 +140,8 @@ const UserWallet = () => {
           }
         });
 
-        // Compute total wallet balance: Base ($500) + Custom Top-ups - Withdrawals + Total Refunded Ticket Money!
-        const baseBalance = 500.00;
+        // Compute total wallet balance: User Wallet Balance + Custom Top-ups - Withdrawals + Total Refunded Ticket Money
+        const baseBalance = Number(user?.walletBalance) || 0.00;
         const customTxSum = savedCustomTx.reduce((acc, tx) => acc + (tx.amount || 0), 0);
         const calculatedBalance = Math.max(0, baseBalance + customTxSum + totalRefunds);
         setBalance(calculatedBalance);

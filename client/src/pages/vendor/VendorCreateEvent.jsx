@@ -417,12 +417,12 @@ const VendorCreateEvent = () => {
           toast.error('Offer Start Date cannot be in the past');
           return;
         }
-        if (validUntil < todayStr) {
-          toast.error('Offer End Date cannot be in the past');
-          return;
-        }
         if (validUntil <= validFrom) {
           toast.error('Offer End Date must be after Offer Start Date');
+          return;
+        }
+        if (date && validUntil > date) {
+          toast.error('Offer End Date cannot be set after the Event Date');
           return;
         }
       }
@@ -839,6 +839,7 @@ const VendorCreateEvent = () => {
                         type="date" 
                         value={validUntil}
                         min={validFrom || getTodayDateString()}
+                        max={date || undefined}
                         onChange={(e) => setValidUntil(e.target.value)}
                         className="w-full bg-[#12101F] text-zinc-400 px-4 py-3.5 rounded-xl border border-zinc-800/80 focus:outline-none focus:border-purple-500 transition-colors text-sm"
                       />

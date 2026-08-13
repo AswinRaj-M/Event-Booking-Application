@@ -5,13 +5,11 @@ import mongoose from "mongoose";
 export const ticketSchema = new mongoose.Schema({
   ticketId  :{
     type : String,
-    required : true,
-    unique : true
+    required : true
   },
   qrCodeToken :{
     type : String,
-    required : true,
-    unique : true
+    default: null
   },
   status : {
     type : String,
@@ -27,7 +25,7 @@ export const ticketSchema = new mongoose.Schema({
     ref : "Vendor",
     default : null
   }
-})
+});
 
 export const bookingSchema = new mongoose.Schema({
   bookingId : String,
@@ -46,27 +44,27 @@ export const bookingSchema = new mongoose.Schema({
 
   tierId :{
     type : mongoose.Schema.Types.ObjectId,
-    required : true
+    required : false
   },
 
   tierName : {
     type : String,
-    required : true,
+    default : "Standard",
   },
 
   ticketPrice : {
     type : Number,
-    required : true
+    required : true,
   },
 
   quantity : {
     type : Number,
-    required : true
+    required : true,
   },
 
   totalAmount :{
     type : Number,
-    required : true
+    required : true,
   },
 
   paymentStatus : {
@@ -81,6 +79,26 @@ export const bookingSchema = new mongoose.Schema({
     default : "pending"
   },
 
+  // Booking-level QR Token and Check-in Tracking
+  qrCodeToken: {
+    type: String,
+    index: true,
+    default: null
+  },
+  isCheckedIn: {
+    type: Boolean,
+    default: false
+  },
+  checkedInAt: {
+    type: Date,
+    default: null
+  },
+  checkedInBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Vendor",
+    default: null
+  },
+
   couponCode :{
     type : String,
     upperCase : true,
@@ -91,8 +109,12 @@ export const bookingSchema = new mongoose.Schema({
     type : Number,
     default :0 
   },
-},{timestamps : true})
+},{timestamps : true});
 
-const Booking = mongoose.model("Booking",bookingSchema)
+const Booking = mongoose.model("Booking",bookingSchema);
 
-export default Booking
+// Drop legacy unique indexes on subdocuments if they exist in Mongo
+Booking.collection?.dropIndex("tickets.qrCodeToken_1").catch(() => {});
+Booking.collection?.dropIndex("tickets.ticketId_1").catch(() => {});
+
+export default Booking;

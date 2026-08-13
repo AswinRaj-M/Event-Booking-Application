@@ -155,21 +155,9 @@ const MyTicketsPage = () => {
                     </div>
                   </div>
 
-                  {/* Individual Tickets Grid */}
-                  <div>
-                    <h3 className="text-xs font-extrabold uppercase tracking-widest text-zinc-400 mb-4">
-                      Individual QR Tickets ({booking.tickets?.length || 0})
-                    </h3>
-
-                    {booking.tickets && booking.tickets.length > 0 ? (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {booking.tickets.map((ticket, idx) => (
-                          <TicketCard key={ticket.ticketId || ticket._id || `ticket-${idx}`} ticket={ticket} index={idx} />
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-zinc-500 italic">No tickets generated for this booking.</p>
-                    )}
+                  {/* Single Booking QR Pass */}
+                  <div className="flex flex-col items-center pt-2">
+                    <TicketCard booking={booking} />
                   </div>
                 </div>
               );

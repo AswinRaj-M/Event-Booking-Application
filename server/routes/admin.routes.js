@@ -29,6 +29,7 @@ import {
 } from "../controllers/admin/event.controller.js"
 import {
   createCoupon,
+  updateCoupon,
   getAllCoupons,
   toggleCouponStatus,
   deleteCoupon
@@ -71,6 +72,7 @@ router.patch("/events/toggle-block/:eventId", protect, requireRole("admin"), asy
 
 // Coupon Routes
 router.post('/coupons', protect, requireRole("admin"), asyncHandler(createCoupon))
+router.put('/coupons/:id', protect, requireRole("admin"), asyncHandler(updateCoupon))
 router.get('/coupons', protect, requireRole("admin"), asyncHandler(getAllCoupons))
 router.patch('/coupons/toggle-status/:id', protect, requireRole("admin"), asyncHandler(toggleCouponStatus))
 router.delete('/coupons/:id', protect, requireRole("admin"), asyncHandler(deleteCoupon))

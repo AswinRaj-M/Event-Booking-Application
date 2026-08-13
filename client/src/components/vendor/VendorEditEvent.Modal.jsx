@@ -157,17 +157,18 @@ const VendorEditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
 
   // Prepopulate form when event changes
   useEffect(() => {
-    if (event && event.rawEvent) {
-      const raw = event.rawEvent;
+    if (event) {
+      const raw = event.rawEvent || event;
       setEventTitle(raw.title || '');
       setShortDescription(raw.description || '');
       setEventCategory(raw.category?._id || raw.category || '');
       setEventType(raw.eventType === 'Online' ? 'online' : 'in-person');
       setOnlineLink(raw.onlineLink || '');
       
-      setDate(formatDateForInput(raw.schedule?.date));
-      setStartTime(raw.schedule?.startTime || '07:00 PM');
-      setEndTime(raw.schedule?.endTime || '11:00 PM');
+      const eventDate = raw.schedule?.date || raw.date;
+      setDate(formatDateForInput(eventDate));
+      setStartTime(raw.schedule?.startTime || raw.startTime || '07:00 PM');
+      setEndTime(raw.schedule?.endTime || raw.endTime || '11:00 PM');
       
       setVenueName(raw.venue || '');
       setAddress(raw.address || '');
@@ -353,12 +354,12 @@ const VendorEditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
         toast.error('Offer Start Date cannot be in the past');
         return;
       }
-      if (validUntil < todayStr) {
-        toast.error('Offer End Date cannot be in the past');
-        return;
-      }
       if (validUntil <= validFrom) {
         toast.error('Offer End Date must be after Offer Start Date');
+        return;
+      }
+      if (date && validUntil > date) {
+        toast.error('Offer End Date cannot be set after the Event Date');
         return;
       }
     }
@@ -783,6 +784,7 @@ const VendorEditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
                           type="date" 
                           value={validUntil}
                           min={validFrom || formatDateForInput(new Date())}
+                          max={date || undefined}
                           onChange={(e) => setValidUntil(e.target.value)}
                           className="w-full bg-[#12101F] text-zinc-400 px-3 py-2.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-purple-500 text-xs"
                         />

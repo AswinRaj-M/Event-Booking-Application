@@ -6,12 +6,13 @@ import {
 import { AppError } from "../../utils/AppError.js";
 import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
 
-export const validateAndApplyCoupon = async (couponCode, userId, eventId, subtotal) => {
+export const validateAndApplyCoupon = async (couponCode, userId, eventId, subtotal, ticketCount = 1) => {
   if (!couponCode) {
     throw new AppError("Coupon code is required", HTTP_STATUS.BAD_REQUEST);
   }
 
-  const coupon = await findCouponByCodeRepo(couponCode);
+  const cleanCode = couponCode.trim().toUpperCase();
+  const coupon = await findCouponByCodeRepo(cleanCode);
   if (!coupon) {
     throw new AppError("Invalid coupon code", HTTP_STATUS.NOT_FOUND);
   }
@@ -43,23 +44,48 @@ export const validateAndApplyCoupon = async (couponCode, userId, eventId, subtot
     throw new AppError("This coupon is not applicable for this event", HTTP_STATUS.BAD_REQUEST);
   }
 
-  if (coupon.minPurchaseAmount && subtotal < coupon.minPurchaseAmount) {
-    throw new AppError(`Minimum purchase amount of ₹${coupon.minPurchaseAmount} is required for this coupon`, HTTP_STATUS.BAD_REQUEST);
+  // 1. Minimum Ticket Requirement Validation (Applies only to Percentage coupons)
+  if (coupon.discountType === "percentage") {
+    const minRequiredTickets = Number(coupon.minTickets) || 1;
+    const purchasedTickets = Number(ticketCount) || 1;
+    if (minRequiredTickets > 1 && purchasedTickets < minRequiredTickets) {
+      throw new AppError(
+        `This coupon requires a minimum purchase of ${minRequiredTickets} tickets. You have selected ${purchasedTickets} ticket${purchasedTickets > 1 ? 's' : ''}.`,
+        HTTP_STATUS.BAD_REQUEST
+      );
+    }
   }
 
+  // 2. Minimum Order Value Validation
+  if (coupon.minPurchaseAmount && Number(coupon.minPurchaseAmount) > 0 && subtotal < Number(coupon.minPurchaseAmount)) {
+    throw new AppError(
+      `Minimum order value of ₹${Number(coupon.minPurchaseAmount).toLocaleString()} is required to use this coupon.`,
+      HTTP_STATUS.BAD_REQUEST
+    );
+  }
+
+  // 3. Discount Calculation based on actual ticket price (subtotal)
   let discountAmount = 0;
   if (coupon.discountType === "percentage") {
-    discountAmount = (subtotal * coupon.discountValue) / 100;
-    if (coupon.maxDiscountAmount && discountAmount > coupon.maxDiscountAmount) {
-      discountAmount = coupon.maxDiscountAmount;
+    // Calculate percentage discount based on actual subtotal (ticketPrice * quantity)
+    discountAmount = (subtotal * Number(coupon.discountValue)) / 100;
+    
+    // 4. Maximum Discount Limit enforcement
+    if (coupon.maxDiscountAmount && Number(coupon.maxDiscountAmount) > 0) {
+      if (discountAmount > Number(coupon.maxDiscountAmount)) {
+        discountAmount = Number(coupon.maxDiscountAmount);
+      }
     }
   } else if (coupon.discountType === "fixed") {
-    discountAmount = coupon.discountValue;
+    discountAmount = Number(coupon.discountValue);
   }
 
-  // Ensure discount does not exceed subtotal
+  // Ensure discount does not exceed subtotal and cannot be negative
   if (discountAmount > subtotal) {
     discountAmount = subtotal;
+  }
+  if (discountAmount < 0) {
+    discountAmount = 0;
   }
 
   return {

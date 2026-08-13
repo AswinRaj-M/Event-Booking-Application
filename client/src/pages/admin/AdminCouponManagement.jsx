@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import {
   getAllCouponsApi,
   createCouponApi,
+  updateCouponApi,
   toggleCouponStatusApi,
   deleteCouponApi
 } from "../../services/admin.api";
@@ -59,7 +60,8 @@ function AdminCouponManagement() {
     description: "",
     minOrder: "1000",
     maxDiscount: "500",
-    target: "New Users"
+    minTickets: "1",
+    target: "All Users"
   });
 
   const deduplicateCoupons = (list) => {
@@ -115,7 +117,7 @@ function AdminCouponManagement() {
       id: coupon._id || coupon.id,
       code: coupon.code,
       discount: discountStr,
-      discountType: coupon.discountType,
+      discountType: coupon.discountType || "percentage",
       discountValue: coupon.discountValue,
       scope: coupon.applicableEvents ? "Event Specific" : "All Events",
       usageCount: coupon.usedCount || 0,
@@ -127,7 +129,8 @@ function AdminCouponManagement() {
       avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
       description: coupon.description || `Special ${discountStr} promotional discount.`,
       minOrder: coupon.minPurchaseAmount ? `₹${coupon.minPurchaseAmount.toLocaleString()}` : "₹0",
-      maxDiscount: coupon.maxDiscountAmount ? `₹${coupon.maxDiscountAmount.toLocaleString()}` : "No Limit",
+      minTickets: isPercentage ? (coupon.minTickets ? `${coupon.minTickets} ticket${coupon.minTickets > 1 ? 's' : ''}` : "1 ticket") : "N/A",
+      maxDiscount: isPercentage ? (coupon.maxDiscountAmount ? `₹${coupon.maxDiscountAmount.toLocaleString()}` : "No Limit") : "N/A",
       perUser: `${coupon.perUserLimit || 1} time`,
       totalCap: `${coupon.usagelimit || coupon.usageLimit || 100} uses`,
       target: ["All Users"],
@@ -243,18 +246,20 @@ function AdminCouponManagement() {
   const handleOpenEditModal = (coupon, e) => {
     e.stopPropagation();
     setEditingCoupon(coupon);
+    const raw = coupon.raw || {};
     setFormData({
-      code: coupon.code,
-      discountType: coupon.discountType || "percentage",
-      discountValue: coupon.discountValue || "",
-      scope: coupon.scope,
-      usageLimit: coupon.usageLimit,
-      startDate: coupon.startDate,
-      endDate: coupon.endDate,
-      description: coupon.description,
-      minOrder: String(coupon.minOrder).replace(/[^0-9]/g, ''),
-      maxDiscount: String(coupon.maxDiscount).replace(/[^0-9]/g, ''),
-      target: coupon.target.join(", ")
+      code: coupon.code || raw.code || "",
+      discountType: coupon.discountType || raw.discountType || "percentage",
+      discountValue: coupon.discountValue !== undefined ? coupon.discountValue : (raw.discountValue || ""),
+      scope: coupon.scope || "All Events",
+      usageLimit: String(raw.usagelimit || raw.usageLimit || coupon.usageLimit || "100"),
+      startDate: raw.startDate ? new Date(raw.startDate).toISOString().split('T')[0] : "",
+      endDate: raw.endDate ? new Date(raw.endDate).toISOString().split('T')[0] : "",
+      description: coupon.description || raw.description || "",
+      minOrder: raw.minPurchaseAmount !== undefined ? String(raw.minPurchaseAmount) : String(coupon.minOrder).replace(/[^0-9]/g, ''),
+      maxDiscount: raw.maxDiscountAmount !== undefined ? String(raw.maxDiscountAmount) : String(coupon.maxDiscount).replace(/[^0-9]/g, ''),
+      minTickets: raw.minTickets !== undefined ? String(raw.minTickets) : "1",
+      target: Array.isArray(coupon.target) ? coupon.target.join(", ") : "All Users"
     });
     setIsEditModalOpen(true);
   };
@@ -293,35 +298,79 @@ function AdminCouponManagement() {
     }
   };
 
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!editingCoupon) return;
 
-    const discountStr = formData.discountType === "percentage" 
-      ? `${formData.discountValue}% OFF` 
-      : `₹${formData.discountValue} OFF`;
+    const cleanCode = formData.code.trim().toUpperCase();
+    if (!cleanCode) {
+      toast.error("Coupon code is required");
+      return;
+    }
 
-    setCoupons(prev => prev.map(c => {
-      if (c.id === editingCoupon.id) {
-        return {
-          ...c,
-          code: formData.code.toUpperCase(),
-          discount: discountStr,
-          discountType: formData.discountType,
-          discountValue: Number(formData.discountValue),
-          scope: formData.scope,
-          usageLimit: Number(formData.usageLimit) || c.usageLimit,
-          description: formData.description,
-          minOrder: `₹${formData.minOrder}`,
-          maxDiscount: `₹${formData.maxDiscount}`,
-          target: formData.target.split(",").map(t => t.trim())
-        };
+    const discountVal = Number(formData.discountValue);
+    if (!formData.discountValue || isNaN(discountVal) || discountVal <= 0) {
+      toast.error("Please enter a valid discount value greater than 0");
+      return;
+    }
+
+    if (formData.discountType === "fixed") {
+      const minOrderVal = Number(formData.minOrder);
+      if (!formData.minOrder || isNaN(minOrderVal) || minOrderVal <= 0) {
+        toast.error("Minimum order value is required and must be greater than 0 for fixed amount coupons");
+        return;
       }
-      return c;
-    }));
 
-    setIsEditModalOpen(false);
-    toast.success(`Coupon "${formData.code}" updated successfully!`);
+      if (discountVal >= minOrderVal) {
+        toast.error(`Discount Value (₹${discountVal}) must be strictly less than Minimum Order Value (₹${minOrderVal})`);
+        return;
+      }
+    } else if (formData.discountType === "percentage") {
+      if (discountVal > 100) {
+        toast.error("Percentage discount cannot exceed 100%");
+        return;
+      }
+      if (formData.minOrder && Number(formData.minOrder) < 0) {
+        toast.error("Minimum order value cannot be negative");
+        return;
+      }
+      if (formData.maxDiscount && Number(formData.maxDiscount) < 0) {
+        toast.error("Maximum discount amount cannot be negative");
+        return;
+      }
+      if (formData.minTickets && (Number(formData.minTickets) < 1 || !Number.isInteger(Number(formData.minTickets)))) {
+        toast.error("Minimum tickets required must be an integer of at least 1");
+        return;
+      }
+    }
+
+    const payload = {
+      code: cleanCode,
+      discountType: formData.discountType,
+      discountValue: discountVal,
+      minPurchaseAmount: Number(formData.minOrder) || 0,
+      minTickets: formData.discountType === "fixed" ? 1 : (Number(formData.minTickets) || 1),
+      usagelimit: Number(formData.usageLimit) || 100,
+      description: formData.description?.trim() || ""
+    };
+
+    if (formData.discountType === "percentage" && formData.maxDiscount && Number(formData.maxDiscount) > 0) {
+      payload.maxDiscountAmount = Number(formData.maxDiscount);
+    }
+    if (formData.startDate) payload.startDate = formData.startDate;
+    if (formData.endDate) payload.endDate = formData.endDate;
+
+    try {
+      const res = await updateCouponApi(editingCoupon.id, payload);
+      if (res.data && res.data.success) {
+        toast.success(`Coupon "${payload.code}" updated successfully!`);
+        setIsEditModalOpen(false);
+        fetchCoupons();
+      }
+    } catch (error) {
+      console.error("Failed to update coupon:", error);
+      toast.error(error.response?.data?.message || "Failed to update coupon");
+    }
   };
 
   // Paginated coupons from backend
@@ -704,6 +753,10 @@ function AdminCouponManagement() {
                                           <span className="font-semibold text-gray-200">{coupon.minOrder}</span>
                                         </div>
                                         <div className="flex items-center gap-2">
+                                          <span className="text-gray-500">Min Tickets:</span>
+                                          <span className="font-semibold text-gray-200">{coupon.minTickets}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
                                           <span className="text-gray-500">Max Discount:</span>
                                           <span className="font-semibold text-gray-200">{coupon.maxDiscount}</span>
                                         </div>
@@ -833,7 +886,7 @@ function AdminCouponManagement() {
               </button>
             </div>
 
-            <form onSubmit={handleEditSubmit} className="p-5 space-y-4 text-xs">
+            <form onSubmit={handleEditSubmit} className="p-5 space-y-4 text-xs max-h-[80vh] overflow-y-auto scrollbar-hide">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-gray-400 mb-1 font-medium">Coupon Code *</label>
@@ -841,27 +894,12 @@ function AdminCouponManagement() {
                     type="text"
                     required
                     value={formData.code}
-                    onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
                     className="w-full bg-[#0B0914] border border-gray-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500 uppercase font-mono"
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-400 mb-1 font-medium">Scope</label>
-                  <select
-                    value={formData.scope}
-                    onChange={(e) => setFormData({ ...formData, scope: e.target.value })}
-                    className="w-full bg-[#0B0914] border border-gray-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500"
-                  >
-                    <option value="All Events">All Events</option>
-                    <option value="Event Specific">Event Specific</option>
-                    <option value="Vendor Specific">Vendor Specific</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-gray-400 mb-1 font-medium">Discount Type</label>
+                  <label className="block text-gray-400 mb-1 font-medium">Discount Type *</label>
                   <select
                     value={formData.discountType}
                     onChange={(e) => setFormData({ ...formData, discountType: e.target.value })}
@@ -871,13 +909,106 @@ function AdminCouponManagement() {
                     <option value="fixed">Fixed Amount (₹ OFF)</option>
                   </select>
                 </div>
+              </div>
+
+              {/* Conditional Discount Fields */}
+              {formData.discountType === "fixed" ? (
+                /* Fixed Amount: Discount Value & Minimum Order Value only */
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-gray-400 mb-1 font-medium">Fixed Discount Value (₹) *</label>
+                    <input
+                      type="number"
+                      required
+                      value={formData.discountValue}
+                      onChange={(e) => setFormData({ ...formData, discountValue: e.target.value })}
+                      placeholder="500"
+                      className="w-full bg-[#0B0914] border border-gray-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-400 mb-1 font-medium">Minimum Order Value (₹) *</label>
+                    <input
+                      type="number"
+                      required
+                      value={formData.minOrder}
+                      onChange={(e) => setFormData({ ...formData, minOrder: e.target.value })}
+                      placeholder="2000"
+                      className="w-full bg-[#0B0914] border border-gray-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500"
+                    />
+                    <p className="text-[10px] text-purple-400/80 mt-1">Must be &gt; Discount Value</p>
+                  </div>
+                </div>
+              ) : (
+                /* Percentage: Discount %, Max Discount, Min Order, Min Tickets */
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-gray-400 mb-1 font-medium">Discount Value (%) *</label>
+                      <input
+                        type="number"
+                        max="100"
+                        required
+                        value={formData.discountValue}
+                        onChange={(e) => setFormData({ ...formData, discountValue: e.target.value })}
+                        placeholder="20"
+                        className="w-full bg-[#0B0914] border border-gray-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-400 mb-1 font-medium">Max Discount Amount (₹)</label>
+                      <input
+                        type="number"
+                        value={formData.maxDiscount}
+                        onChange={(e) => setFormData({ ...formData, maxDiscount: e.target.value })}
+                        placeholder="500"
+                        className="w-full bg-[#0B0914] border border-gray-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-gray-400 mb-1 font-medium">Min Order Value (₹)</label>
+                      <input
+                        type="number"
+                        value={formData.minOrder}
+                        onChange={(e) => setFormData({ ...formData, minOrder: e.target.value })}
+                        placeholder="1000"
+                        className="w-full bg-[#0B0914] border border-gray-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-400 mb-1 font-medium">Min Tickets Required</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={formData.minTickets}
+                        onChange={(e) => setFormData({ ...formData, minTickets: e.target.value })}
+                        placeholder="1"
+                        className="w-full bg-[#0B0914] border border-gray-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-gray-400 mb-1 font-medium">Discount Value *</label>
+                  <label className="block text-gray-400 mb-1 font-medium">Start Date</label>
                   <input
-                    type="number"
-                    required
-                    value={formData.discountValue}
-                    onChange={(e) => setFormData({ ...formData, discountValue: e.target.value })}
+                    type="date"
+                    value={formData.startDate}
+                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                    className="w-full bg-[#0B0914] border border-gray-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-400 mb-1 font-medium">Expiry Date (End Date)</label>
+                  <input
+                    type="date"
+                    value={formData.endDate}
+                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
                     className="w-full bg-[#0B0914] border border-gray-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500"
                   />
                 </div>
@@ -894,13 +1025,16 @@ function AdminCouponManagement() {
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-400 mb-1 font-medium">Target Audience</label>
-                  <input
-                    type="text"
-                    value={formData.target}
-                    onChange={(e) => setFormData({ ...formData, target: e.target.value })}
+                  <label className="block text-gray-400 mb-1 font-medium">Scope</label>
+                  <select
+                    value={formData.scope}
+                    onChange={(e) => setFormData({ ...formData, scope: e.target.value })}
                     className="w-full bg-[#0B0914] border border-gray-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500"
-                  />
+                  >
+                    <option value="All Events">All Events</option>
+                    <option value="Event Specific">Event Specific</option>
+                    <option value="Vendor Specific">Vendor Specific</option>
+                  </select>
                 </div>
               </div>
 

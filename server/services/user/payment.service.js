@@ -45,7 +45,7 @@ export const createRazorpayOrderService = async (userId, { eventId, tierId, quan
     couponCode
   );
 
-  if (!booking || !booking.totalAmount) {
+  if (!booking || booking.totalAmount === undefined || booking.totalAmount === null) {
     throw new AppError("Failed to initiate event booking", HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
 
