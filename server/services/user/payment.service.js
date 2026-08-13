@@ -90,7 +90,9 @@ export const createRazorpayOrderService = async (userId, { eventId, tierId, quan
     currency: razorpayOrder.currency,
     receipt: receipt,
     paymentId: paymentRecord._id,
-    bookingId: booking._id
+    bookingId: booking._id,
+    checkoutExpiresAt: booking.checkoutExpiresAt,
+    expiresInSeconds: booking.checkoutExpiresAt ? Math.max(0, Math.floor((new Date(booking.checkoutExpiresAt).getTime() - Date.now()) / 1000)) : 600,
   };
 };
 
@@ -108,17 +110,54 @@ export const verifyPaymentSignatureService = async (userId, { razorpay_order_id,
   }
 
   // Security: Check user ownership
-  if (payment.userId._id ? payment.userId._id.toString() !== userId.toString() : payment.userId.toString() !== userId.toString()) {
+  const paymentUserId = payment.userId?._id ? payment.userId._id.toString() : payment.userId.toString();
+  if (paymentUserId !== userId.toString()) {
     throw new AppError("Unauthorized payment verification request", HTTP_STATUS.FORBIDDEN);
   }
 
+  // Retrieve Associated Booking
+  const bookingId = payment.orderId?._id || payment.orderId;
+  const booking = bookingId ? await Booking.findById(bookingId) : null;
+
+  if (!booking) {
+    throw new AppError("Associated booking record not found for this payment", HTTP_STATUS.NOT_FOUND);
+  }
+
   // Security: Prevent Duplicate Verification / Replay Attacks
-  if (payment.status === "SUCCESS") {
+  if (payment.status === "SUCCESS" && booking.bookingStatus === "confirmed") {
     return {
       message: "Payment already verified successfully",
       alreadyVerified: true,
-      payment
+      payment,
+      booking
     };
+  }
+
+  // EXPIRATION CHECK: Verify that checkout session has not expired
+  const now = new Date();
+  const isExpired = (booking.checkoutExpiresAt && now > new Date(booking.checkoutExpiresAt)) ||
+                    booking.bookingStatus === "expired" ||
+                    booking.bookingStatus === "cancelled";
+
+  if (isExpired) {
+    // 1. Mark Booking as cancelled and release inventory
+    booking.bookingStatus = "cancelled";
+    booking.paymentStatus = "failed";
+    booking.isInventoryReleased = true;
+    await booking.save();
+
+    // 2. Mark Payment as EXPIRED
+    await updatePaymentStatusRepo(razorpay_order_id, {
+      status: "EXPIRED",
+      razorpayPaymentId: razorpay_payment_id,
+      signature: razorpay_signature,
+      notes: { ...payment.notes, expiredCheckout: true, failureReason: "Checkout session expired before payment verification" }
+    });
+
+    throw new AppError(
+      "Checkout session has expired. Please start a new booking.",
+      HTTP_STATUS.BAD_REQUEST
+    );
   }
 
   // HMAC SHA256 Signature Calculation
@@ -138,17 +177,15 @@ export const verifyPaymentSignatureService = async (userId, { razorpay_order_id,
       signature: razorpay_signature
     });
 
-    if (payment.orderId) {
-      await Booking.findByIdAndUpdate(payment.orderId._id || payment.orderId, {
-        paymentStatus: "failed",
-        bookingStatus: "cancelled"
-      });
-    }
+    booking.paymentStatus = "failed";
+    booking.bookingStatus = "cancelled";
+    booking.isInventoryReleased = true;
+    await booking.save();
 
     throw new AppError("Payment signature verification failed. Invalid signature.", HTTP_STATUS.BAD_REQUEST);
   }
 
-  // Signature Valid: Mark Payment as SUCCESS
+  // Signature Valid & Not Expired: Mark Payment as SUCCESS
   const updatedPayment = await updatePaymentStatusRepo(razorpay_order_id, {
     status: "SUCCESS",
     razorpayPaymentId: razorpay_payment_id,
@@ -156,15 +193,13 @@ export const verifyPaymentSignatureService = async (userId, { razorpay_order_id,
   });
 
   // Confirm booking, update booking status to "confirmed" & "paid", update event capacity/sold count, and generate QR code
-  if (payment.orderId) {
-    const bookingId = payment.orderId._id || payment.orderId;
-    await confirmBookingAfterPaymentService(bookingId);
-  }
+  await confirmBookingAfterPaymentService(booking._id);
 
   return {
     success: true,
     message: "Payment verified successfully",
-    payment: updatedPayment
+    payment: updatedPayment,
+    bookingId: booking._id
   };
 };
 

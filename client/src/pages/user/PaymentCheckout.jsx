@@ -18,7 +18,9 @@ import {
   AlertCircle, 
   Info,
   Loader2,
-  ChevronLeft
+  ChevronLeft,
+  Clock,
+  RefreshCw
 } from 'lucide-react';
 import { USER_ROUTES } from '../../constants/Routes';
 import { createBooking } from '../../services/user.api.js';
@@ -69,6 +71,60 @@ const PaymentCheckout = () => {
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [applyingCoupon, setApplyingCoupon] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Expiring Checkout Session State (10 Minutes)
+  const [sessionExpiresAt, setSessionExpiresAt] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('checkoutSessionExpiresAt');
+      if (saved && Number(saved) > Date.now()) {
+        return Number(saved);
+      }
+    } catch (e) {}
+    const defaultExp = Date.now() + 10 * 60 * 1000;
+    try {
+      sessionStorage.setItem('checkoutSessionExpiresAt', defaultExp.toString());
+    } catch (e) {}
+    return defaultExp;
+  });
+
+  const [timeLeft, setTimeLeft] = useState(() => Math.max(0, Math.floor((sessionExpiresAt - Date.now()) / 1000)));
+  const [isExpired, setIsExpired] = useState(() => (sessionExpiresAt - Date.now()) <= 0);
+
+  // Real-time countdown tick
+  React.useEffect(() => {
+    const updateCountdown = () => {
+      const remaining = Math.max(0, Math.floor((sessionExpiresAt - Date.now()) / 1000));
+      setTimeLeft(remaining);
+      if (remaining <= 0) {
+        setIsExpired(true);
+      } else {
+        setIsExpired(false);
+      }
+    };
+
+    updateCountdown();
+    const timer = setInterval(updateCountdown, 1000);
+    return () => clearInterval(timer);
+  }, [sessionExpiresAt]);
+
+  const formatCountdown = (secs) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const handleRestartBooking = () => {
+    try {
+      sessionStorage.removeItem('checkoutSessionExpiresAt');
+      sessionStorage.removeItem('lastCheckoutState');
+    } catch (e) {}
+    const targetEventId = event?._id || event?.id;
+    if (targetEventId) {
+      navigate(USER_ROUTES.EVENT_DETAILS.replace(':id', targetEventId));
+    } else {
+      navigate(USER_ROUTES.EXPLORE);
+    }
+  };
 
   // Calculate final totals
   const currentTotal = Math.max(0, initialTotal - couponDiscount);
@@ -162,6 +218,11 @@ const PaymentCheckout = () => {
       return;
     }
 
+    if (isExpired || timeLeft <= 0) {
+      toast.error("Checkout session has expired. Please restart your booking.");
+      return;
+    }
+
     try {
       setIsProcessing(true);
 
@@ -182,6 +243,15 @@ const PaymentCheckout = () => {
       }
 
       const orderData = orderRes.data;
+
+      // Sync real server-side session expiration
+      if (orderData.checkoutExpiresAt) {
+        const serverExp = new Date(orderData.checkoutExpiresAt).getTime();
+        setSessionExpiresAt(serverExp);
+        try {
+          sessionStorage.setItem('checkoutSessionExpiresAt', serverExp.toString());
+        } catch (e) {}
+      }
 
       // Step 2: Load Razorpay SDK
       const isLoaded = await loadRazorpayScript();
@@ -339,7 +409,7 @@ const PaymentCheckout = () => {
         <main className="pt-28 pb-20 max-w-7xl mx-auto px-4 md:px-8">
           
           {/* Header Navigation Link */}
-          <div className="mb-6">
+          <div className="mb-4">
             <Link
               to={`${USER_ROUTES.EVENT_DETAILS.replace(':id', event._id)}`}
               className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-purple-400 transition-colors"
@@ -347,6 +417,45 @@ const PaymentCheckout = () => {
               <ChevronLeft className="w-4 h-4" /> Back to Event Details
             </Link>
           </div>
+
+          {/* Real-time Checkout Session Countdown Banner */}
+          {!isExpired ? (
+            <div className="mb-6 bg-[#120F20] border border-purple-500/30 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg shadow-purple-950/20 backdrop-blur-md">
+              <div className="flex items-center gap-3">
+                <div className={`p-2.5 rounded-xl border flex items-center justify-center transition-colors ${timeLeft < 120 ? 'bg-rose-950/60 border-rose-500/40 text-rose-400 animate-pulse' : 'bg-purple-950/60 border-purple-500/40 text-purple-400'}`}>
+                  <Clock className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-white">Tickets Temporarily Reserved</div>
+                  <div className="text-[11px] text-zinc-400">Complete your payment within the reservation window</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <span className="text-xs font-bold text-zinc-400">Complete payment in:</span>
+                <span className={`text-base font-black px-3.5 py-1 rounded-xl border font-mono tracking-wider transition-colors ${timeLeft < 120 ? 'bg-rose-950/80 border-rose-500 text-rose-300 animate-pulse shadow-[0_0_15px_rgba(244,63,94,0.3)]' : 'bg-purple-950/60 border-purple-500/40 text-purple-300'}`}>
+                  {formatCountdown(timeLeft)}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="mb-6 bg-rose-950/40 border border-rose-500/50 rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl backdrop-blur-md">
+              <div className="flex items-center gap-3.5">
+                <div className="p-3 bg-rose-600/20 border border-rose-500/40 rounded-2xl text-rose-400 shrink-0">
+                  <AlertCircle className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-white">Checkout Session Expired</h3>
+                  <p className="text-xs text-rose-300/80 mt-0.5">Your 10-minute ticket reservation has expired and the reserved seats were released. Please restart your booking.</p>
+                </div>
+              </div>
+              <button
+                onClick={handleRestartBooking}
+                className="px-5 py-2.5 bg-gradient-to-r from-rose-600 to-purple-600 hover:from-rose-500 hover:to-purple-500 text-white text-xs font-extrabold rounded-xl transition-all shadow-lg cursor-pointer shrink-0 flex items-center gap-2"
+              >
+                <RefreshCw className="w-4 h-4" /> Restart Booking
+              </button>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             
@@ -664,24 +773,34 @@ const PaymentCheckout = () => {
                 )}
               </div>
 
-              {/* Pay Button */}
-              <button
-                onClick={handleFinalPayment}
-                disabled={isProcessing}
-                className="w-full py-4 px-6 bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-base rounded-2xl transition-all shadow-[0_0_30px_rgba(168,85,247,0.3)] hover:shadow-[0_0_40px_rgba(168,85,247,0.5)] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isProcessing ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>Processing Order...</span>
-                  </>
-                ) : (
-                  <>
-                    <Lock className="w-4 h-4" />
-                    <span>Pay ₹{currentTotal.toFixed(2)} Securely</span>
-                  </>
-                )}
-              </button>
+              {/* Pay / Action Button */}
+              {isExpired ? (
+                <button
+                  onClick={handleRestartBooking}
+                  className="w-full py-4 px-6 bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-white font-extrabold text-base rounded-2xl transition-all shadow-[0_0_25px_rgba(244,63,94,0.25)] flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  <span>Session Expired — Restart Booking</span>
+                </button>
+              ) : (
+                <button
+                  onClick={handleFinalPayment}
+                  disabled={isProcessing}
+                  className="w-full py-4 px-6 bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-base rounded-2xl transition-all shadow-[0_0_30px_rgba(168,85,247,0.3)] hover:shadow-[0_0_40px_rgba(168,85,247,0.5)] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>Processing Order...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="w-4 h-4" />
+                      <span>Pay ₹{currentTotal.toFixed(2)} Securely</span>
+                    </>
+                  )}
+                </button>
+              )}
 
               {/* Security Badges Footer */}
               <div className="pt-2 flex flex-col items-center gap-3">

@@ -2,7 +2,6 @@ import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import {
-  LayoutDashboard,
   Ticket,
   Wallet,
   User,
@@ -31,7 +30,6 @@ const UserSideBar = () => {
   };
 
   const platformLinks = [
-    { path: USER_ROUTES.HOME, icon: LayoutDashboard, label: "Dashboard" },
     { path: USER_ROUTES.BOOKINGS, icon: Ticket, label: "My Bookings" },
     { path: USER_ROUTES.WALLET, icon: Wallet, label: "Wallet" }
   ];

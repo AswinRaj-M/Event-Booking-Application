@@ -89,14 +89,25 @@ export const bookingSchema = new mongoose.Schema({
 
   paymentStatus : {
     type : String,
-    enum : ["pending","failed","paid","refunded"],
+    enum : ["pending","failed","paid","refunded","expired"],
     default : "pending"
   },
 
   bookingStatus : {
     type : String,
-    enum :["pending", "confirmed", "cancelled", "completed"],
+    enum :["pending", "confirmed", "cancelled", "completed", "expired"],
     default : "pending"
+  },
+
+  checkoutExpiresAt: {
+    type: Date,
+    index: true,
+    default: null
+  },
+
+  isInventoryReleased: {
+    type: Boolean,
+    default: false
   },
 
   // Booking-level QR Token and Check-in Tracking

@@ -20,7 +20,33 @@ import {
   saveBookingRepo,
 } from "../../repository/user/booking.repo.js";
 
+export const CHECKOUT_EXPIRATION_MINUTES = 10;
+export const CHECKOUT_EXPIRATION_MS = CHECKOUT_EXPIRATION_MINUTES * 60 * 1000;
+
+/**
+ * Cleanup expired pending bookings and release reserved inventory
+ */
+export const cleanupExpiredBookingsService = async () => {
+  const now = new Date();
+  return await Booking.updateMany(
+    {
+      bookingStatus: "pending",
+      checkoutExpiresAt: { $lt: now },
+    },
+    {
+      $set: {
+        bookingStatus: "cancelled",
+        paymentStatus: "failed",
+        isInventoryReleased: true,
+      },
+    }
+  );
+};
+
 export const createPendingBookingService = async (userId, eventId, tierId, quantity, couponCode) => {
+   // 1. Clean up any expired pending bookings first
+   await cleanupExpiredBookingsService().catch(() => {});
+
    const event = await Event.findOne({ _id: eventId, isDeleted: false });
 
    if (!event) {
@@ -49,16 +75,34 @@ export const createPendingBookingService = async (userId, eventId, tierId, quant
      };
    }
 
+   const validTierId = (tierId && mongoose.isValidObjectId(tierId))
+     ? new mongoose.Types.ObjectId(tierId)
+     : (selectedTier?._id && mongoose.isValidObjectId(selectedTier._id) ? selectedTier._id : new mongoose.Types.ObjectId());
+
    const tierCapacity = Number(selectedTier?.capacity) || Number(event.totalTickets) || 1000;
    const tierSold = Number(selectedTier?.sold) || Number(event.soldTickets) || 0;
-   const availableSeats = Math.max(0, tierCapacity - tierSold);
+
+   // 2. Count active non-expired pending reservations so tickets are held during checkout
+   const activePending = await Booking.aggregate([
+     {
+       $match: {
+         eventId: new mongoose.Types.ObjectId(eventId),
+         tierId: validTierId,
+         bookingStatus: "pending",
+         checkoutExpiresAt: { $gt: new Date() },
+       },
+     },
+     { $group: { _id: null, totalPending: { $sum: "$quantity" } } },
+   ]);
+   const pendingHeldTickets = activePending[0]?.totalPending || 0;
+   const availableSeats = Math.max(0, tierCapacity - (tierSold + pendingHeldTickets));
 
    if (availableSeats <= 0 && tierCapacity > 0) {
-     throw new AppError("This event or ticket tier is sold out!", HTTP_STATUS.BAD_REQUEST);
+     throw new AppError("This event or ticket tier is currently sold out or reserved!", HTTP_STATUS.BAD_REQUEST);
    }
 
    if (quantity > availableSeats && availableSeats > 0) {
-     throw new AppError(`Insufficient tickets available! Only ${availableSeats} tickets left.`, HTTP_STATUS.BAD_REQUEST);
+     throw new AppError(`Insufficient tickets available! Only ${availableSeats} ticket(s) currently unreserved.`, HTTP_STATUS.BAD_REQUEST);
    }
 
    const ticketPrice = selectedTier.price || 0;
@@ -104,9 +148,8 @@ export const createPendingBookingService = async (userId, eventId, tierId, quant
    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
    const bookingIdString = `BK-${Date.now().toString().slice(-6)}-${randomSuffix}`;
 
-   const validTierId = (tierId && mongoose.isValidObjectId(tierId))
-     ? new mongoose.Types.ObjectId(tierId)
-     : (selectedTier?._id && mongoose.isValidObjectId(selectedTier._id) ? selectedTier._id : new mongoose.Types.ObjectId());
+   // 3. Set exact checkout session expiration timestamp (10 minutes)
+   const checkoutExpiresAt = new Date(Date.now() + CHECKOUT_EXPIRATION_MS);
 
    const bookingPayload = {
      bookingId: bookingIdString,
@@ -124,6 +167,8 @@ export const createPendingBookingService = async (userId, eventId, tierId, quant
      couponCode: validatedCoupon ? validatedCoupon.code : undefined,
      paymentStatus: "pending",
      bookingStatus: "pending",
+     checkoutExpiresAt,
+     isInventoryReleased: false,
      qrCodeToken: generateQrToken(),
      tickets: []
    };
@@ -138,6 +183,14 @@ export const getBookingDetailsService = async(userId, userRole, bookingId) => {
 
   if(!booking){
     throw new AppError("Booking Not Found!", HTTP_STATUS.NOT_FOUND);
+  }
+
+  // Check and update if pending booking has expired
+  if (booking.bookingStatus === "pending" && booking.checkoutExpiresAt && new Date() > new Date(booking.checkoutExpiresAt)) {
+    booking.bookingStatus = "cancelled";
+    booking.paymentStatus = "failed";
+    booking.isInventoryReleased = true;
+    await booking.save();
   }
 
   const isBooker = booking.userId._id.toString() === userId.toString();
