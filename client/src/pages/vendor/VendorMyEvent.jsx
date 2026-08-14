@@ -13,7 +13,6 @@ import {
   ChevronDown, 
   FileText, 
   MoreHorizontal,
-  Bell,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
@@ -311,11 +310,6 @@ const VendorMyEvent = () => {
             <span className="hover:text-zinc-200 transition-colors cursor-pointer">My Events</span>
           </div>
           <div className="flex items-center gap-4">
-            {/* Notifications */}
-            <button className="relative p-2 text-zinc-400 hover:text-white transition-all bg-white/5 rounded-full border border-white/10 cursor-pointer">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-purple-500 rounded-full border-2 border-[#070514]" />
-            </button>
             {/* User Profile Info */}
             <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-2">
               <div className="text-right">

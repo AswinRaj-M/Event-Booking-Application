@@ -5,6 +5,7 @@ import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
 import Event from "../../models/event.model.js";
 import Booking from "../../models/booking.model.js";
 import Coupon from "../../models/coupon.model.js";
+import User from "../../models/user.model.js";
 import mongoose from "mongoose";
 import { validateAndApplyCoupon } from "./coupon.service.js";
 import CouponRedemption from "../../models/couponRedemption.model.js";
@@ -303,25 +304,62 @@ export const confirmBookingAfterPaymentService = async (bookingId) => {
     }
   }
 
-  // Real-time user notifications
+  // Real-time user & vendor notifications
   try {
     const bookingUserId = booking.userId?._id ? booking.userId._id : booking.userId;
-    const populatedEvent = await Event.findById(booking.eventId).select("title");
+    const populatedEvent = await Event.findById(booking.eventId).populate("vendorId", "_id organizerName businessName");
     const eventTitle = populatedEvent?.title || "Event";
+    const vendorId = populatedEvent?.vendorId?._id || populatedEvent?.vendorId;
 
-    // 1. PAYMENT_SUCCESS
+    // Fetch customer name for vendor notification
+    const customer = await User.findById(bookingUserId).select("fullName");
+    const customerName = customer?.fullName || "A customer";
+
+    // 1. PAYMENT_SUCCESS to User
     sendNotification(bookingUserId, {
       title: "Payment Successful 💳",
-      message: `Payment of ₹${booking.totalAmount} for "${eventTitle}" was received successfully.`,
+      message: `Payment of ₹${booking.totalAmount.toFixed(2)} for "${eventTitle}" was received successfully.`,
       type: "PAYMENT_SUCCESS"
     });
 
-    // 2. BOOKING_SUCCESS
+    // 2. BOOKING_SUCCESS to User
     sendNotification(bookingUserId, {
       title: "Booking Confirmed! 🎉",
       message: `Your booking #${booking.bookingId || booking._id} for "${eventTitle}" has been confirmed.`,
       type: "BOOKING_SUCCESS"
     });
+
+    // 8. NEW_BOOKING to Vendor
+    if (vendorId) {
+      sendNotification(vendorId, {
+        title: "New Booking Received! 🎟️",
+        message: `${customerName} booked ${booking.quantity} ticket(s) for "${eventTitle}". Total: ₹${booking.totalAmount.toFixed(2)}`,
+        type: "NEW_BOOKING"
+      });
+
+      // 9. EVENT_SOLD_OUT to Vendor
+      if (populatedEvent) {
+        const totalCapacity = (populatedEvent.ticketTiers || []).reduce((sum, t) => sum + (t.capacity || 0), 0) || Number(populatedEvent.totalTickets) || 0;
+        const totalSold = populatedEvent.soldTickets || 0;
+
+        if (totalCapacity > 0 && totalSold >= totalCapacity) {
+          sendNotification(vendorId, {
+            title: "Event Sold Out! 🔥",
+            message: `Congratulations! "${eventTitle}" is now 100% sold out (${totalSold}/${totalCapacity} tickets).`,
+            type: "EVENT_SOLD_OUT"
+          });
+        } else if (booking.tierId) {
+          const bookedTier = (populatedEvent.ticketTiers || []).find((t) => t._id.toString() === booking.tierId.toString());
+          if (bookedTier && bookedTier.capacity > 0 && bookedTier.sold >= bookedTier.capacity) {
+            sendNotification(vendorId, {
+              title: "Ticket Tier Sold Out! 🔥",
+              message: `Tier "${bookedTier.name}" for "${eventTitle}" has sold out (${bookedTier.sold}/${bookedTier.capacity} tickets)!`,
+              type: "EVENT_SOLD_OUT"
+            });
+          }
+        }
+      }
+    }
   } catch (notifErr) {
     console.error("Error sending booking confirmation notifications:", notifErr);
   }

@@ -10,11 +10,14 @@ import {
   Clock,
   Wallet,
   AlertTriangle,
-  Ticket
+  Ticket,
+  Flame,
+  UserCheck
 } from "lucide-react";
 
-const NotificationBell = () => {
+const NotificationBell = ({ placement = "right", className = "" }) => {
   const { user } = useSelector((state) => state.user);
+  const { vendor } = useSelector((state) => state.vendor);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const notificationRef = useRef(null);
 
@@ -154,6 +157,18 @@ const NotificationBell = () => {
             <CheckCircle2 className="w-4 h-4 text-cyan-400" />
           </div>
         );
+      case "NEW_BOOKING":
+        return (
+          <div className="w-8 h-8 rounded-xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
+            <UserCheck className="w-4 h-4 text-indigo-400" />
+          </div>
+        );
+      case "EVENT_SOLD_OUT":
+        return (
+          <div className="w-8 h-8 rounded-xl bg-orange-600/20 border border-orange-500/30 text-orange-400 flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
+            <Flame className="w-4 h-4 text-orange-400 animate-pulse" />
+          </div>
+        );
       default:
         return (
           <div className="w-8 h-8 rounded-xl bg-purple-600/20 border border-purple-500/30 text-purple-400 flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
@@ -163,13 +178,25 @@ const NotificationBell = () => {
     }
   };
 
+  // Compute responsive dropdown position classes
+  const getDropdownClasses = () => {
+    if (placement === "sidebar") {
+      return "fixed top-16 left-4 right-4 sm:absolute sm:top-0 sm:left-full sm:right-auto sm:ml-4 w-auto sm:w-96 max-w-sm z-[999]";
+    }
+    if (placement === "left") {
+      return "fixed top-16 left-4 right-4 sm:absolute sm:top-auto sm:left-0 sm:right-auto sm:mt-3 w-auto sm:w-96 max-w-sm z-[999]";
+    }
+    // default: "right"
+    return "fixed top-16 left-4 right-4 sm:absolute sm:top-auto sm:right-0 sm:left-auto sm:mt-3 w-auto sm:w-96 max-w-sm z-[999]";
+  };
+
   return (
-    <div className="relative" ref={notificationRef}>
+    <div className={`relative shrink-0 ${className}`} ref={notificationRef}>
       {/* Bell Trigger Button */}
       <button
         onClick={toggleNotifications}
         aria-label="Notifications"
-        className="relative text-[#8A8F98] hover:text-white transition-colors outline-none cursor-pointer p-2 rounded-xl hover:bg-white/5 flex items-center justify-center"
+        className="relative text-[#8A8F98] hover:text-white transition-colors outline-none cursor-pointer p-2 rounded-xl hover:bg-white/5 flex items-center justify-center shrink-0"
       >
         <Bell className="w-5 h-5" fill={unreadCount > 0 ? "currentColor" : "none"} />
         {unreadCount > 0 ? (
@@ -183,7 +210,7 @@ const NotificationBell = () => {
 
       {/* Notification Dropdown Menu */}
       {isNotificationOpen && (
-        <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-[#0E0B1F]/98 backdrop-blur-2xl border border-purple-500/30 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.9)] z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div className={`${getDropdownClasses()} bg-[#0E0B1F]/98 backdrop-blur-2xl border border-purple-500/30 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.9)] overflow-hidden animate-in fade-in zoom-in-95 duration-200`}>
           {/* Header */}
           <div className="p-4 px-5 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
             <div className="flex items-center gap-2">
@@ -214,7 +241,7 @@ const NotificationBell = () => {
                   <Bell className="w-6 h-6 opacity-60" />
                 </div>
                 <p className="text-sm font-semibold text-white">No notifications yet</p>
-                <p className="text-xs text-zinc-500 mt-1">We'll alert you here when there are updates on your bookings</p>
+                <p className="text-xs text-zinc-500 mt-1">We'll alert you here when there are new bookings or event updates</p>
               </div>
             ) : (
               notifications.map((notif) => (

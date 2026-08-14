@@ -6,10 +6,6 @@ import {
   Clock, 
   ArrowUpRight, 
   Download, 
-  Bell, 
-  LayoutGrid, 
-  Info, 
-  ArrowRight,
   Building2,
   Ticket as TicketIcon,
   CreditCard,
@@ -194,12 +190,6 @@ const VendorWallet = () => {
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Bell Icon Button */}
-            <button className="relative p-2.5 bg-[#0E0C1D] hover:bg-[#1A1633] border border-white/5 rounded-2xl transition-all cursor-pointer">
-              <Bell className="w-4 h-4 text-zinc-400 hover:text-white" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-purple-500 rounded-full" />
-            </button>
-
             {/* Vendor Profile Pill */}
             <div className="flex items-center gap-3 pl-2 pr-4 py-1.5 bg-[#0E0C1D] border border-white/5 rounded-2xl">
               <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white font-black text-xs shadow-md overflow-hidden shrink-0">

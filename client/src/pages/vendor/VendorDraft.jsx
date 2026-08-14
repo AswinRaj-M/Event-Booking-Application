@@ -10,7 +10,6 @@ import {
   Search,
   ChevronDown,
   Trash2,
-  Bell,
   SlidersHorizontal,
   Layout,
   PlusCircle,
@@ -201,10 +200,6 @@ const VendorDraft = () => {
               <span className="text-white font-semibold">Drafts</span>
             </div>
           </div>
-          <button className="relative p-2 text-zinc-400 hover:text-white transition-all bg-white/5 rounded-full border border-white/10 cursor-pointer">
-            <Bell className="w-4 h-4" />
-            <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-purple-500 rounded-full" />
-          </button>
         </div>
 
         {/* Title Row */}

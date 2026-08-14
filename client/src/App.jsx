@@ -10,6 +10,7 @@ import { getSocket, disconnectSocket } from './services/socket';
 
 function App() {
   const { user } = useSelector((state) => state.user);
+  const { vendor } = useSelector((state) => state.vendor);
 
   useEffect(() => {
     const suspendedMessage = localStorage.getItem("userSuspendedToast");
@@ -20,13 +21,13 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const userId = user?.id || user?._id;
-    if (!userId) {
+    const activeId = user?.id || user?._id || vendor?.id || vendor?._id;
+    if (!activeId) {
       disconnectSocket();
       return;
     }
 
-    const socket = getSocket(userId);
+    const socket = getSocket(activeId);
 
     const handleNotification = (data) => {
       if (!data) return;
@@ -53,8 +54,9 @@ function App() {
         console.error("Failed to persist notification:", e);
       }
 
-      // Display real-time toast at top-right
+      // Display single real-time toast at top-right deduplicated by unique ID
       toast(newNotif.title, {
+        id: newNotif._id,
         description: newNotif.message,
         icon: "🔔",
       });
@@ -68,7 +70,7 @@ function App() {
     return () => {
       socket.off("notification", handleNotification);
     };
-  }, [user]);
+  }, [user, vendor]);
 
   return (
     <>

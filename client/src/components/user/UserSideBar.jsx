@@ -12,6 +12,7 @@ import {
 import { logoutUserThunk, logoutUserState } from "../../features/user.slice";
 import { toast } from "sonner";
 import { COMMON_ROUTES, USER_ROUTES } from "../../constants/Routes";
+import NotificationBell from "../common/NotificationBell";
 
 const UserSideBar = () => {
   const location = useLocation();
@@ -41,14 +42,15 @@ const UserSideBar = () => {
   ];
 
   return (
-    <div className="w-64 h-screen bg-[#050505] border-r border-zinc-900 flex flex-col fixed top-0 left-0 font-sans selection:bg-purple-500/30 overflow-hidden">
+    <div className="w-64 h-screen bg-[#050505] border-r border-zinc-900 flex flex-col fixed top-0 left-0 font-sans selection:bg-purple-500/30 z-30">
       
-      {/* Brand Header */}
-      <div className="p-6 pb-2 flex flex-col justify-center">
+      {/* Brand Header & Notification Bell */}
+      <div className="p-6 pb-4 border-b border-zinc-900/60 flex items-center justify-between relative z-40">
         <div className="flex flex-col">
           <span className="text-white font-extrabold text-lg tracking-wider leading-none">Festivo</span>
           <span className="text-[10px] text-zinc-500 font-semibold tracking-wider mt-1.5 uppercase">Premium Booking</span>
         </div>
+        <NotificationBell placement="sidebar" />
       </div>
 
       {/* Main Navigation Area */}

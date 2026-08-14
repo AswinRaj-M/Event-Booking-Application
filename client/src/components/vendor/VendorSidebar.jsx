@@ -16,6 +16,7 @@ import {
 import { vendorLogoutThunk, vendorLogoutState } from "../../features/vendorSlice";
 import { toast } from "sonner";
 import { COMMON_ROUTES, VENDOR_ROUTES } from "../../constants/Routes";
+import NotificationBell from "../common/NotificationBell";
 
 const VendorSidebar = () => {
     const location = useLocation();
@@ -49,10 +50,18 @@ const VendorSidebar = () => {
     ];
 
     return (
-        <div className="w-64 h-screen bg-[#070514] border-r border-white/5 flex flex-col fixed top-0 left-0 font-sans selection:bg-purple-500/30 overflow-hidden">
+        <div className="w-64 h-screen bg-[#070514] border-r border-white/5 flex flex-col fixed top-0 left-0 font-sans selection:bg-purple-500/30 z-30">
+            {/* Brand Header & Notification Bell */}
+            <div className="p-5 pb-3 border-b border-white/5 flex items-center justify-between relative z-40">
+                <div className="flex flex-col">
+                    <span className="text-white font-extrabold text-base tracking-wider leading-none">Festivo</span>
+                    <span className="text-[10px] text-purple-400 font-semibold tracking-wider mt-1 uppercase">Vendor Portal</span>
+                </div>
+                <NotificationBell placement="sidebar" />
+            </div>
 
             {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto overflow-x-hidden pt-8 px-4 pb-20 scrollbar-thin scrollbar-thumb-purple-900/50 scrollbar-track-transparent">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden pt-4 px-4 pb-20 scrollbar-thin scrollbar-thumb-purple-900/50 scrollbar-track-transparent">
 
                 {/* Main Links */}
                 <div className="space-y-1">

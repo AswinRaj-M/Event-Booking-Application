@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
 import {
-  Bell,
   HelpCircle,
   Camera,
   Check,
@@ -327,12 +326,6 @@ const VendorProfilePage = () => {
           </div>
 
           <div className="flex items-center gap-5">
-            {/* Bell Notifications */}
-            <button className="relative p-2 text-zinc-400 hover:text-white transition-all bg-zinc-900/60 hover:bg-zinc-800/60 rounded-full border border-zinc-800/80 cursor-pointer">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-purple-500 rounded-full" />
-            </button>
-
             {/* FAQ Icon */}
             <button className="p-2 text-zinc-400 hover:text-white transition-all bg-zinc-900/60 hover:bg-zinc-800/60 rounded-full border border-zinc-800/80 cursor-pointer">
               <HelpCircle className="w-5 h-5" />

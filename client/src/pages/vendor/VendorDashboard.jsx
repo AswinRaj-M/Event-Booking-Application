@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, PlusCircle, Calendar, CalendarDays, Users } from 'lucide-react';
+import { PlusCircle, Calendar, CalendarDays, Users } from 'lucide-react';
 import VendorSidebar from '../../components/vendor/VendorSidebar';
 import { VENDOR_ROUTES } from '../../constants/Routes';
 import { getVendorEventsApi } from '../../services/vendor.api';
@@ -115,10 +115,6 @@ const VendorHome = () => {
             <h1 className="text-xl font-bold tracking-wide">Vendor Dashboard</h1>
           </div>
           <div className="flex items-center gap-4">
-            <button className="relative p-2 text-gray-400 hover:text-white transition-colors bg-white/5 rounded-full border border-white/10">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-[#070514]" />
-            </button>
             <Link to={VENDOR_ROUTES.CREATE_EVENT}>
               <button className="flex items-center gap-2 px-4 py-2 bg-[#8B5CF6] hover:bg-[#7C3AED] text-white text-sm font-semibold rounded-lg transition-all shadow-[0_0_15px_rgba(139,92,246,0.3)] cursor-pointer">
                 <PlusCircle className="w-4 h-4" />
