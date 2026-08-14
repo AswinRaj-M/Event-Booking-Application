@@ -27,6 +27,18 @@ import {
   cancelEvent,
   deleteEvent,
 } from "../controllers/vendor/event.controller.js"
+import {
+  getVendorWallet,
+  getVendorTransactions
+} from "../controllers/vendor/vendorWallet.controller.js"
+import {
+  requestWithdrawalController,
+  getVendorWithdrawalsController
+} from "../controllers/vendor/withdrawal.controller.js"
+import {
+  checkInTicket,
+  getRecentCheckIns
+} from "../controllers/vendor/checkIn.controller.js"
 import upload from '../middleware/upload.js'
 import { asyncHandler } from '../middleware/error.middleware.js'
 import { requireRole } from '../middleware/role.middleware.js'
@@ -102,10 +114,15 @@ router.put(
 )
 router.delete("/delete-event/:eventId", protect, requireRole("vendor"), asyncHandler(deleteEvent))
 
-import {
-  getVendorWallet,
-  getVendorTransactions
-} from "../controllers/vendor/vendorWallet.controller.js"
+// Vendor Wallet & Transactions & Withdrawals
+router.get("/wallet", protect, requireRole("vendor"), asyncHandler(getVendorWallet))
+router.get("/wallet/transactions", protect, requireRole("vendor"), asyncHandler(getVendorTransactions))
+router.post("/wallet/withdraw", protect, requireRole("vendor"), asyncHandler(requestWithdrawalController))
+router.get("/wallet/withdrawals", protect, requireRole("vendor"), asyncHandler(getVendorWithdrawalsController))
+
+// Ticket Check-In
+router.post("/check-in", protect, requireRole("vendor"), asyncHandler(checkInTicket))
+router.get("/check-ins/recent", protect, requireRole("vendor"), asyncHandler(getRecentCheckIns))
 
 router.post("/logout", protect, requireRole("vendor"), asyncHandler(vendorLogout))
 router.get("/logout", protect, requireRole("vendor"), asyncHandler(vendorLogout))
@@ -116,18 +133,5 @@ router.get("/status", protect, requireRole("vendor"), (req, res) => {
     isBlocked: req.user.isBlocked
   });
 })
-
-import {
-  requestWithdrawalController,
-  getVendorWithdrawalsController
-} from "../controllers/vendor/withdrawal.controller.js"
-
-import {
-  checkInTicket,
-  getRecentCheckIns
-} from "../controllers/vendor/checkIn.controller.js";
-
-router.post("/check-in", protect, requireRole("vendor"), asyncHandler(checkInTicket));
-router.get("/check-ins/recent", protect, requireRole("vendor"), asyncHandler(getRecentCheckIns));
 
 export default router;
