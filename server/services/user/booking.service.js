@@ -24,6 +24,7 @@ import {
   findUserBookingsRepo,
   saveBookingRepo,
 } from "../../repository/user/booking.repo.js";
+import { sendNotification } from "../../config/socket.js";
 
 export const CHECKOUT_EXPIRATION_MINUTES = 10;
 export const CHECKOUT_EXPIRATION_MS = CHECKOUT_EXPIRATION_MINUTES * 60 * 1000;
@@ -302,6 +303,29 @@ export const confirmBookingAfterPaymentService = async (bookingId) => {
     }
   }
 
+  // Real-time user notifications
+  try {
+    const bookingUserId = booking.userId?._id ? booking.userId._id : booking.userId;
+    const populatedEvent = await Event.findById(booking.eventId).select("title");
+    const eventTitle = populatedEvent?.title || "Event";
+
+    // 1. PAYMENT_SUCCESS
+    sendNotification(bookingUserId, {
+      title: "Payment Successful 💳",
+      message: `Payment of ₹${booking.totalAmount} for "${eventTitle}" was received successfully.`,
+      type: "PAYMENT_SUCCESS"
+    });
+
+    // 2. BOOKING_SUCCESS
+    sendNotification(bookingUserId, {
+      title: "Booking Confirmed! 🎉",
+      message: `Your booking #${booking.bookingId || booking._id} for "${eventTitle}" has been confirmed.`,
+      type: "BOOKING_SUCCESS"
+    });
+  } catch (notifErr) {
+    console.error("Error sending booking confirmation notifications:", notifErr);
+  }
+
   return booking;
 };
 
@@ -467,6 +491,29 @@ export const cancelTicketService = async(userId, ticketId, allowedLimitHours = 0
     console.error("Error decrementing event sold count:", err);
   }
 
+  // Real-time user notifications
+  try {
+    const eventTitle = event?.title || "Event";
+
+    // 3. BOOKING_CANCELLED
+    sendNotification(userId, {
+      title: "Ticket Cancelled ❌",
+      message: `Ticket #${ticket.ticketId} for "${eventTitle}" has been cancelled.`,
+      type: "BOOKING_CANCELLED",
+    });
+
+    if (ticketRefundAmount > 0) {
+      // 5. REFUND_COMPLETED
+      sendNotification(userId, {
+        title: "Refund Added to Wallet 💰",
+        message: `₹${ticketRefundAmount.toFixed(2)} refund has been added to your wallet for "${eventTitle}".`,
+        type: "REFUND_COMPLETED",
+      });
+    }
+  } catch (notifErr) {
+    console.error("Error sending ticket cancellation notifications:", notifErr);
+  }
+
   return {
     bookingId: booking.bookingId || booking._id,
     ticketId: ticket.ticketId,
@@ -630,6 +677,30 @@ export const cancelBookingService = async (userId, bookingId, allowedLimitHours 
     }
   } catch (err) {
     console.error("Error decrementing event sold count:", err);
+  }
+
+  // Real-time user notifications
+  try {
+    const eventTitle = event?.title || "Event";
+    const bookingCode = booking.bookingId || `BK-${booking._id.toString().slice(-6).toUpperCase()}`;
+
+    // 3. BOOKING_CANCELLED
+    sendNotification(userId, {
+      title: "Booking Cancelled ❌",
+      message: `Booking #${bookingCode} for "${eventTitle}" has been cancelled.`,
+      type: "BOOKING_CANCELLED",
+    });
+
+    if (totalRefundAmount > 0) {
+      // 5. REFUND_COMPLETED
+      sendNotification(userId, {
+        title: "Refund Added to Wallet 💰",
+        message: `₹${totalRefundAmount.toFixed(2)} refund has been added to your wallet for "${eventTitle}".`,
+        type: "REFUND_COMPLETED",
+      });
+    }
+  } catch (notifErr) {
+    console.error("Error sending booking cancellation notifications:", notifErr);
   }
 
   return {

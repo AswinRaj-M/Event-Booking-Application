@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import UserSideBar from "../../components/user/UserSideBar";
+import NotificationBell from "../../components/common/NotificationBell";
 import { 
   getBookingHistory,
   createUserWalletOrderApi,
@@ -423,11 +424,8 @@ const UserWallet = () => {
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Bell Icon Button */}
-            <button className="relative p-2.5 bg-[#0E0C1D] hover:bg-[#1A1633] border border-white/5 rounded-2xl transition-all cursor-pointer">
-              <Bell className="w-4 h-4 text-zinc-400 hover:text-white" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-pink-500 rounded-full" />
-            </button>
+            {/* Notification Bell Dropdown */}
+            <NotificationBell />
 
             {/* Profile Pill */}
             <div className="flex items-center gap-3 pl-2 pr-4 py-1.5 bg-[#0E0C1D] border border-white/5 rounded-2xl">

@@ -5,6 +5,7 @@ import {
 } from "../../repository/vendor/checkIn.repo.js";
 import { AppError } from "../../utils/AppError.js";
 import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
+import { sendNotification } from "../../config/socket.js";
 
 export const validateAndCheckInBookingService = async (vendorId, qrToken) => {
   if (!qrToken || typeof qrToken !== "string" || !qrToken.trim()) {
@@ -53,6 +54,20 @@ export const validateAndCheckInBookingService = async (vendorId, qrToken) => {
 
   // Perform Booking Check-in
   const updatedBooking = await updateBookingCheckInRepo(booking._id, vendorId);
+
+  // 7. TICKET_CHECKED_IN notification
+  try {
+    const attendeeUserId = updatedBooking.userId?._id ? updatedBooking.userId._id : updatedBooking.userId;
+    if (attendeeUserId) {
+      sendNotification(attendeeUserId, {
+        title: "Ticket Checked-In 🎟️",
+        message: `Your ticket for "${updatedBooking.eventId?.title || "Event"}" has been checked in successfully. Enjoy the event!`,
+        type: "TICKET_CHECKED_IN",
+      });
+    }
+  } catch (notifErr) {
+    console.error("Failed to send check-in notification:", notifErr);
+  }
 
   return {
     success: true,

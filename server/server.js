@@ -12,13 +12,14 @@ import commonRoutes from "./routes/common.routes.js"
 import paymentRoutes from "./routes/payment.routes.js"
 import { globalErrorHandler } from "./middleware/error.middleware.js"
 
-connectDB()
+import http from "http"
+import { initSocket } from "./config/socket.js"
 
+connectDB()
 
 const app = express()
 
 app.use(passport.initialize())
-
 
 app.use(express.json())
 app.use(cookieParser());
@@ -34,7 +35,6 @@ app.use("/api/vendors", vendorRoutes)
 app.use('/api/common', commonRoutes)
 app.use("/api/payments", paymentRoutes)
 
-
 app.use(globalErrorHandler);
 
 const PORT = process.env.PORT || 5000
@@ -43,6 +43,9 @@ app.get("/", (req, res) => {
   res.send("FESTIVO")
 })
 
-app.listen(PORT, '0.0.0.0', () => {
+const server = http.createServer(app)
+initSocket(server)
+
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`server is running on localhost : ${PORT}`)
 })  

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { updateUserData } from "../../features/user.slice";
 import { 
   Search, 
   Bell, 
@@ -21,6 +22,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import UserSideBar from "../../components/user/UserSideBar";
+import NotificationBell from "../../components/common/NotificationBell";
 import { USER_ROUTES } from "../../constants/Routes";
 import { 
   getBookingHistory, 
@@ -32,6 +34,7 @@ import {
 
 const MyBookings = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const user = useSelector((state) => state.user?.user);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("upcoming"); // upcoming, past, cancelled
@@ -306,6 +309,10 @@ const MyBookings = () => {
       const bookingId = booking._id || booking.id;
       const res = await cancelBookingApi(bookingId);
       
+      if (res.data?.newWalletBalance !== undefined && user) {
+        dispatch(updateUserData({ ...user, walletBalance: res.data.newWalletBalance }));
+      }
+      
       toast.success(
         res.data?.message || "Booking cancelled successfully! Refund has been credited to your wallet.",
         { id: "cancel-ticket-toast" }
@@ -365,7 +372,10 @@ const MyBookings = () => {
             <p className="text-sm text-zinc-400">View and manage your upcoming and past event tickets.</p>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {/* Notification Bell Dropdown */}
+            <NotificationBell />
+
             {/* Browse Events Button */}
             <Link to={USER_ROUTES.EXPLORE}>
               <button className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white text-sm font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(139,92,246,0.3)] cursor-pointer">

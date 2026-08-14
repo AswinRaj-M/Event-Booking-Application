@@ -16,6 +16,7 @@ import {
   updateEventRepo,
   deleteEventRepo,
 } from "../../repository/vendor/event.repo.js";
+import { sendNotification } from "../../config/socket.js";
 
 const validateOfferDates = (offerEnabled, validFrom, validUntil, eventDate) => {
   const isEnabled = offerEnabled === "true" || offerEnabled === true;
@@ -238,6 +239,27 @@ export const cancelEventService = async (eventId, vendorId) => {
               refundAmount
             }
           });
+        }
+
+        // Real-time user notifications on event cancellation
+        try {
+          // 6. EVENT_CANCELLED
+          sendNotification(bookingUserId, {
+            title: "Event Cancelled ⚠️",
+            message: `The event "${event.title}" has been cancelled by the host.`,
+            type: "EVENT_CANCELLED",
+          });
+
+          // 5. REFUND_COMPLETED
+          if (refundAmount > 0) {
+            sendNotification(bookingUserId, {
+              title: "Refund Added to Wallet 💰",
+              message: `₹${refundAmount.toFixed(2)} refund has been added to your wallet for "${event.title}".`,
+              type: "REFUND_COMPLETED",
+            });
+          }
+        } catch (notifErr) {
+          console.error(`Failed to notify user ${bookingUserId} of event cancellation:`, notifErr);
         }
       }
 
