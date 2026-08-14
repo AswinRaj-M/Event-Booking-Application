@@ -118,6 +118,11 @@ const UserEventDetails = () => {
         const eventRes = await getEventById(id);
         if (eventRes.data?.success) {
           const foundEvent = eventRes.data.event;
+          if (foundEvent?.isBlocked) {
+            toast.error("This event is blocked by admin");
+            navigate(USER_ROUTES.EXPLORE, { replace: true });
+            return;
+          }
           setEvent(foundEvent);
           
           try {
@@ -133,13 +138,19 @@ const UserEventDetails = () => {
         }
       } catch (err) {
         console.error("Event Details fetch error:", err);
-        setError(err.response?.data?.message || "Something went wrong while retrieving event details.");
+        const errorMsg = err.response?.data?.message || "Something went wrong while retrieving event details.";
+        if (err.response?.status === 403 || errorMsg.toLowerCase().includes("blocked")) {
+          toast.error(errorMsg || "This event is blocked by admin");
+          navigate(USER_ROUTES.EXPLORE, { replace: true });
+          return;
+        }
+        setError(errorMsg);
       } finally {
         setLoading(false);
       }
     };
     fetchEventData();
-  }, [id]);
+  }, [id, navigate]);
 
   
   useEffect(() => {
@@ -251,6 +262,11 @@ const UserEventDetails = () => {
 
   const handleBookTickets = () => {
     if (!event) return;
+    if (event.isBlocked) {
+      toast.error("This event is blocked by admin");
+      navigate(USER_ROUTES.EXPLORE, { replace: true });
+      return;
+    }
     if (availableSeats <= 0) {
       toast.error("This ticket tier is sold out!");
       return;

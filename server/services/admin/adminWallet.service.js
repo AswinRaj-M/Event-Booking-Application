@@ -291,9 +291,28 @@ export const getAdminWalletDetailsService = async (adminId, queryParams = {}) =>
     }
   });
 
-  const commissionEarned = commissionStats[0]?.totalCommission || 0;
-  const totalCouponCostSponsored = couponStats[0]?.totalCouponSponsored || 0;
+  const commissionEarned = Number((commissionStats[0]?.totalCommission || 0).toFixed(2));
+  const totalCouponCostSponsored = Number((couponStats[0]?.totalCouponSponsored || 0).toFixed(2));
   const netPlatformRevenue = Number((commissionEarned - totalCouponCostSponsored).toFixed(2));
+  const totalDeposited = Number((wallet.totalDeposited || 0).toFixed(2));
+
+  // Admin Wallet Balance = Admin Added Money (Deposits) + Platform Net Commission Revenue - Disbursed Vendor Payouts
+  const calculatedPlatformBalance = Math.max(
+    0,
+    Number((totalDeposited + netPlatformRevenue - vendorPayouts).toFixed(2))
+  );
+
+  // Sync wallet document with the verified real-time calculated balance
+  if (
+    wallet.balance !== calculatedPlatformBalance ||
+    wallet.totalCommissionEarned !== commissionEarned ||
+    wallet.totalPayoutsDisbursed !== vendorPayouts
+  ) {
+    wallet.balance = calculatedPlatformBalance;
+    wallet.totalCommissionEarned = commissionEarned;
+    wallet.totalPayoutsDisbursed = vendorPayouts;
+    await wallet.save();
+  }
 
   return {
     wallet: {
@@ -305,6 +324,7 @@ export const getAdminWalletDetailsService = async (adminId, queryParams = {}) =>
     },
     metrics: {
       platformBalance: wallet.balance,
+      totalDeposited,
       vendorPayouts,
       pendingWithdrawalsAmount,
       commissionEarned,

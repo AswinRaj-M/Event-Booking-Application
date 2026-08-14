@@ -44,6 +44,7 @@ const AdminPaymentPage = () => {
 
   // Financial KPI state
   const [platformBalance, setPlatformBalance] = useState(0);
+  const [totalDeposited, setTotalDeposited] = useState(0);
   const [vendorPayouts, setVendorPayouts] = useState(0);
   const [pendingWithdrawalsAmount, setPendingWithdrawalsAmount] = useState(0);
   const [commissionEarned, setCommissionEarned] = useState(0);
@@ -102,8 +103,9 @@ const AdminPaymentPage = () => {
 
       // 1. Process Wallet Details & Metrics
       if (walletRes?.data?.success && walletRes.data.data) {
-        const { metrics } = walletRes.data.data;
+        const { metrics, wallet } = walletRes.data.data;
         setPlatformBalance(Number(metrics.platformBalance) || 0);
+        setTotalDeposited(Number(metrics.totalDeposited ?? wallet?.totalDeposited) || 0);
         setVendorPayouts(Number(metrics.vendorPayouts) || 0);
         setPendingWithdrawalsAmount(Number(metrics.pendingWithdrawalsAmount) || 0);
         setCommissionEarned(Number(metrics.commissionEarned) || 0);
@@ -537,7 +539,7 @@ const AdminPaymentPage = () => {
           {/* Top 4 Financial KPI Cards Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-5 shrink-0">
             
-            {/* Card 1: Platform Balance */}
+            {/* Card 1: Platform Balance (Commission + Admin Added Money) */}
             <div className="bg-[#151221] border border-purple-500/30 rounded-2xl md:rounded-3xl p-5 md:p-6 shadow-xl backdrop-blur-md relative overflow-hidden group">
               <div className="flex justify-between items-start mb-3 sm:mb-4">
                 <span className="text-xs font-bold text-purple-300">Admin Wallet Balance</span>
@@ -545,10 +547,13 @@ const AdminPaymentPage = () => {
                   <WalletIcon className="w-5 h-5" />
                 </div>
               </div>
-              <div className="text-2xl sm:text-3xl font-black text-white tracking-tight mb-2 truncate">
+              <div className="text-2xl sm:text-3xl font-black text-white tracking-tight mb-1 truncate">
                 ₹{platformBalance.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
-              <div className="flex items-center justify-between text-xs">
+              <div className="text-[11px] font-semibold text-purple-300/80 mb-3 flex items-center gap-1">
+                <span>Commission (₹{netPlatformRevenue.toLocaleString("en-IN")}) + Added (₹{totalDeposited.toLocaleString("en-IN")})</span>
+              </div>
+              <div className="flex items-center justify-between text-xs pt-1 border-t border-purple-500/10">
                 <span className="text-emerald-400 font-bold flex items-center gap-1">
                   <ShieldCheck className="w-3.5 h-3.5" /> Razorpay Verified
                 </span>

@@ -23,7 +23,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { USER_ROUTES } from '../../constants/Routes';
-import { createBooking } from '../../services/user.api.js';
+import { createBooking, getEventById } from '../../services/user.api.js';
 import axiosInstance from '../../services/axiosInstance.js';
 import { toast } from 'sonner';
 
@@ -63,6 +63,44 @@ const PaymentCheckout = () => {
     discountAmount: initialDiscount = 0,
     totalAmount: initialTotal = 0 
   } = checkoutData;
+
+  // Verify event status (blocked / deleted) whenever user enters checkout page
+  React.useEffect(() => {
+    const targetEventId = event?._id || event?.id || checkoutData?.event?._id || checkoutData?.event?.id;
+    if (!targetEventId) return;
+
+    let isMounted = true;
+    const verifyEventStatus = async () => {
+      try {
+        const res = await getEventById(targetEventId);
+        if (res.data?.success && res.data.event?.isBlocked) {
+          if (!isMounted) return;
+          try {
+            sessionStorage.removeItem('checkoutSessionExpiresAt');
+            sessionStorage.removeItem('lastCheckoutState');
+          } catch (e) {}
+          toast.error("This event is blocked by admin");
+          navigate(USER_ROUTES.EXPLORE, { replace: true });
+        }
+      } catch (err) {
+        if (!isMounted) return;
+        const errorMsg = err.response?.data?.message || "";
+        if (err.response?.status === 403 || errorMsg.toLowerCase().includes("blocked")) {
+          try {
+            sessionStorage.removeItem('checkoutSessionExpiresAt');
+            sessionStorage.removeItem('lastCheckoutState');
+          } catch (e) {}
+          toast.error(errorMsg || "This event is blocked by admin");
+          navigate(USER_ROUTES.EXPLORE, { replace: true });
+        }
+      }
+    };
+
+    verifyEventStatus();
+    return () => {
+      isMounted = false;
+    };
+  }, [event?._id, event?.id, checkoutData?.event?._id, checkoutData?.event?.id, navigate]);
 
   // Local Form & Checkout States
   const [paymentMethod, setPaymentMethod] = useState('razorpay'); // 'razorpay' | 'card' | 'venue'
@@ -181,7 +219,17 @@ const PaymentCheckout = () => {
       }
     } catch (err) {
       console.error('Failed to validate coupon:', err);
-      toast.error(err.response?.data?.message || 'Invalid or expired coupon code');
+      const errorMsg = err.response?.data?.message || 'Invalid or expired coupon code';
+      if (err.response?.status === 403 || errorMsg.toLowerCase().includes("blocked")) {
+        try {
+          sessionStorage.removeItem('checkoutSessionExpiresAt');
+          sessionStorage.removeItem('lastCheckoutState');
+        } catch (e) {}
+        toast.error(errorMsg || "This event is blocked by admin");
+        navigate(USER_ROUTES.EXPLORE, { replace: true });
+        return;
+      }
+      toast.error(errorMsg);
     } finally {
       setApplyingCoupon(false);
     }
@@ -200,13 +248,13 @@ const PaymentCheckout = () => {
     return new Promise((resolve) => {
       if (window.Razorpay) {
         resolve(true);
-        return;
+      } else {
+        const script = document.createElement("script");
+        script.src = "https://checkout.razorpay.com/v1/checkout.js";
+        script.onload = () => resolve(true);
+        script.onerror = () => resolve(false);
+        document.body.appendChild(script);
       }
-      const script = document.createElement("script");
-      script.src = "https://checkout.razorpay.com/v1/checkout.js";
-      script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
-      document.body.appendChild(script);
     });
   };
 
@@ -306,11 +354,21 @@ const PaymentCheckout = () => {
           } catch (err) {
             toast.dismiss("verify-toast");
             console.error('Payment verification error:', err);
-            toast.error(err.response?.data?.message || "Payment verification failed.");
+            const errorMsg = err.response?.data?.message || "Payment verification failed.";
+            if (err.response?.status === 403 || errorMsg.toLowerCase().includes("blocked")) {
+              try {
+                sessionStorage.removeItem('checkoutSessionExpiresAt');
+                sessionStorage.removeItem('lastCheckoutState');
+              } catch (e) {}
+              toast.error(errorMsg || "This event is blocked by admin");
+              navigate(USER_ROUTES.EXPLORE, { replace: true });
+              return;
+            }
+            toast.error(errorMsg);
             navigate(USER_ROUTES.PAYMENT_STATUS, {
               state: {
                 status: 'failure',
-                reason: err.response?.data?.message || "Verification failed",
+                reason: errorMsg,
                 orderId: orderData.order_id,
                 checkoutState: checkoutData
               }
@@ -371,8 +429,20 @@ const PaymentCheckout = () => {
 
     } catch (err) {
       console.error('Checkout error:', err);
-      toast.error(err.response?.data?.message || 'Failed to initialize payment.');
+      const errorMsg = err.response?.data?.message || 'Failed to initialize payment.';
       setIsProcessing(false);
+
+      if (err.response?.status === 403 || errorMsg.toLowerCase().includes("blocked")) {
+        try {
+          sessionStorage.removeItem('checkoutSessionExpiresAt');
+          sessionStorage.removeItem('lastCheckoutState');
+        } catch (e) {}
+        toast.error(errorMsg || "This event is blocked by admin");
+        navigate(USER_ROUTES.EXPLORE, { replace: true });
+        return;
+      }
+
+      toast.error(errorMsg);
     }
   };
 

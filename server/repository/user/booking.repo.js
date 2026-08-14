@@ -28,9 +28,11 @@ export const findUserBookingsRepo = async(userId) => {
 
   return await Booking.find({
     userId,
+    paymentStatus: { $nin: ["failed", "expired", "pending"] },
+    bookingStatus: { $nin: ["failed", "expired", "pending"] },
     $or: [
       { paymentStatus: { $in: ["paid", "refunded", "completed", "success", "SUCCESS", "free"] } },
-      { bookingStatus: { $in: ["confirmed", "checked-in", "completed"] } }
+      { bookingStatus: { $in: ["confirmed", "checked-in", "completed", "cancelled"] } }
     ]
   })
     .populate({

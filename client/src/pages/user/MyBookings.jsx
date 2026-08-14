@@ -207,7 +207,15 @@ const MyBookings = () => {
     const now = new Date();
 
     bookings.forEach((booking) => {
-      if (booking.paymentStatus === "failed" || (booking.paymentStatus === "pending" && booking.bookingStatus === "pending")) {
+      // Exclude failed payments, expired checkout sessions, and pending uncompleted bookings
+      if (
+        booking.paymentStatus === "failed" ||
+        booking.paymentStatus === "expired" ||
+        booking.paymentStatus === "pending" ||
+        booking.bookingStatus === "failed" ||
+        booking.bookingStatus === "expired" ||
+        booking.bookingStatus === "pending"
+      ) {
         return;
       }
 
@@ -233,8 +241,15 @@ const MyBookings = () => {
 
   // Filter and process bookings based on activeTab and search query
   const filteredBookings = bookings.filter((booking) => {
-    // Exclude failed or un-paid abandoned checkout attempts
-    if (booking.paymentStatus === "failed" || (booking.paymentStatus === "pending" && booking.bookingStatus === "pending")) {
+    // Exclude failed payments, expired checkout sessions, and pending uncompleted bookings
+    if (
+      booking.paymentStatus === "failed" ||
+      booking.paymentStatus === "expired" ||
+      booking.paymentStatus === "pending" ||
+      booking.bookingStatus === "failed" ||
+      booking.bookingStatus === "expired" ||
+      booking.bookingStatus === "pending"
+    ) {
       return false;
     }
 
@@ -355,30 +370,30 @@ const MyBookings = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#05050C] text-white font-sans selection:bg-purple-500/30">
+    <div className="flex min-h-screen bg-[#05050C] text-white font-sans selection:bg-purple-500/30 w-full max-w-full overflow-x-hidden relative">
       {/* Sidebar Navigation */}
       <UserSideBar />
 
       {/* Main Container Area */}
-      <main className="flex-1 ml-64 p-8 min-h-screen relative z-10 flex flex-col">
+      <main className="flex-1 ml-64 p-4 sm:p-6 lg:p-8 min-h-screen relative z-10 flex flex-col min-w-0 max-w-[calc(100vw-16rem)] overflow-x-hidden">
         {/* Glow Effects */}
         <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] bg-purple-900/10 rounded-full blur-[140px] pointer-events-none -z-10" />
         <div className="absolute bottom-[-10%] left-[20%] w-[700px] h-[700px] bg-indigo-900/10 rounded-full blur-[160px] pointer-events-none -z-10" />
 
         {/* Top Header Row */}
-        <div className="flex justify-between items-center mb-8 relative z-20">
-          <div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-white mb-2">My Tickets</h1>
-            <p className="text-sm text-zinc-400">View and manage your upcoming and past event tickets.</p>
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-8 relative z-20 w-full min-w-0">
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white mb-2 truncate">My Tickets</h1>
+            <p className="text-xs sm:text-sm text-zinc-400">View and manage your upcoming and past event tickets.</p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 shrink-0">
             {/* Notification Bell Dropdown */}
             <NotificationBell />
 
             {/* Browse Events Button */}
             <Link to={USER_ROUTES.EXPLORE}>
-              <button className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white text-sm font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(139,92,246,0.3)] cursor-pointer">
+              <button className="flex items-center gap-2 px-4 sm:px-5 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white text-xs sm:text-sm font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(139,92,246,0.3)] cursor-pointer whitespace-nowrap">
                 <Plus className="w-4 h-4" />
                 Browse Events
               </button>
@@ -387,9 +402,9 @@ const MyBookings = () => {
         </div>
 
         {/* Search & Filter Tabs Panel */}
-        <div className="flex flex-col sm:flex-row gap-4 items-center justify-between mb-8 relative z-20">
+        <div className="flex flex-col lg:flex-row gap-4 items-stretch lg:items-center justify-between mb-8 relative z-20 w-full min-w-0">
           {/* Search bar */}
-          <div className="relative w-full sm:w-80">
+          <div className="relative w-full lg:w-80 shrink-0">
             <Search className="absolute left-4 top-3.5 w-4 h-4 text-zinc-500" />
             <input 
               type="text" 
@@ -401,10 +416,10 @@ const MyBookings = () => {
           </div>
 
           {/* Toggle Tab Selectors */}
-          <div className="flex items-center bg-[#0b0914] p-1.5 rounded-xl border border-zinc-850 w-full sm:w-auto">
+          <div className="flex items-center bg-[#0b0914] p-1.5 rounded-xl border border-zinc-800/80 w-full lg:w-auto overflow-x-auto max-w-full scrollbar-none">
             <button
               onClick={() => setActiveTab("upcoming")}
-              className={`flex-1 sm:flex-none px-4 sm:px-5 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 ${
+              className={`flex-1 sm:flex-none px-3.5 sm:px-5 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap ${
                 activeTab === "upcoming"
                   ? "bg-[#1C1A30] text-purple-300 border border-purple-500/15"
                   : "text-zinc-500 hover:text-zinc-300"
@@ -417,7 +432,7 @@ const MyBookings = () => {
             </button>
             <button
               onClick={() => setActiveTab("past")}
-              className={`flex-1 sm:flex-none px-4 sm:px-5 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 ${
+              className={`flex-1 sm:flex-none px-3.5 sm:px-5 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap ${
                 activeTab === "past"
                   ? "bg-[#1C1A30] text-purple-300 border border-purple-500/15"
                   : "text-zinc-500 hover:text-zinc-300"
@@ -430,7 +445,7 @@ const MyBookings = () => {
             </button>
             <button
               onClick={() => setActiveTab("cancelled")}
-              className={`flex-1 sm:flex-none px-4 sm:px-5 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 ${
+              className={`flex-1 sm:flex-none px-3.5 sm:px-5 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap ${
                 activeTab === "cancelled"
                   ? "bg-[#1C1A30] text-purple-300 border border-purple-500/15"
                   : "text-zinc-500 hover:text-zinc-300"
@@ -466,7 +481,7 @@ const MyBookings = () => {
           </div>
         ) : (
           /* Tickets Cards List */
-          <div className="space-y-6 relative z-10 flex-grow">
+          <div className="space-y-6 relative z-10 flex-grow w-full min-w-0">
             {filteredBookings.length > 0 ? (
               filteredBookings.map((booking) => {
                 const event = booking.eventId;
@@ -484,10 +499,10 @@ const MyBookings = () => {
                 return (
                   <div 
                     key={booking._id}
-                    className="bg-[#0b0914]/60 border border-white/5 rounded-3xl overflow-hidden hover:border-purple-500/15 hover:shadow-[0_0_25px_rgba(139,92,246,0.03)] transition-all flex flex-col md:flex-row h-full group animate-fadeIn"
+                    className="bg-[#0b0914]/60 border border-white/5 rounded-3xl overflow-hidden hover:border-purple-500/15 hover:shadow-[0_0_25px_rgba(139,92,246,0.03)] transition-all flex flex-col lg:flex-row w-full min-w-0 group animate-fadeIn"
                   >
                     {/* Event Image Column */}
-                    <div className="relative w-full md:w-56 h-48 md:h-auto bg-[#121021] shrink-0 overflow-hidden">
+                    <div className="relative w-full lg:w-56 h-48 lg:h-auto min-h-[180px] bg-[#121021] shrink-0 overflow-hidden">
                       <img 
                         src={imageUrl} 
                         alt={title} 
@@ -506,25 +521,25 @@ const MyBookings = () => {
                     </div>
 
                     {/* Info & Details Column */}
-                    <div className="p-6 md:p-7 flex-1 flex flex-col md:flex-row justify-between gap-6">
+                    <div className="p-5 sm:p-6 lg:p-7 flex-1 flex flex-col md:flex-row justify-between gap-6 min-w-0">
                       {/* Left Specs */}
-                      <div className="space-y-4 flex-1">
-                        <div className="space-y-2">
+                      <div className="space-y-4 flex-1 min-w-0">
+                        <div className="space-y-2 min-w-0">
                           {/* Date & Time Row */}
                           <div className="flex items-center gap-2 text-xs font-bold text-purple-400 uppercase tracking-wider">
                             <Calendar className="w-4 h-4 text-purple-400 shrink-0" />
-                            <span>
+                            <span className="truncate">
                               {getFormattedDate(event?.schedule?.date)} • {event?.schedule?.startTime || "TBA"}
                             </span>
                           </div>
 
                           {/* Event Title */}
-                          <h3 className="text-xl font-extrabold text-white leading-tight group-hover:text-purple-400 transition-colors">
+                          <h3 className="text-lg sm:text-xl font-extrabold text-white leading-tight group-hover:text-purple-400 transition-colors break-words">
                             {title}
                           </h3>
 
                           {/* Venue Location Row */}
-                          <div className="flex items-center gap-2 text-xs text-zinc-400 font-medium">
+                          <div className="flex items-center gap-2 text-xs text-zinc-400 font-medium min-w-0">
                             <MapPin className="w-4 h-4 text-purple-400 shrink-0" />
                             <span className="truncate">
                               {event?.eventType === "Online" ? "Online Event" : `${event?.venue || "Venue TBA"}, ${event?.city || "TBA"}`}
@@ -533,7 +548,7 @@ const MyBookings = () => {
                         </div>
 
                         {/* Metadata details block */}
-                        <div className="grid grid-cols-3 gap-4 pt-1 max-w-sm">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 pt-1 max-w-sm">
                           <div>
                             <span className="text-[9px] text-zinc-500 uppercase tracking-widest font-bold">Type</span>
                             <p className="text-white text-xs font-bold mt-1 truncate">{booking.tierName || "General"}</p>
@@ -552,12 +567,14 @@ const MyBookings = () => {
                       </div>
 
                       {/* Right Actions & Status */}
-                      <div className="flex flex-col justify-between items-end md:w-48 gap-4">
+                      <div className="flex flex-col justify-between items-start md:items-end w-full md:w-52 shrink-0 gap-4 min-w-0">
                         {/* Status Badge */}
-                        {getStatusBadge(booking.bookingStatus, event?.eventStatus, endDateTime)}
+                        <div className="self-start md:self-end">
+                          {getStatusBadge(booking.bookingStatus, event?.eventStatus, endDateTime)}
+                        </div>
 
                         {/* Actions Grid */}
-                        <div className="w-full space-y-2 pt-4">
+                        <div className="w-full space-y-2 pt-2 md:pt-4 min-w-0">
                           {isCompleted ? (
                             <div className="flex flex-col gap-2.5 w-full">
                               {/* If user already reviewed this event, display their rating and feedback */}

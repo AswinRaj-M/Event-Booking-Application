@@ -59,7 +59,6 @@ export const initSocket = (httpServer) => {
     if (targetId) {
       const room = `user:${targetId}`;
       socket.join(room);
-      console.log(`[Socket.IO] User ${targetId} connected and joined room: ${room}`);
     }
 
     socket.on("join", (userIdToJoin) => {
@@ -67,7 +66,6 @@ export const initSocket = (httpServer) => {
       if (targetIdToJoin) {
         const room = `user:${targetIdToJoin}`;
         socket.join(room);
-        console.log(`[Socket.IO] User explicitly joined room: ${room}`);
       }
     });
 
@@ -83,13 +81,11 @@ export const getIO = () => io;
 
 export const sendNotification = (userTarget, data = {}) => {
   if (!io || !userTarget) {
-    console.warn("[Socket.IO] sendNotification called but io or userTarget missing", { io: !!io, userTarget });
     return;
   }
 
   const targetId = extractTargetId(userTarget);
   if (!targetId) {
-    console.warn("[Socket.IO] Could not extract valid userId from userTarget:", userTarget);
     return;
   }
 
@@ -102,6 +98,5 @@ export const sendNotification = (userTarget, data = {}) => {
   };
 
   const room = `user:${targetId}`;
-  console.log(`[Socket.IO] Emitting notification to room "${room}":`, payload);
   io.to(room).emit("notification", payload);
 };

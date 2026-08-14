@@ -1,6 +1,12 @@
 import { io } from "socket.io-client";
 
-const SOCKET_URL = "http://localhost:5000";
+const getSocketURL = () => {
+  if (import.meta.env.VITE_SOCKET_URL) return import.meta.env.VITE_SOCKET_URL;
+  if (typeof window !== "undefined") return window.location.origin;
+  return "http://localhost:5000";
+};
+
+const SOCKET_URL = getSocketURL();
 
 let socket = null;
 
@@ -15,14 +21,13 @@ export const getSocket = (userId) => {
     });
 
     socket.on("connect", () => {
-      console.log("[Socket.IO] Connected to backend, id:", socket.id);
       if (userId) {
         socket.emit("join", userId);
       }
     });
 
-    socket.on("connect_error", (err) => {
-      console.error("[Socket.IO] Connection error:", err.message);
+    socket.on("connect_error", () => {
+      // Connection error handled silently
     });
   } else {
     if (userId) {

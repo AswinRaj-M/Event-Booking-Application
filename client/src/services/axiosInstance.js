@@ -6,8 +6,14 @@ export const injectStore = (_store) => {
   store = _store
 }
 
+const getBaseURL = () => {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  if (typeof window !== "undefined") return `${window.location.origin}/api`;
+  return "http://localhost:5000/api";
+};
+
 const axiosInstance = axios.create({
-  baseURL: "http://localhost:5000/api",
+  baseURL: getBaseURL(),
   withCredentials: true
 })
 

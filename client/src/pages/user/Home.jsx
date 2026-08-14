@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
-import { Search, MapPin, Calendar, Clock, ArrowRight, Ticket, Star, Users, Tag, Copy, Check, Award } from 'lucide-react';
+import { Search, MapPin, Calendar, Clock, ArrowRight, Ticket, Star, Users, Tag, Copy, Check, Award, ChevronLeft, ChevronRight } from 'lucide-react';
 import { VENDOR_ROUTES, USER_ROUTES } from '../../constants/Routes';
 import { getExploreEvents, getPublicCouponsApi, getOrganizersApi } from '../../services/user.api.js';
 import { getAllCategories } from '../../services/common.api.js';
@@ -26,10 +26,21 @@ const Home = () => {
   const [publicCoupons, setPublicCoupons] = useState([]);
   const [organizers, setOrganizers] = useState([]);
   const [copiedCode, setCopiedCode] = useState("");
+  const [currentCouponIndex, setCurrentCouponIndex] = useState(0);
   const [stats, setStats] = useState({ totalEvents: 0, totalUsers: 0, rating: 0 });
   const [loading, setLoading] = useState(true);
   const [organizersLoading, setOrganizersLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const handlePrevCoupon = () => {
+    if (publicCoupons.length <= 1) return;
+    setCurrentCouponIndex((prev) => (prev === 0 ? publicCoupons.length - 1 : prev - 1));
+  };
+
+  const handleNextCoupon = () => {
+    if (publicCoupons.length <= 1) return;
+    setCurrentCouponIndex((prev) => (prev === publicCoupons.length - 1 ? 0 : prev + 1));
+  };
 
   useEffect(() => {
     const fetchHomeData = async () => {
@@ -122,57 +133,112 @@ const Home = () => {
           </div>
 
           {/* Active Public Promotional Coupon Banner */}
-          {publicCoupons.length > 0 && (
-            <div className="w-full max-w-4xl mx-auto mb-16">
-              <div className="bg-gradient-to-r from-purple-950/80 via-indigo-950/80 to-purple-950/80 border border-purple-500/40 rounded-2xl p-4 md:p-6 shadow-[0_0_30px_rgba(168,85,247,0.2)] flex flex-col md:flex-row items-center justify-between gap-4">
-                <div className="flex items-center gap-4 text-left">
-                  <div className="w-12 h-12 rounded-xl bg-purple-600/30 border border-purple-400/40 flex items-center justify-center text-purple-300 shrink-0">
-                    <Tag className="w-6 h-6 animate-pulse" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 text-[10px] font-bold uppercase tracking-wider border border-purple-500/30">
-                        Promotional Offer
-                      </span>
-                      {publicCoupons[0].endDate && (
-                        <span className="text-[11px] text-gray-400">
-                          Expires {new Date(publicCoupons[0].endDate).toLocaleDateString()}
-                        </span>
-                      )}
+          {publicCoupons.length > 0 && (() => {
+            const activeCoupon = publicCoupons[currentCouponIndex] || publicCoupons[0];
+            return (
+              <div className="w-full max-w-4xl mx-auto mb-16 relative group">
+                <div className="bg-gradient-to-r from-purple-950/80 via-indigo-950/80 to-purple-950/80 border border-purple-500/40 rounded-2xl p-4 md:p-6 shadow-[0_0_30px_rgba(168,85,247,0.2)] flex flex-col md:flex-row items-center justify-between gap-4 transition-all duration-300">
+                  
+                  {/* Left Side: Coupon Tag & Offer Info */}
+                  <div className="flex items-center gap-4 text-left w-full md:w-auto">
+                    <div className="w-12 h-12 rounded-xl bg-purple-600/30 border border-purple-400/40 flex items-center justify-center text-purple-300 shrink-0">
+                      <Tag className="w-6 h-6 animate-pulse" />
                     </div>
-                    <h3 className="text-base md:text-lg font-bold text-white mt-1">
-                      {publicCoupons[0].displayName ? publicCoupons[0].displayName : `Save ${publicCoupons[0].discountType === "percentage" ? `${publicCoupons[0].discountValue}% OFF` : `₹${publicCoupons[0].discountValue} OFF`}`} <span className="text-purple-400 font-mono">({publicCoupons[0].code})</span>
-                    </h3>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      {publicCoupons[0].description || "Apply code during event checkout to claim discount."}
-                    </p>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 text-[10px] font-bold uppercase tracking-wider border border-purple-500/30">
+                          Promotional Offer
+                        </span>
+                        {publicCoupons.length > 1 && (
+                          <span className="px-2 py-0.5 rounded-full bg-purple-600/30 text-purple-200 text-[10px] font-extrabold border border-purple-400/30">
+                            {currentCouponIndex + 1} of {publicCoupons.length}
+                          </span>
+                        )}
+                        {activeCoupon.endDate && (
+                          <span className="text-[11px] text-gray-400">
+                            Expires {new Date(activeCoupon.endDate).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="text-base md:text-lg font-bold text-white mt-1">
+                        {activeCoupon.displayName
+                          ? activeCoupon.displayName
+                          : `Save ${activeCoupon.discountType === "percentage" ? `${activeCoupon.discountValue}% OFF` : `₹${activeCoupon.discountValue} OFF`}`}{" "}
+                        <span className="text-purple-400 font-mono">({activeCoupon.code})</span>
+                      </h3>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {activeCoupon.description || "Apply code during event checkout to claim discount."}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Right Side: Copy Code Button + Arrows Navigation */}
+                  <div className="flex items-center gap-2 sm:gap-3 shrink-0 w-full md:w-auto justify-between md:justify-end">
+                    {/* Coupon Code Pill */}
+                    <div className="bg-[#0B0914] border border-purple-500/40 rounded-xl px-4 py-2.5 flex items-center gap-3 font-mono font-bold text-sm text-purple-300 shadow-inner">
+                      <span>{activeCoupon.code}</span>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(activeCoupon.code);
+                          setCopiedCode(activeCoupon.code);
+                          toast.success(`Copied coupon code ${activeCoupon.code}!`);
+                          setTimeout(() => setCopiedCode(""), 3000);
+                        }}
+                        className="p-1 text-gray-400 hover:text-white transition-colors cursor-pointer"
+                        title="Copy Coupon Code"
+                      >
+                        {copiedCode === activeCoupon.code ? (
+                          <Check className="w-4 h-4 text-green-400" />
+                        ) : (
+                          <Copy className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Arrow Navigation Buttons (when multiple coupons exist) */}
+                    {publicCoupons.length > 1 && (
+                      <div className="flex items-center gap-1 bg-black/40 border border-purple-500/30 rounded-xl p-1 backdrop-blur-sm">
+                        <button
+                          onClick={handlePrevCoupon}
+                          aria-label="Previous Coupon"
+                          className="p-1.5 rounded-lg text-purple-300 hover:text-white hover:bg-purple-600/40 transition-all active:scale-95 cursor-pointer"
+                          title="Previous Coupon"
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={handleNextCoupon}
+                          aria-label="Next Coupon"
+                          className="p-1.5 rounded-lg text-purple-300 hover:text-white hover:bg-purple-600/40 transition-all active:scale-95 cursor-pointer"
+                          title="Next Coupon"
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 shrink-0">
-                  <div className="bg-[#0B0914] border border-purple-500/40 rounded-xl px-4 py-2.5 flex items-center gap-3 font-mono font-bold text-sm text-purple-300 shadow-inner">
-                    <span>{publicCoupons[0].code}</span>
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(publicCoupons[0].code);
-                        setCopiedCode(publicCoupons[0].code);
-                        toast.success(`Copied coupon code ${publicCoupons[0].code}!`);
-                        setTimeout(() => setCopiedCode(""), 3000);
-                      }}
-                      className="p-1 text-gray-400 hover:text-white transition-colors cursor-pointer"
-                      title="Copy Coupon Code"
-                    >
-                      {copiedCode === publicCoupons[0].code ? (
-                        <Check className="w-4 h-4 text-green-400" />
-                      ) : (
-                        <Copy className="w-4 h-4" />
-                      )}
-                    </button>
+                {/* Bottom Dot Indicators */}
+                {publicCoupons.length > 1 && (
+                  <div className="flex justify-center items-center gap-1.5 mt-3">
+                    {publicCoupons.map((_, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setCurrentCouponIndex(idx)}
+                        aria-label={`Go to coupon ${idx + 1}`}
+                        className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                          currentCouponIndex === idx
+                            ? "w-6 bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.8)]"
+                            : "w-1.5 bg-white/20 hover:bg-white/40"
+                        }`}
+                      />
+                    ))}
                   </div>
-                </div>
+                )}
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Stats Section */}
           <div className="grid grid-cols-3 gap-6 md:gap-16 w-full max-w-3xl mx-auto border-t border-white/10 pt-12">

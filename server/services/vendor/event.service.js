@@ -74,6 +74,15 @@ export const createEventService = async(data)=>{
     }
   }
 
+  if(parsedDate){
+    const d = new Date()
+    const time  = new Date(rawDate)
+    if(d.getTime() > time.getTime()){
+      throw new AppError("You cant host this event",HTTP_STATUS.BAD_REQUEST)
+      return;
+    }
+  }
+  
   validateOfferDates(data.offerEnabled, data.validFrom, data.validUntil, parsedDate || rawDate);
 
   let ticketTiers = data.ticketTiers;

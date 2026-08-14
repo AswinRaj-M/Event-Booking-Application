@@ -9,6 +9,7 @@ import {
 } from "../../repository/user/payment.repo.js";
 import { createPendingBookingService, confirmBookingAfterPaymentService } from "./booking.service.js";
 import Booking from "../../models/booking.model.js";
+import Event from "../../models/event.model.js";
 import { AppError } from "../../utils/AppError.js";
 import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
 
@@ -34,6 +35,17 @@ const getRazorpayInstance = () => {
 export const createRazorpayOrderService = async (userId, { eventId, tierId, quantity, couponCode }) => {
   if (!eventId || !quantity || Number(quantity) <= 0) {
     throw new AppError("Valid Event ID and Quantity are required", HTTP_STATUS.BAD_REQUEST);
+  }
+
+  const event = await Event.findOne({ _id: eventId, isDeleted: false });
+  if (!event) {
+    throw new AppError("Event not found or is currently unavailable", HTTP_STATUS.NOT_FOUND);
+  }
+  if (event.isBlocked) {
+    throw new AppError("This event is blocked by admin", HTTP_STATUS.FORBIDDEN);
+  }
+  if (event.eventStatus === "cancelled" || event.eventStatus === "draft") {
+    throw new AppError(`This event is currently ${event.eventStatus} and unavailable for booking`, HTTP_STATUS.BAD_REQUEST);
   }
 
   // Step A: Create initial pending booking
@@ -123,6 +135,14 @@ export const verifyPaymentSignatureService = async (userId, { razorpay_order_id,
     throw new AppError("Associated booking record not found for this payment", HTTP_STATUS.NOT_FOUND);
   }
 
+  const event = await Event.findById(booking.eventId);
+  if (!event || event.isDeleted) {
+    throw new AppError("Event not found or is currently unavailable", HTTP_STATUS.NOT_FOUND);
+  }
+  if (event.isBlocked) {
+    throw new AppError("This event is blocked by admin", HTTP_STATUS.FORBIDDEN);
+  }
+
   // Security: Prevent Duplicate Verification / Replay Attacks
   if (payment.status === "SUCCESS" && booking.bookingStatus === "confirmed") {
     return {
@@ -137,12 +157,12 @@ export const verifyPaymentSignatureService = async (userId, { razorpay_order_id,
   const now = new Date();
   const isExpired = (booking.checkoutExpiresAt && now > new Date(booking.checkoutExpiresAt)) ||
                     booking.bookingStatus === "expired" ||
-                    booking.bookingStatus === "cancelled";
+                    booking.bookingStatus === "failed";
 
   if (isExpired) {
-    // 1. Mark Booking as cancelled and release inventory
-    booking.bookingStatus = "cancelled";
-    booking.paymentStatus = "failed";
+    // 1. Mark Booking as expired and release inventory
+    booking.bookingStatus = "expired";
+    booking.paymentStatus = "expired";
     booking.isInventoryReleased = true;
     await booking.save();
 
@@ -178,7 +198,7 @@ export const verifyPaymentSignatureService = async (userId, { razorpay_order_id,
     });
 
     booking.paymentStatus = "failed";
-    booking.bookingStatus = "cancelled";
+    booking.bookingStatus = "failed";
     booking.isInventoryReleased = true;
     await booking.save();
 
@@ -225,7 +245,8 @@ export const recordPaymentFailureService = async (userId, { razorpay_order_id, s
   if (payment.orderId) {
     await Booking.findByIdAndUpdate(payment.orderId._id || payment.orderId, {
       paymentStatus: "failed",
-      bookingStatus: "cancelled"
+      bookingStatus: "failed",
+      isInventoryReleased: true
     });
   }
 

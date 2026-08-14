@@ -1,3 +1,5 @@
+import { AppError } from "../../utils/AppError.js";
+import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
 import {
   getExploreEventsRepo,
   findEventById,
@@ -9,7 +11,14 @@ export const getExploreEventsService = async (filters) => {
 };
 
 export const getEventByIdService = async (id) => {
-  return await findEventById(id);
+  const event = await findEventById(id);
+  if (!event || event.isDeleted) {
+    throw new AppError("Event not found", HTTP_STATUS.NOT_FOUND);
+  }
+  if (event.isBlocked) {
+    throw new AppError("This event is blocked by admin", HTTP_STATUS.FORBIDDEN);
+  }
+  return event;
 };
 
 export const getOrganizersService = async (limit) => {

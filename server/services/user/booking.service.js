@@ -43,8 +43,8 @@ export const cleanupExpiredBookingsService = async () => {
     },
     {
       $set: {
-        bookingStatus: "cancelled",
-        paymentStatus: "failed",
+        bookingStatus: "expired",
+        paymentStatus: "expired",
         isInventoryReleased: true,
       },
     }
@@ -59,6 +59,14 @@ export const createPendingBookingService = async (userId, eventId, tierId, quant
 
    if (!event) {
      throw new AppError("Event not found or is currently unavailable", HTTP_STATUS.NOT_FOUND);
+   }
+
+   if (event.isBlocked) {
+     throw new AppError("This event is blocked by admin", HTTP_STATUS.FORBIDDEN);
+   }
+
+   if (event.eventStatus === "cancelled" || event.eventStatus === "draft") {
+     throw new AppError(`This event is currently ${event.eventStatus} and unavailable for booking`, HTTP_STATUS.BAD_REQUEST);
    }
 
    let selectedTier = null;
@@ -195,8 +203,8 @@ export const getBookingDetailsService = async(userId, userRole, bookingId) => {
 
   // Check and update if pending booking has expired
   if (booking.bookingStatus === "pending" && booking.checkoutExpiresAt && new Date() > new Date(booking.checkoutExpiresAt)) {
-    booking.bookingStatus = "cancelled";
-    booking.paymentStatus = "failed";
+    booking.bookingStatus = "expired";
+    booking.paymentStatus = "expired";
     booking.isInventoryReleased = true;
     await booking.save();
   }

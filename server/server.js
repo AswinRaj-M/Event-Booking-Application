@@ -24,7 +24,9 @@ app.use(passport.initialize())
 app.use(express.json())
 app.use(cookieParser());
 app.use(cors({
-  origin: process.env.CLIENT_PORT,
+  origin: (origin, callback) => {
+    callback(null, true);
+  },
   credentials: true
 }))
 
@@ -47,5 +49,7 @@ const server = http.createServer(app)
 initSocket(server)
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`server is running on localhost : ${PORT}`)
+  console.log(`Server is running on: http://localhost:${PORT}`)
+  const tunnelUrl = process.env.PUBLIC_TUNNEL_URL || "https://953308e66be29d.lhr.life";
+  console.log(`Tunnel URL: ${tunnelUrl}`)
 })  
