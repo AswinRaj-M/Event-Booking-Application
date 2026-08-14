@@ -166,7 +166,7 @@ export const getAllBookingsAdminService = async ({
       totalBookings: totalBookingsCount || 12450,
       bookingsGrowth: "+12.5% this month",
       totalEvents: activeEventsCount || 847,
-      eventsLabel: "Active events",
+      eventsLabel: "Events",
       cancelledBookings: cancelledBookingsCount || 432,
       cancelledGrowth: "+2.1% from last week",
       totalRevenue: totalRevenue || 842000,

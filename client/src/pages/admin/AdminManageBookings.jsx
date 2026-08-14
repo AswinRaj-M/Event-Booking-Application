@@ -56,7 +56,7 @@ const AdminManageBookings = () => {
       totalBookings: 12450,
       bookingsGrowth: "+12.5% this month",
       totalEvents: 847,
-      eventsLabel: "Active events",
+      eventsLabel: "Events",
       cancelledBookings: 432,
       cancelledGrowth: "+2.1% from last week",
       totalRevenue: 842000,
@@ -529,7 +529,7 @@ const AdminManageBookings = () => {
                 </div>
                 <div className="flex items-center gap-1.5 text-xs font-bold text-blue-400">
                   <Calendar className="w-3.5 h-3.5" />
-                  <span>{data.kpis.eventsLabel || "Active events"}</span>
+                  <span>{data.kpis.eventsLabel || "Events"}</span>
                 </div>
               </div>
               <div className="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.25)] shrink-0">
