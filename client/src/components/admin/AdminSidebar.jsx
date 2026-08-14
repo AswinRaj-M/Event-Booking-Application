@@ -85,8 +85,8 @@ function AdminSidebar() {
                             <CreditCard className={`mr-3 h-5 w-5 ${isActive(ADMIN_ROUTES.PAYMENTS) ? 'text-purple-400' : 'text-gray-500'}`} />
                             Payments
                         </Link>
-                        <Link to="#" className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive('/admin/analytics') ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
-                            <BarChart3 className={`mr-3 h-5 w-5 ${isActive('/admin/analytics') ? 'text-purple-400' : 'text-gray-500'}`} />
+                        <Link to={ADMIN_ROUTES.ANALYTICS} className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive(ADMIN_ROUTES.ANALYTICS) ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
+                            <BarChart3 className={`mr-3 h-5 w-5 ${isActive(ADMIN_ROUTES.ANALYTICS) ? 'text-purple-400' : 'text-gray-500'}`} />
                             Analytics
                         </Link>
                     </nav>

@@ -9,4 +9,5 @@ export const ADMIN_ROUTES = {
   COUPONS: '/admin/coupons',
   CREATE_COUPON: '/admin/coupons/create',
   PAYMENTS: '/admin/payments',
+  ANALYTICS: '/admin/analytics',
 };

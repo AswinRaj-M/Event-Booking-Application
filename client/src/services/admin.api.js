@@ -118,4 +118,9 @@ export const recordAdminWalletPaymentFailureApi = (data) => {
 
 export const getAdminWalletDetailsApi = (params = {}) => {
   return axiosInstance.get("/admin/wallet/details", { params });
+};
+
+// Admin Analytics API
+export const getAdminAnalyticsApi = (params = {}) => {
+  return axiosInstance.get("/admin/analytics", { params });
 };

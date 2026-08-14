@@ -100,4 +100,8 @@ router.post('/wallet/verify-payment', protect, requireRole("admin"), asyncHandle
 router.post('/wallet/record-failure', protect, requireRole("admin"), asyncHandler(recordAdminWalletPaymentFailure))
 router.get('/wallet/details', protect, requireRole("admin"), asyncHandler(getAdminWalletDetails))
 
+// Admin Analytics
+import { getAdminAnalytics } from "../controllers/admin/analytics.controller.js"
+router.get('/analytics', protect, requireRole("admin"), asyncHandler(getAdminAnalytics))
+
 export default router
