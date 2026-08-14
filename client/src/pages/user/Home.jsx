@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
-import { Search, MapPin, Calendar, Clock, ArrowRight, Ticket, Star, Users, Tag, Copy, Check, Award, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, MapPin, Calendar, Clock, ArrowRight, Ticket, Star, Users, Tag, Copy, Check, Award, ChevronLeft, ChevronRight, MessageSquare, X } from 'lucide-react';
 import { VENDOR_ROUTES, USER_ROUTES } from '../../constants/Routes';
 import { getExploreEvents, getPublicCouponsApi, getOrganizersApi } from '../../services/user.api.js';
 import { getAllCategories } from '../../services/common.api.js';
@@ -27,6 +27,7 @@ const Home = () => {
   const [organizers, setOrganizers] = useState([]);
   const [copiedCode, setCopiedCode] = useState("");
   const [currentCouponIndex, setCurrentCouponIndex] = useState(0);
+  const [feedbacksModalOrg, setFeedbacksModalOrg] = useState(null);
   const [stats, setStats] = useState({ totalEvents: 0, totalUsers: 0, rating: 0 });
   const [loading, setLoading] = useState(true);
   const [organizersLoading, setOrganizersLoading] = useState(true);
@@ -473,10 +474,10 @@ const Home = () => {
                 return (
                   <div
                     key={org._id}
-                    className="bg-[#0A0A0A] border border-white/5 rounded-2xl p-6 flex flex-col items-center text-center hover:border-purple-500/30 transition-all duration-300 group hover:-translate-y-1 shadow-xl hover:shadow-[0_10px_30px_rgba(147,51,234,0.1)] relative overflow-hidden"
+                    className="bg-[#0A0A0A] border border-white/5 rounded-2xl p-6 flex flex-col items-center text-center hover:border-purple-500/30 transition-all duration-300 group hover:-translate-y-1 shadow-xl hover:shadow-[0_10px_30px_rgba(147,51,234,0.1)] relative hover:z-40 focus-within:z-40"
                   >
                     {/* Background subtle hover glow */}
-                    <div className="absolute inset-0 bg-gradient-to-b from-purple-950/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-purple-950/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
                     {/* Avatar Container */}
                     <div className="relative mb-4">
@@ -545,25 +546,98 @@ const Home = () => {
 
                     {/* Recent Written Feedback Section */}
                     {org.recentReviews && org.recentReviews.length > 0 ? (
-                      <div className="w-full bg-[#120f26]/70 border border-purple-500/15 rounded-xl p-3 mb-4 text-left shadow-inner flex flex-col justify-between flex-grow">
+                      <div className="w-full bg-[#120f26]/70 border border-purple-500/15 rounded-xl p-3 mb-4 text-left shadow-inner flex flex-col justify-between flex-grow relative">
                         <p className="text-xs text-zinc-300 italic line-clamp-2 leading-relaxed font-light mb-2">
                           "{org.recentReviews[0].feedback}"
                         </p>
-                        <div className="flex items-center gap-2 mt-auto pt-1 border-t border-white/5">
-                          <div className="w-4 h-4 rounded-full bg-purple-900/60 border border-purple-500/30 overflow-hidden flex items-center justify-center text-[8px] font-bold text-purple-300 shrink-0 select-none">
-                            {org.recentReviews[0].reviewerAvatar ? (
-                              <img
-                                src={org.recentReviews[0].reviewerAvatar}
-                                alt={org.recentReviews[0].reviewerName}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              org.recentReviews[0].reviewerName?.charAt(0).toUpperCase() || "U"
-                            )}
+
+                        <div className="flex items-center justify-between gap-1.5 mt-auto pt-1.5 border-t border-white/5">
+                          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                            <div className="w-4 h-4 rounded-full bg-purple-900/60 border border-purple-500/30 overflow-hidden flex items-center justify-center text-[8px] font-bold text-purple-300 shrink-0 select-none">
+                              {org.recentReviews[0].reviewerAvatar ? (
+                                <img
+                                  src={org.recentReviews[0].reviewerAvatar}
+                                  alt={org.recentReviews[0].reviewerName}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                org.recentReviews[0].reviewerName?.charAt(0).toUpperCase() || "U"
+                              )}
+                            </div>
+                            <span className="text-[10px] text-zinc-400 font-medium truncate">
+                              — {org.recentReviews[0].reviewerName || "Verified Attendee"}
+                            </span>
                           </div>
-                          <span className="text-[10px] text-zinc-400 font-medium truncate">
-                            — {org.recentReviews[0].reviewerName || "Verified Attendee"}
-                          </span>
+
+                          {/* View All Feedbacks Hover Trigger */}
+                          {org.recentReviews.length > 1 && (
+                            <div className="relative group/tooltip shrink-0">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setFeedbacksModalOrg(org);
+                                }}
+                                className="text-[10px] text-purple-400 hover:text-purple-300 font-bold underline underline-offset-2 flex items-center gap-1 cursor-pointer transition-colors"
+                              >
+                                <span>View feedbacks</span>
+                                <span className="bg-purple-500/25 text-purple-300 px-1 py-0.2 rounded text-[9px] font-extrabold">
+                                  {org.recentReviews.length}
+                                </span>
+                              </button>
+
+                              {/* Hover Floating Popover with All Feedbacks (Desktop hover) */}
+                              <div className="hidden sm:block absolute bottom-full right-0 sm:right-auto sm:left-1/2 sm:-translate-x-1/2 mb-2 w-72 sm:w-80 max-w-[calc(100vw-3rem)] bg-[#0E0C1F]/98 border border-purple-500/40 rounded-2xl p-3.5 shadow-[0_10px_40px_rgba(0,0,0,0.95)] z-50 pointer-events-none group-hover/tooltip:pointer-events-auto opacity-0 group-hover/tooltip:opacity-100 transition-all duration-200 transform translate-y-1 group-hover/tooltip:translate-y-0 backdrop-blur-2xl max-h-72 overflow-y-auto scrollbar-thin scrollbar-thumb-purple-900/50 text-left">
+                                <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-purple-500/20">
+                                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-purple-300 flex items-center gap-1.5">
+                                    <MessageSquare className="w-3.5 h-3.5 text-purple-400" />
+                                    All Feedbacks ({org.recentReviews.length})
+                                  </span>
+                                  <div className="flex items-center gap-1 text-amber-400 text-xs font-bold">
+                                    <Star className="w-3 h-3 fill-amber-400" />
+                                    <span>{Number(org.rating).toFixed(1)}</span>
+                                  </div>
+                                </div>
+
+                                <div className="space-y-2.5">
+                                  {org.recentReviews.map((rev, rIdx) => (
+                                    <div key={rev._id || rIdx} className="bg-white/[0.03] border border-white/5 rounded-xl p-2.5 hover:border-purple-500/20 transition-colors">
+                                      <div className="flex items-center justify-between mb-1.5">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                          <div className="w-5 h-5 rounded-full bg-purple-950/80 border border-purple-500/30 overflow-hidden flex items-center justify-center text-[9px] font-bold text-purple-300 shrink-0 select-none">
+                                            {rev.reviewerAvatar ? (
+                                              <img src={rev.reviewerAvatar} alt={rev.reviewerName} className="w-full h-full object-cover" />
+                                            ) : (
+                                              rev.reviewerName?.charAt(0).toUpperCase() || "U"
+                                            )}
+                                          </div>
+                                          <span className="text-xs font-bold text-white truncate">
+                                            {rev.reviewerName || "Verified Attendee"}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center gap-0.5 text-amber-400 shrink-0">
+                                          {[1, 2, 3, 4, 5].map((s) => (
+                                            <Star
+                                              key={s}
+                                              className={`w-2.5 h-2.5 ${s <= (rev.rating || 5) ? "fill-amber-400 text-amber-400" : "text-zinc-700"}`}
+                                            />
+                                          ))}
+                                        </div>
+                                      </div>
+                                      <p className="text-[11px] text-zinc-300 italic font-light leading-relaxed">
+                                        "{rev.feedback}"
+                                      </p>
+                                      {rev.createdAt && (
+                                        <span className="text-[9px] text-zinc-500 block mt-1">
+                                          {new Date(rev.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                                        </span>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ) : (
@@ -585,6 +659,83 @@ const Home = () => {
                   </div>
                 );
               })}
+            </div>
+          )}
+
+          {/* Feedbacks Modal Dialog (Mobile & Click View) */}
+          {feedbacksModalOrg && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn"
+              onClick={() => setFeedbacksModalOrg(null)}
+            >
+              <div
+                className="bg-[#0B0914] border border-purple-500/30 rounded-3xl w-full max-w-md p-6 shadow-[0_0_50px_rgba(147,51,234,0.2)] relative text-left max-h-[85vh] flex flex-col"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  onClick={() => setFeedbacksModalOrg(null)}
+                  className="absolute top-5 right-5 text-zinc-400 hover:text-white p-1.5 rounded-xl hover:bg-white/5 transition-colors cursor-pointer"
+                  title="Close"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+
+                <div className="flex items-center gap-3 mb-5 pr-8">
+                  <div className="w-10 h-10 rounded-xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0">
+                    <MessageSquare className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-base font-extrabold text-white tracking-tight truncate">
+                      {feedbacksModalOrg.organizerName || feedbacksModalOrg.businessName || "Organizer Feedbacks"}
+                    </h3>
+                    <div className="flex items-center gap-1.5 text-xs text-zinc-400 mt-0.5">
+                      <div className="flex items-center gap-0.5 text-amber-400">
+                        <Star className="w-3.5 h-3.5 fill-amber-400" />
+                        <span className="font-bold text-white ml-0.5">{Number(feedbacksModalOrg.rating).toFixed(1)}</span>
+                      </div>
+                      <span>•</span>
+                      <span>{feedbacksModalOrg.recentReviews?.length || 0} Feedbacks</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3 overflow-y-auto pr-1 flex-1 scrollbar-thin scrollbar-thumb-purple-900/50">
+                  {feedbacksModalOrg.recentReviews?.map((rev, rIdx) => (
+                    <div key={rev._id || rIdx} className="bg-white/[0.03] border border-white/5 rounded-2xl p-3.5">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-6 h-6 rounded-full bg-purple-950/80 border border-purple-500/30 overflow-hidden flex items-center justify-center text-[10px] font-bold text-purple-300 shrink-0 select-none">
+                            {rev.reviewerAvatar ? (
+                              <img src={rev.reviewerAvatar} alt={rev.reviewerName} className="w-full h-full object-cover" />
+                            ) : (
+                              rev.reviewerName?.charAt(0).toUpperCase() || "U"
+                            )}
+                          </div>
+                          <span className="text-xs font-bold text-white truncate">
+                            {rev.reviewerName || "Verified Attendee"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-0.5 text-amber-400 shrink-0">
+                          {[1, 2, 3, 4, 5].map((s) => (
+                            <Star
+                              key={s}
+                              className={`w-3 h-3 ${s <= (rev.rating || 5) ? "fill-amber-400 text-amber-400" : "text-zinc-700"}`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      <p className="text-xs text-zinc-300 italic font-light leading-relaxed">
+                        "{rev.feedback}"
+                      </p>
+                      {rev.createdAt && (
+                        <span className="text-[10px] text-zinc-500 block mt-2">
+                          {new Date(rev.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </section>

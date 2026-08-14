@@ -139,7 +139,7 @@ export const getOrganizersRepo = async (limit = 8) => {
             $sort: { createdAt: -1 }
           },
           {
-            $limit: 3
+            $limit: 50
           },
           {
             $lookup: {
