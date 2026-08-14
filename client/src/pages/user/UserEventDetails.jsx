@@ -231,7 +231,7 @@ const UserEventDetails = () => {
     }
   }, [selectedTierIndex, availableSeats]);
 
-  // Standard Mock Service Fee matches photo ($14.90 for standard booking, or $0 if free)
+  // Standard Service Fee (₹14.90 for standard booking, or ₹0 if free)
   const serviceFee = isFree ? 0 : 14.90;
 
   const discountPercent = useMemo(() => {

@@ -15,7 +15,7 @@ import {
   HandCoins,
   ShieldCheck,
   Building2,
-  DollarSign,
+  IndianRupee,
   Sidebar,
   CheckCircle2,
   XCircle,

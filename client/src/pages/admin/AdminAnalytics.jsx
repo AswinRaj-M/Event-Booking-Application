@@ -5,7 +5,6 @@ import {
   Calendar,
   CreditCard,
   Activity,
-  DollarSign,
   TrendingUp,
   Download,
   ChevronDown,
