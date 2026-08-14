@@ -140,19 +140,34 @@ const AdminPaymentPage = () => {
       // 3. Build Unified Transactions Ledger (Admin Deposits + Vendor Payouts)
       const allTx = [];
 
-      // Add Admin Wallet Deposits
+      // Add Admin Wallet Transactions (Deposits, Platform Commissions, Refunds)
       if (walletRes?.data?.data?.transactions) {
         walletRes.data.data.transactions.forEach((tx) => {
-          const isDeposit = tx.transactionType === "deposit";
+          const isCredit = tx.amount >= 0;
+          let category = "Admin Deposit";
+          let from = "Razorpay Payment";
+          if (tx.transactionType === "commission") {
+            category = "Platform Commission";
+            from = "Booking Platform Fee";
+          } else if (tx.transactionType === "refund") {
+            category = "Refund Reversal";
+            from = "Booking Cancellation";
+          } else if (tx.transactionType === "payout") {
+            category = "Vendor Payout";
+            from = "Admin Wallet";
+          }
+
           allTx.push({
             id: tx.razorpayPaymentId || `TXN-${tx._id.slice(-6).toUpperCase()}`,
-            type: isDeposit ? "Credit" : "Debit",
-            category: "Admin Deposit",
-            typeBg: "bg-emerald-950/60 border-emerald-500/30 text-emerald-400",
+            type: isCredit ? "Credit" : "Debit",
+            category,
+            typeBg: isCredit
+              ? "bg-emerald-950/60 border-emerald-500/30 text-emerald-400"
+              : "bg-rose-950/60 border-rose-500/30 text-rose-400",
             amount: tx.amount,
-            from: "Razorpay Payment",
-            reason: tx.description || "Admin wallet deposit via Razorpay",
-            paymentId: tx.razorpayPaymentId || tx.razorpayOrderId || "N/A",
+            from,
+            reason: tx.description || "Admin wallet transaction",
+            paymentId: tx.razorpayPaymentId || tx.razorpayOrderId || (tx.metadata?.bookingCode || "N/A"),
             status: tx.status === "completed" ? "Completed" : (tx.status === "failed" ? "Failed" : "Pending"),
             statusBg: tx.status === "completed"
               ? "bg-emerald-950/60 border-emerald-500/30 text-emerald-400"
@@ -832,7 +847,7 @@ const AdminPaymentPage = () => {
 
                           <td className="px-3 py-3.5 whitespace-nowrap">
                             <span className={`inline-block px-2.5 py-0.5 rounded-md text-[10px] font-extrabold border ${tx.typeBg}`}>
-                              {tx.type} {isCredit ? "(Deposit)" : "(Payout)"}
+                              {tx.type} ({tx.category || (isCredit ? "Deposit" : "Payout")})
                             </span>
                           </td>
 

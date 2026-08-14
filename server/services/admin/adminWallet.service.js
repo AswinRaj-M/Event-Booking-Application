@@ -11,7 +11,10 @@ import {
 } from "../../repository/admin/adminWallet.repo.js";
 import WithdrawalRequest from "../../models/withdrawalRequest.model.js";
 import WalletTransaction from "../../models/walletTransaction.model.js";
+import AdminWalletTransaction from "../../models/adminWalletTransaction.model.js";
 import Booking from "../../models/booking.model.js";
+import User from "../../models/user.model.js";
+import { getPlatformCommissionRate } from "../../config/commission.config.js";
 import { AppError } from "../../utils/AppError.js";
 import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
 
@@ -316,3 +319,172 @@ export const getAdminWalletDetailsService = async (adminId, queryParams = {}) =>
     },
   };
 };
+
+/**
+ * Process and credit platform commission (and deduct admin-funded coupon discount) to Admin Wallet
+ * Called automatically upon successful booking confirmation.
+ */
+export const processAdminBookingCommission = async (booking) => {
+  if (!booking || !booking._id) {
+    throw new AppError("Invalid booking details for admin wallet processing", HTTP_STATUS.BAD_REQUEST);
+  }
+
+  // 1. Idempotency Check: Prevent duplicate commission processing
+  const existingTx = await AdminWalletTransaction.findOne({
+    "metadata.bookingId": booking._id,
+    transactionType: "commission",
+  });
+  if (existingTx) {
+    console.log(`[Admin Wallet] Commission already credited for booking: ${booking._id}`);
+    return existingTx;
+  }
+
+  // 2. Find system administrator
+  const adminUser = await User.findOne({ role: "admin" });
+  if (!adminUser) {
+    console.error("[Admin Wallet] System admin account not found.");
+    return null;
+  }
+
+  // 3. Calculate Platform Fee and Admin-funded Coupon Discount
+  const grossAmount = Number(booking.originalAmount) > 0
+    ? Number(booking.originalAmount)
+    : (Number(booking.ticketPrice) * (Number(booking.quantity) || 1)) || (Number(booking.totalAmount) + Number(booking.couponDiscount || 0));
+
+  const commissionRate = getPlatformCommissionRate();
+  const platformCommission = Number(((grossAmount * commissionRate) / 100).toFixed(2));
+  const couponDiscount = Number(booking.couponDiscount) || 0;
+
+  // Net Admin credit = Platform Fee - Coupon Discount (Admin absorbs coupon discount)
+  const adminNetAmount = Number((platformCommission - couponDiscount).toFixed(2));
+
+  // 4. Update Admin Wallet balance & totalCommissionEarned
+  const adminWallet = await findOrCreateAdminWalletRepo(adminUser._id);
+  const updatedWallet = await updateAdminWalletBalanceRepo(adminWallet._id, {
+    balanceInc: adminNetAmount,
+    totalCommissionInc: platformCommission,
+  });
+
+  // 5. Create AdminWalletTransaction ledger record
+  const bookingCode = booking.bookingId || `BK-${booking._id.toString().slice(-6).toUpperCase()}`;
+  const description = couponDiscount > 0
+    ? `Platform commission (₹${platformCommission.toFixed(2)}) - Coupon subsidy (₹${couponDiscount.toFixed(2)}) for #${bookingCode}`
+    : `Platform commission for #${bookingCode}`;
+
+  const transaction = await createAdminWalletTransactionRepo({
+    walletId: adminWallet._id,
+    adminId: adminUser._id,
+    transactionType: "commission",
+    amount: adminNetAmount,
+    currency: "INR",
+    status: "completed",
+    paymentMethod: "platform",
+    description,
+    metadata: {
+      bookingId: booking._id,
+      bookingCode,
+      eventId: booking.eventId?._id || booking.eventId,
+      grossAmount,
+      platformCommission,
+      couponDiscount,
+      commissionRate,
+      netAdminEarnings: adminNetAmount,
+    },
+  });
+
+  return {
+    adminWallet: updatedWallet,
+    transaction,
+    adminNetAmount,
+    platformCommission,
+    couponDiscount,
+  };
+};
+
+/**
+ * Reverse platform commission (and recover admin-funded coupon subsidy) on refund
+ * Handles both full booking cancellations and single/partial ticket cancellations.
+ */
+export const processAdminBookingRefund = async (
+  booking,
+  { isPartial = false, ticketId = null, cancelledTicketsCount = 1, totalQuantity = 1 } = {}
+) => {
+  if (!booking || !booking._id) return null;
+
+  // 1. Idempotency Check: Prevent duplicate refund transactions
+  const query = isPartial && ticketId
+    ? { "metadata.ticketId": ticketId, transactionType: "refund" }
+    : { "metadata.bookingId": booking._id, transactionType: "refund", "metadata.isPartial": false };
+
+  const existingRefundTx = await AdminWalletTransaction.findOne(query);
+  if (existingRefundTx) {
+    console.log(`[Admin Wallet] Refund transaction already processed for booking: ${booking._id}`);
+    return existingRefundTx;
+  }
+
+  // 2. Find system administrator
+  const adminUser = await User.findOne({ role: "admin" });
+  if (!adminUser) {
+    console.error("[Admin Wallet] System admin account not found for refund reversal.");
+    return null;
+  }
+
+  // 3. Calculate full booking financials
+  const fullGross = Number(booking.originalAmount) > 0
+    ? Number(booking.originalAmount)
+    : (Number(booking.ticketPrice) * (Number(booking.quantity) || 1)) || (Number(booking.totalAmount) + Number(booking.couponDiscount || 0));
+
+  const commissionRate = getPlatformCommissionRate();
+  const fullCommission = Number(((fullGross * commissionRate) / 100).toFixed(2));
+  const fullCoupon = Number(booking.couponDiscount) || 0;
+
+  // Proportional calculations based on cancelled ticket count
+  const count = Number(cancelledTicketsCount) || 1;
+  const total = Number(totalQuantity) || (Number(booking.quantity) || 1);
+
+  const refundedCommission = Number(((fullCommission * count) / total).toFixed(2));
+  const recoveredCoupon = Number(((fullCoupon * count) / total).toFixed(2));
+  const adminRefundDeduction = Number((refundedCommission - recoveredCoupon).toFixed(2));
+
+  // 4. Update Admin Wallet balance & commission totals
+  const adminWallet = await findOrCreateAdminWalletRepo(adminUser._id);
+  const updatedWallet = await updateAdminWalletBalanceRepo(adminWallet._id, {
+    balanceInc: -adminRefundDeduction,
+    totalCommissionInc: -refundedCommission,
+  });
+
+  // 5. Create AdminWalletTransaction refund ledger record
+  const bookingCode = booking.bookingId || `BK-${booking._id.toString().slice(-6).toUpperCase()}`;
+  const description = isPartial
+    ? `Commission reversal on ticket cancellation (${ticketId})`
+    : `Commission reversal on booking cancellation #${bookingCode}`;
+
+  const transaction = await createAdminWalletTransactionRepo({
+    walletId: adminWallet._id,
+    adminId: adminUser._id,
+    transactionType: "refund",
+    amount: -adminRefundDeduction,
+    currency: "INR",
+    status: "completed",
+    paymentMethod: "platform",
+    description,
+    metadata: {
+      bookingId: booking._id,
+      bookingCode,
+      ticketId,
+      isPartial,
+      cancelledTicketsCount: count,
+      totalQuantity: total,
+      refundedCommission,
+      recoveredCoupon,
+      netAdminRefundDeduction: adminRefundDeduction,
+    },
+  });
+
+  return {
+    adminWallet: updatedWallet,
+    transaction,
+    adminRefundDeduction,
+  };
+};
+

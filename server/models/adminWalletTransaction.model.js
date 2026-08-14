@@ -16,7 +16,7 @@ const adminWalletTransactionSchema = new mongoose.Schema(
     },
     transactionType: {
       type: String,
-      enum: ["deposit", "payout", "commission", "adjustment"],
+      enum: ["deposit", "payout", "commission", "coupon_subsidy", "refund", "adjustment"],
       required: true,
       default: "deposit",
     },

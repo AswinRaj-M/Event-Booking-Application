@@ -119,19 +119,22 @@ export const processVendorBookingEarnings = async (booking) => {
 };
 
 /**
- * Process & Deduct Vendor Wallet Balance for a Booking Refund (Booking-Level)
- * Creates ONLY ONE WalletTransaction per booking refund.
+ * Process & Deduct Vendor Wallet Balance for a Booking Refund (Supports both Full Booking and Partial/Single Ticket cancellations)
  */
-export const processVendorBookingRefund = async (booking) => {
+export const processVendorBookingRefund = async (
+  booking,
+  { isPartial = false, ticketId = null, cancelledTicketsCount = 1, totalQuantity = 1 } = {}
+) => {
   if (!booking || !booking._id) return null;
 
-  // 1. Idempotency Check: Prevent duplicate refund transactions for the same bookingId
-  const existingRefundTx = await WalletTransaction.findOne({
-    bookingId: booking._id,
-    transactionType: "refund",
-  });
+  // 1. Idempotency Check: Prevent duplicate refund transactions
+  const query = isPartial && ticketId
+    ? { bookingId: booking._id, transactionType: "refund", description: { $regex: ticketId } }
+    : { bookingId: booking._id, transactionType: "refund" };
+
+  const existingRefundTx = await WalletTransaction.findOne(query);
   if (existingRefundTx) {
-    console.log(`[Wallet] Refund transaction already processed for booking: ${booking._id}`);
+    console.log(`[Vendor Wallet] Refund transaction already processed for booking/ticket: ${booking._id}`);
     return existingRefundTx;
   }
 
@@ -149,23 +152,33 @@ export const processVendorBookingRefund = async (booking) => {
 
   const vendorId = event.vendorId?._id || event.vendorId;
 
-  // 2. Calculate Total Booking Refund Amount & Commission based on the original booking amount
-  const grossAmount = Number(booking.originalAmount) > 0 
+  // 2. Calculate Proportional Booking Refund Amount & Commission based on the original booking amount
+  const fullGross = Number(booking.originalAmount) > 0 
     ? Number(booking.originalAmount) 
     : (booking.ticketPrice * (booking.quantity || 1)) || (Number(booking.totalAmount) + Number(booking.couponDiscount || 0));
 
-  const earningsData = calculatePlatformCommission(grossAmount);
+  const count = Number(cancelledTicketsCount) || 1;
+  const total = Number(totalQuantity) || (Number(booking.quantity) || 1);
+
+  const proportionalGross = Number(((fullGross * count) / total).toFixed(2));
+  const proportionalCoupon = Number((((Number(booking.couponDiscount) || 0) * count) / total).toFixed(2));
+
+  const earningsData = calculatePlatformCommission(proportionalGross);
 
   const wallet = await findOrCreateWalletRepo(vendorId);
 
-  // 3. Deduct total net vendor earnings from Available Balance & Total Earnings safely
+  // 3. Deduct proportional net vendor earnings from Available Balance & Total Earnings safely
   const updatedWallet = await updateWalletBalanceRepo(wallet._id, {
     availableBalanceInc: -earningsData.netEarnings,
     totalEarningsInc: -earningsData.netEarnings,
     pendingBalanceInc: 0,
   });
 
-  // 4. Create ONLY ONE WalletTransaction record for the entire booking refund
+  // 4. Create WalletTransaction record for the refund
+  const description = isPartial && ticketId
+    ? `Ticket cancellation refund for "${event.title}" (${ticketId})`
+    : `Booking cancellation refund for "${event.title}"`;
+
   const transaction = await createWalletTransactionRepo({
     walletId: wallet._id,
     vendorId: vendorId,
@@ -174,16 +187,17 @@ export const processVendorBookingRefund = async (booking) => {
     transactionType: "refund",
     amount: -earningsData.grossAmount,
     platformCommission: -earningsData.platformCommission,
-    adminCouponDiscount: -(Number(booking.couponDiscount) || 0),
+    adminCouponDiscount: -proportionalCoupon,
     netAmount: -earningsData.netEarnings,
     status: "completed",
-    description: `Booking cancellation refund for "${event.title}"`,
+    description,
     createdTime: new Date(),
   });
 
   return {
     wallet: updatedWallet,
     transaction,
+    earningsData,
   };
 };
 

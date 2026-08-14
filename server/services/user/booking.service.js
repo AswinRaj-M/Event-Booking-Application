@@ -11,6 +11,7 @@ import { validateAndApplyCoupon } from "./coupon.service.js";
 import CouponRedemption from "../../models/couponRedemption.model.js";
 import { generateQRCode } from "../../utils/generateQrCode.js";
 import { processVendorBookingEarnings, processVendorBookingRefund } from "../vendor/vendorWallet.service.js";
+import { processAdminBookingCommission, processAdminBookingRefund } from "../admin/adminWallet.service.js";
 import {
   updateUserWalletBalanceRepo,
   createUserWalletTransactionRepo
@@ -281,6 +282,13 @@ export const confirmBookingAfterPaymentService = async (bookingId) => {
     console.error("Error processing vendor wallet earnings on booking confirmation:", err);
   }
 
+  // Credit Admin Wallet with Platform Fee (and absorb coupon discount)
+  try {
+    await processAdminBookingCommission(booking);
+  } catch (err) {
+    console.error("Error processing admin wallet commission on booking confirmation:", err);
+  }
+
   // Consume applied coupon only after successful payment confirmation
   if (booking.couponCode && booking.couponDiscount > 0) {
     try {
@@ -513,11 +521,28 @@ export const cancelTicketService = async(userId, ticketId, allowedLimitHours = 0
     }
   }
 
-  // 4. Process Vendor Wallet Refund Deduction
+  // 4. Process Vendor Wallet Proportional Refund Deduction
   try {
-    await processVendorBookingRefund(booking);
+    await processVendorBookingRefund(booking, {
+      isPartial: true,
+      ticketId: ticket.ticketId,
+      cancelledTicketsCount: 1,
+      totalQuantity,
+    });
   } catch (err) {
-    console.error("Error processing vendor wallet refund deduction:", err);
+    console.error("Error processing vendor wallet refund deduction on ticket cancellation:", err);
+  }
+
+  // 5. Process Admin Wallet Commission & Coupon Reversal
+  try {
+    await processAdminBookingRefund(booking, {
+      isPartial: true,
+      ticketId: ticket.ticketId,
+      cancelledTicketsCount: 1,
+      totalQuantity,
+    });
+  } catch (err) {
+    console.error("Error processing admin wallet refund deduction on ticket cancellation:", err);
   }
 
   // 5. Decrement Event Sold Ticket Count
@@ -701,9 +726,24 @@ export const cancelBookingService = async (userId, bookingId, allowedLimitHours 
 
   // 4. Process Vendor Wallet Refund Deduction
   try {
-    await processVendorBookingRefund(booking);
+    await processVendorBookingRefund(booking, {
+      isPartial: false,
+      cancelledTicketsCount: unCancelledTickets.length,
+      totalQuantity,
+    });
   } catch (err) {
-    console.error("Error processing vendor wallet refund deduction:", err);
+    console.error("Error processing vendor wallet refund deduction on booking cancellation:", err);
+  }
+
+  // 5. Process Admin Wallet Commission & Coupon Reversal
+  try {
+    await processAdminBookingRefund(booking, {
+      isPartial: false,
+      cancelledTicketsCount: unCancelledTickets.length,
+      totalQuantity,
+    });
+  } catch (err) {
+    console.error("Error processing admin wallet refund deduction on booking cancellation:", err);
   }
 
   // 5. Decrement Event Sold Ticket Count
