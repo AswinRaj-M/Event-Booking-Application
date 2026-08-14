@@ -371,25 +371,49 @@ const AdminManageBookings = () => {
   }, [searchTerm]);
 
   // Export Bookings PDF Report with jsPDF
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     try {
       toast.loading("Generating bookings report PDF...", { id: "booking-pdf" });
+      
+      // If there are more records than currently loaded in the page, fetch full list for export
+      let exportBookings = data.bookings;
+      if (data.pagination && data.pagination.total > data.bookings.length) {
+        try {
+          const exportRes = await getAllBookingsAdminApi({
+            page: 1,
+            limit: Math.min(200, data.pagination.total),
+            search: searchTerm,
+            status: statusFilter,
+            paymentStatus: paymentFilter,
+            startDate: dateFilter,
+          });
+          if (exportRes.data?.success && exportRes.data.data?.bookings) {
+            exportBookings = exportRes.data.data.bookings;
+          }
+        } catch (e) {
+          // Fallback to current page bookings if full fetch fails
+          exportBookings = data.bookings;
+        }
+      }
+
       const doc = new jsPDF("landscape");
 
+      // Report Header
       doc.setFontSize(18);
       doc.setTextColor(20, 20, 30);
       doc.text("Festivo Platform - Booking Management Report", 14, 18);
 
+      // Metadata Subtitle
       doc.setFontSize(10);
       doc.setTextColor(100);
       doc.text(
-        `Generated on: ${new Date().toLocaleString("en-IN")} | Total Bookings: ${data.pagination?.total || data.bookings.length}`,
+        `Generated on: ${new Date().toLocaleString("en-IN")} | Total Records: ${exportBookings.length} | Status Filter: ${statusFilter.toUpperCase()} | Payment Filter: ${paymentFilter.toUpperCase()}`,
         14,
         25
       );
       doc.setTextColor(0);
 
-      // Section 1: KPI Metrics
+      // Section 1: Platform Summary KPI Table
       doc.setFontSize(12);
       doc.text("Platform Summary", 14, 34);
 
@@ -398,11 +422,11 @@ const AdminManageBookings = () => {
           "Total Bookings",
           `${data.kpis.totalBookings?.toLocaleString() || "0"} (${data.kpis.bookingsGrowth})`,
           "Total Events",
-          `${data.kpis.totalEvents?.toLocaleString() || "0"} (${data.kpis.eventsLabel})`,
+          `${data.kpis.totalEvents?.toLocaleString() || "0"} (${data.kpis.eventsLabel || "Events"})`,
           "Cancelled Bookings",
           `${data.kpis.cancelledBookings?.toLocaleString() || "0"} (${data.kpis.cancelledGrowth})`,
           "Total Revenue",
-          `₹${(data.kpis.totalRevenue || 0).toLocaleString("en-IN")} (${data.kpis.revenueGrowth})`,
+          `INR ${(data.kpis.totalRevenue || 0).toLocaleString("en-IN")} (${data.kpis.revenueGrowth})`,
         ],
       ];
 
@@ -418,9 +442,9 @@ const AdminManageBookings = () => {
       // Section 2: Bookings Table
       const currentY = doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY + 10 : 60;
       doc.setFontSize(12);
-      doc.text("Recent Event Bookings", 14, currentY);
+      doc.text("Event Bookings Ledger", 14, currentY);
 
-      const bookingRows = data.bookings.map((b) => [
+      const bookingRows = exportBookings.map((b) => [
         b.bookingId || "-",
         b.user?.name || "Customer",
         b.user?.email || "-",
@@ -428,7 +452,7 @@ const AdminManageBookings = () => {
         b.event?.organizer || "Vendor",
         b.date || "-",
         b.ticketsCount?.toString() || "1",
-        `₹${Number(b.totalAmount || 0).toLocaleString("en-IN")}`,
+        `INR ${Number(b.totalAmount || 0).toLocaleString("en-IN")}`,
         b.paymentStatus?.toUpperCase() || "PENDING",
         b.bookingStatus?.toUpperCase() || "PENDING",
       ]);
@@ -436,7 +460,7 @@ const AdminManageBookings = () => {
       autoTable(doc, {
         startY: currentY + 4,
         head: [["Booking ID", "Customer", "Email", "Event Title", "Organizer", "Date", "Tickets", "Amount", "Payment", "Status"]],
-        body: bookingRows,
+        body: bookingRows.length > 0 ? bookingRows : [["-", "No bookings found", "-", "-", "-", "-", "-", "-", "-", "-"]],
         theme: "striped",
         headStyles: { fillColor: [109, 40, 217] },
         styles: { fontSize: 8 },

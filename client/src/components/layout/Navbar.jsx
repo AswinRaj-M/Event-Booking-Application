@@ -47,8 +47,8 @@ const Navbar = () => {
         if (path === USER_ROUTES.HOME) return "Home";
         if (path === USER_ROUTES.EXPLORE) return "Browse Events";
         if (path === USER_ROUTES.BOOKINGS) return "My Bookings";
+        if (path === COMMON_ROUTES.ABOUT || hash.includes("about")) return "About Us";
         if (hash.includes("browse")) return "Browse Events";
-        if (hash.includes("about")) return "About Us";
         return "Home";
     });
 
@@ -60,8 +60,8 @@ const Navbar = () => {
         else if (path === USER_ROUTES.HOME) setActiveMenu("Home");
         else if (path === USER_ROUTES.EXPLORE) setActiveMenu("Browse Events");
         else if (path === USER_ROUTES.BOOKINGS) setActiveMenu("My Bookings");
+        else if (path === COMMON_ROUTES.ABOUT || hash.includes("about")) setActiveMenu("About Us");
         else if (hash.includes("browse")) setActiveMenu("Browse Events");
-        else if (hash.includes("about")) setActiveMenu("About Us");
     }, [location.pathname, location.hash]);
 
     // Lock body scroll when sidebar drawer is open
@@ -105,7 +105,7 @@ const Navbar = () => {
         { name: "My Bookings", path: USER_ROUTES.BOOKINGS },
         { name: "Home", path: USER_ROUTES.HOME },
         { name: "Profile", path: USER_ROUTES.PROFILE },
-        { name: "About Us", path: "#about" }
+        { name: "About Us", path: COMMON_ROUTES.ABOUT }
     ];
 
     const sidebarNavLinks = [

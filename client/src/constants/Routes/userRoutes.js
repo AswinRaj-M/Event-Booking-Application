@@ -12,4 +12,5 @@ export const USER_ROUTES = {
   WALLET: '/user/wallet',
   SETTINGS: '/user/settings',
   SUPPORT: '/user/support',
+  ABOUT: '/about',
 };

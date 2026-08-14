@@ -19,6 +19,7 @@ import TicketViewPage from '../pages/user/TicketViewPage.jsx';
 import PaymentCheckout from '../pages/user/PaymentCheckout.jsx';
 import PaymentStatusPage from '../pages/user/PaymentStatusPage.jsx';
 import UserWallet from '../pages/user/UserWallet.jsx';
+import AboutUs from '../pages/common/AboutUs.jsx';
 import { COMMON_ROUTES, USER_ROUTES } from '../constants/Routes';
 
 const AppRoutes = () => {
@@ -85,6 +86,8 @@ const AppRoutes = () => {
                     <Landing />
                 </PublicRoute>
             } />
+
+            <Route path={COMMON_ROUTES.ABOUT} element={<AboutUs />} />
 
             <Route path={COMMON_ROUTES.FORGOT_PASSWORD} element={
                 <PublicRoute>

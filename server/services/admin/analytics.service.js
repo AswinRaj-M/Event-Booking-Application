@@ -5,9 +5,7 @@ import Booking from "../../models/booking.model.js";
 import WalletTransaction from "../../models/walletTransaction.model.js";
 import Category from "../../models/category.model.js";
 
-/**
- * Get Comprehensive Admin Analytics Data
- */
+// Get Comprehensive Admin Analytics Data
 export const getAdminAnalyticsService = async ({ timeframe = "month", categoryId = "all" } = {}) => {
   const now = new Date();
   

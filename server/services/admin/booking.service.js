@@ -2,9 +2,7 @@ import Booking from "../../models/booking.model.js";
 import Event from "../../models/event.model.js";
 import User from "../../models/user.model.js";
 
-/**
- * Get all bookings with filtering, search, pagination, and KPI metrics for Admin
- */
+// Get all bookings with filtering, search, pagination, and KPI metrics for Admin
 export const getAllBookingsAdminService = async ({
   page = 1,
   limit = 10,
