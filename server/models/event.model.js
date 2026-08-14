@@ -142,6 +142,18 @@ const eventSchema = new mongoose.Schema({
     enum : ["Free","Paid"],
     default : "Paid"
   },
+  ticketPrice : {
+    type : Number,
+    default : 0
+  },
+  totalTickets : {
+    type : Number,
+    default : 0
+  },
+  soldTickets : {
+    type : Number,
+    default : 0
+  },
   ticketTiers : {
     type :[ticketTierSchema],
     default : [],

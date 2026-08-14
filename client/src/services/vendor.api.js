@@ -88,8 +88,9 @@ export const deleteEventApi = (eventId) => {
   return axiosInstance.delete(`/vendor/delete-event/${eventId}`);
 };
 
-export const sendVendorEmailUpdateOtp = (newEmail) => {
-  return axiosInstance.post("/vendor/send-email-update-otp", { newEmail });
+export const sendVendorEmailUpdateOtp = (data) => {
+  const payload = typeof data === "string" ? { newEmail: data } : data;
+  return axiosInstance.post("/vendor/send-email-update-otp", payload);
 };
 
 export const verifyVendorEmailUpdateOtp = (data) => {

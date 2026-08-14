@@ -6,6 +6,7 @@ import {
   Calendar,
   Download,
   RotateCw,
+  RotateCcw,
   Eye,
   X,
   Ticket,
@@ -41,7 +42,8 @@ const AdminManageBookings = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
-  const [dateFilter, setDateFilter] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [limit] = useState(10);
   const [loading, setLoading] = useState(false);
@@ -343,7 +345,8 @@ const AdminManageBookings = () => {
         search: searchTerm,
         status: statusFilter,
         paymentStatus: paymentFilter,
-        startDate: dateFilter,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
       });
 
       if (res.data?.success && res.data.data) {
@@ -359,7 +362,7 @@ const AdminManageBookings = () => {
 
   useEffect(() => {
     fetchBookings();
-  }, [currentPage, statusFilter, paymentFilter, dateFilter]);
+  }, [currentPage, statusFilter, paymentFilter, startDate, endDate]);
 
   // Debounced search handler
   useEffect(() => {
@@ -385,7 +388,8 @@ const AdminManageBookings = () => {
             search: searchTerm,
             status: statusFilter,
             paymentStatus: paymentFilter,
-            startDate: dateFilter,
+            startDate: startDate || undefined,
+            endDate: endDate || undefined,
           });
           if (exportRes.data?.success && exportRes.data.data?.bookings) {
             exportBookings = exportRes.data.data.bookings;
@@ -404,10 +408,18 @@ const AdminManageBookings = () => {
       doc.text("Festivo Platform - Booking Management Report", 14, 18);
 
       // Metadata Subtitle
+      const dateRangeLabel = startDate && endDate
+        ? `${startDate} to ${endDate}`
+        : startDate
+        ? `From ${startDate}`
+        : endDate
+        ? `Until ${endDate}`
+        : "All Time";
+
       doc.setFontSize(10);
       doc.setTextColor(100);
       doc.text(
-        `Generated on: ${new Date().toLocaleString("en-IN")} | Total Records: ${exportBookings.length} | Status Filter: ${statusFilter.toUpperCase()} | Payment Filter: ${paymentFilter.toUpperCase()}`,
+        `Generated on: ${new Date().toLocaleString("en-IN")} | Date Filter: ${dateRangeLabel} | Total Records: ${exportBookings.length} | Status: ${statusFilter.toUpperCase()} | Payment: ${paymentFilter.toUpperCase()}`,
         14,
         25
       );
@@ -651,17 +663,46 @@ const AdminManageBookings = () => {
                 <ChevronDown className="w-3.5 h-3.5 text-zinc-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
 
-              {/* Date Filter */}
-              <div className="relative flex-1 sm:flex-initial min-w-[130px]">
+              {/* Date Filter Range */}
+              <div className="flex items-center gap-1.5 bg-[#120F26] border border-white/10 p-1 rounded-xl">
+                <div className="flex items-center gap-1 px-1.5 text-zinc-400">
+                  <Calendar className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 hidden xl:inline">Date:</span>
+                </div>
                 <input
                   type="date"
-                  value={dateFilter}
+                  value={startDate}
                   onChange={(e) => {
-                    setDateFilter(e.target.value);
+                    setStartDate(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="w-full bg-[#120F26] border border-white/10 text-xs font-semibold text-zinc-300 px-3 py-1.5 rounded-xl focus:outline-none focus:border-purple-500/50 cursor-pointer transition-colors"
+                  title="Start Date"
+                  className="bg-[#0D0B1F] border border-white/5 text-xs font-semibold text-zinc-200 px-2 py-1 rounded-lg focus:outline-none focus:border-purple-500/50 cursor-pointer"
                 />
+                <span className="text-zinc-600 text-xs font-bold">-</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => {
+                    setEndDate(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  title="End Date"
+                  className="bg-[#0D0B1F] border border-white/5 text-xs font-semibold text-zinc-200 px-2 py-1 rounded-lg focus:outline-none focus:border-purple-500/50 cursor-pointer"
+                />
+                {(startDate || endDate) && (
+                  <button
+                    onClick={() => {
+                      setStartDate("");
+                      setEndDate("");
+                      setCurrentPage(1);
+                    }}
+                    title="Reset Date Filter"
+                    className="p-1 text-zinc-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
 
               {/* Export PDF Button */}

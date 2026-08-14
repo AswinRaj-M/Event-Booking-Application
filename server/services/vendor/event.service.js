@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { AppError } from "../../utils/AppError.js";
 import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
 import Event from "../../models/event.model.js";
@@ -207,18 +208,44 @@ export const createEventService = async(data)=>{
 
 export const getVendorEventsService = async (vendorId) => {
   const events = await getVendorEventsRepo(vendorId);
+  const eventIds = events.map(e => e._id);
+
+  const bookingCounts = await Booking.aggregate([
+    {
+      $match: {
+        eventId: { $in: eventIds },
+        bookingStatus: { $in: ["confirmed", "completed"] },
+        paymentStatus: { $in: ["paid", "free", "completed", "success", "SUCCESS"] }
+      }
+    },
+    {
+      $group: {
+        _id: "$eventId",
+        totalSold: { $sum: "$quantity" }
+      }
+    }
+  ]);
+
+  const bookingCountMap = {};
+  bookingCounts.forEach(b => {
+    bookingCountMap[b._id.toString()] = b.totalSold;
+  });
+
   return events.map((event) => {
     const totalTickets = (event.ticketTiers || []).reduce(
       (sum, tier) => sum + (tier.capacity || 0), 0
     );
-    const soldTickets = event.soldTickets || (event.ticketTiers || []).reduce(
+    const tierSoldSum = (event.ticketTiers || []).reduce(
       (sum, tier) => sum + (tier.sold || 0), 0
     );
+    const actualSold = bookingCountMap[event._id.toString()] !== undefined
+      ? bookingCountMap[event._id.toString()]
+      : (event.soldTickets !== undefined && event.soldTickets > 0 ? event.soldTickets : tierSoldSum);
 
     return {
       ...event.toObject(),
       totalTickets,
-      soldTickets
+      soldTickets: actualSold
     };
   });
 };
@@ -400,17 +427,41 @@ export const updateEventService = async (eventId, vendorId, data) => {
     };
   }
 
+  // Aggregate confirmed / completed bookings count for this specific event by tierId
+  const tierBookingCounts = await Booking.aggregate([
+    {
+      $match: {
+        eventId: existingEvent._id,
+        bookingStatus: { $in: ["confirmed", "completed"] },
+        paymentStatus: { $in: ["paid", "free", "completed", "success", "SUCCESS"] }
+      }
+    },
+    {
+      $group: {
+        _id: "$tierId",
+        totalSold: { $sum: "$quantity" }
+      }
+    }
+  ]);
+  const tierSoldMap = {};
+  let totalConfirmedSold = 0;
+  tierBookingCounts.forEach(b => {
+    if (b._id) tierSoldMap[b._id.toString()] = b.totalSold;
+    totalConfirmedSold += b.totalSold;
+  });
+
   // Handle ticket tiers:
   if (data.ticketTiers !== undefined || data.ticketType !== undefined || data.totalTickets !== undefined || data.ticketPrice !== undefined) {
     let ticketTiers = data.ticketTiers;
     const effectiveTicketType = data.ticketType || existingEvent.ticketType;
 
     if (effectiveTicketType === "Free") {
-      let soldVal = 0;
+      let soldVal = totalConfirmedSold || existingEvent.soldTickets || 0;
       if (existingEvent.ticketTiers && existingEvent.ticketTiers.length > 0) {
-        soldVal = existingEvent.ticketTiers[0].sold || 0;
+        soldVal = Math.max(soldVal, existingEvent.ticketTiers[0].sold || 0);
       }
       ticketTiers = [{
+        _id: existingEvent.ticketTiers?.[0]?._id || new mongoose.Types.ObjectId(),
         name: "General Admission",
         price: 0,
         capacity: Number(data.totalTickets) || existingEvent.totalTickets || 100,
@@ -418,11 +469,12 @@ export const updateEventService = async (eventId, vendorId, data) => {
         benefits: ["General Entry"]
       }];
     } else if (effectiveTicketType === "Paid" && (!ticketTiers || !Array.isArray(ticketTiers) || ticketTiers.length === 0)) {
-      let soldVal = 0;
+      let soldVal = totalConfirmedSold || existingEvent.soldTickets || 0;
       if (existingEvent.ticketTiers && existingEvent.ticketTiers.length > 0) {
-        soldVal = existingEvent.ticketTiers[0].sold || 0;
+        soldVal = Math.max(soldVal, existingEvent.ticketTiers[0].sold || 0);
       }
       ticketTiers = [{
+        _id: existingEvent.ticketTiers?.[0]?._id || new mongoose.Types.ObjectId(),
         name: "General Admission",
         price: Number(data.ticketPrice) || existingEvent.ticketPrice || 0,
         capacity: Number(data.totalTickets) || existingEvent.totalTickets || 100,
@@ -440,14 +492,19 @@ export const updateEventService = async (eventId, vendorId, data) => {
 
       if (existingEvent.ticketTiers && existingEvent.ticketTiers.length > 0) {
         ticketTiers = ticketTiers.map((tier, idx) => {
-          let soldVal = 0;
-          const oldTier = existingEvent.ticketTiers[idx] || existingEvent.ticketTiers.find(t => t.name === tier.name);
-          if (oldTier) {
-            soldVal = oldTier.sold || 0;
-          }
+          const oldTier = (tier._id && existingEvent.ticketTiers.find(t => t._id?.toString() === tier._id?.toString()))
+            || existingEvent.ticketTiers[idx]
+            || existingEvent.ticketTiers.find(t => t.name?.toLowerCase() === tier.name?.toLowerCase());
+
+          const tierId = oldTier ? oldTier._id : (tier._id ? new mongoose.Types.ObjectId(tier._id) : new mongoose.Types.ObjectId());
+          const actualSold = (tierId && tierSoldMap[tierId.toString()] !== undefined)
+            ? tierSoldMap[tierId.toString()]
+            : (oldTier ? (oldTier.sold || 0) : (tier.sold || 0));
+
           return {
             ...tier,
-            sold: soldVal
+            _id: tierId,
+            sold: actualSold
           };
         });
       }
@@ -455,9 +512,17 @@ export const updateEventService = async (eventId, vendorId, data) => {
 
     if (ticketTiers) {
       updateData.ticketTiers = ticketTiers;
-      if (data.totalTickets !== undefined && data.totalTickets !== '') updateData.totalTickets = Number(data.totalTickets);
+      const totalCapacity = ticketTiers.reduce((sum, t) => sum + (Number(t.capacity) || 0), 0);
+      const totalSold = ticketTiers.reduce((sum, t) => sum + (Number(t.sold) || 0), 0);
+      updateData.totalTickets = totalCapacity;
+      updateData.soldTickets = Math.max(totalSold, totalConfirmedSold, existingEvent.soldTickets || 0);
       if (data.ticketPrice !== undefined && data.ticketPrice !== '') updateData.ticketPrice = Number(data.ticketPrice);
     }
+  } else {
+    const totalCapacity = (existingEvent.ticketTiers || []).reduce((sum, t) => sum + (Number(t.capacity) || 0), 0);
+    const totalSold = (existingEvent.ticketTiers || []).reduce((sum, t) => sum + (Number(t.sold) || 0), 0);
+    updateData.totalTickets = totalCapacity;
+    updateData.soldTickets = Math.max(totalSold, totalConfirmedSold, existingEvent.soldTickets || 0);
   }
 
   if (data.offerEnabled !== undefined) {
@@ -483,7 +548,17 @@ export const updateEventService = async (eventId, vendorId, data) => {
     updateData.images = data.images;
   }
 
-  return await updateEventRepo(eventId, vendorId, updateData);
+  const updatedDoc = await updateEventRepo(eventId, vendorId, updateData);
+  if (!updatedDoc) return null;
+
+  const totalCapacity = (updatedDoc.ticketTiers || []).reduce((sum, t) => sum + (Number(t.capacity) || 0), 0);
+  const totalSold = (updatedDoc.ticketTiers || []).reduce((sum, t) => sum + (Number(t.sold) || 0), 0);
+
+  return {
+    ...updatedDoc.toObject(),
+    totalTickets: totalCapacity || updatedDoc.totalTickets || 0,
+    soldTickets: Math.max(totalSold, totalConfirmedSold, updatedDoc.soldTickets || 0)
+  };
 };
 
 export const deleteEventService = async (eventId, vendorId) => {

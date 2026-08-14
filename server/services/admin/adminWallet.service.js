@@ -335,6 +335,7 @@ export const getAdminWalletDetailsService = async (adminId, queryParams = {}) =>
     pagination: {
       total: walletTxData.total,
       page: walletTxData.page,
+      limit: walletTxData.limit,
       totalPages: walletTxData.totalPages,
     },
   };

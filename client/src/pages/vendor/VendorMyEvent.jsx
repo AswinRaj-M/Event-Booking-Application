@@ -61,8 +61,12 @@ const VendorMyEvent = () => {
 
             const locationStr = `${event.venue || ''}, ${event.city || ''}`;
             const statusStr = event.eventStatus === 'pending' ? 'upcoming' : event.eventStatus;
-            const tSold = event.soldTickets || 0;
-            const tTotal = event.totalTickets || 0;
+            const tSold = event.soldTickets !== undefined 
+              ? event.soldTickets 
+              : (event.ticketTiers || []).reduce((sum, tier) => sum + (tier.sold || 0), 0);
+            const tTotal = event.totalTickets !== undefined 
+              ? event.totalTickets 
+              : (event.ticketTiers || []).reduce((sum, tier) => sum + (tier.capacity || 0), 0);
             const progressVal = tTotal > 0 ? Math.round((tSold / tTotal) * 100) : 0;
             
             let actionsList = ['edit', 'cancel'];
@@ -241,8 +245,12 @@ const VendorMyEvent = () => {
 
           const locationStr = `${updatedEvent.venue || ''}, ${updatedEvent.city || ''}`;
           const statusStr = updatedEvent.eventStatus === 'pending' ? 'upcoming' : updatedEvent.eventStatus;
-          const tSold = updatedEvent.soldTickets || 0;
-          const tTotal = updatedEvent.totalTickets || 0;
+          const tSold = updatedEvent.soldTickets !== undefined 
+            ? updatedEvent.soldTickets 
+            : ((updatedEvent.ticketTiers || []).reduce((sum, tier) => sum + (tier.sold || 0), 0) || e.ticketsSold || 0);
+          const tTotal = updatedEvent.totalTickets !== undefined 
+            ? updatedEvent.totalTickets 
+            : ((updatedEvent.ticketTiers || []).reduce((sum, tier) => sum + (tier.capacity || 0), 0) || e.totalSeats || 0);
           const progressVal = tTotal > 0 ? Math.round((tSold / tTotal) * 100) : 0;
           
           let actionsList = ['edit', 'cancel'];

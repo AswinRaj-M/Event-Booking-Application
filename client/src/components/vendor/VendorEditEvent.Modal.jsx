@@ -182,6 +182,8 @@ const VendorEditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
       
       if (raw.ticketTiers && raw.ticketTiers.length > 0) {
         setTicketTiers(raw.ticketTiers.map(t => ({
+          _id: t._id,
+          sold: t.sold || 0,
           name: t.name || '',
           price: t.price !== undefined ? String(t.price) : '',
           capacity: t.capacity !== undefined ? String(t.capacity) : '',
@@ -439,6 +441,8 @@ const VendorEditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
       const minPrice = Math.min(...ticketTiers.map(tier => parseFloat(tier.price) || 0));
       
       formData.append('ticketTiers', JSON.stringify(ticketTiers.map(t => ({
+        _id: t._id || undefined,
+        sold: t.sold !== undefined ? Number(t.sold) : 0,
         name: t.name,
         price: parseFloat(t.price) || 0,
         capacity: parseInt(t.capacity, 10) || 0,

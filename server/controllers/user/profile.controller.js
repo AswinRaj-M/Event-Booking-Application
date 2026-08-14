@@ -74,14 +74,14 @@ export const changePassword = async (req, res) => {
 
 export const sendEmailUpdateOtp = async (req, res) => {
   const userId = req.user._id;
-  const { newEmail } = req.body;
+  const { newEmail, password } = req.body;
 
   if (!newEmail) {
     throw new AppError("New email is required", HTTP_STATUS.BAD_REQUEST);
   }
 
   const otp = generateOTP();
-  await sendEmailUpdateOtpService(userId, newEmail, otp);
+  await sendEmailUpdateOtpService(userId, newEmail, password, otp);
 
   try {
     await sendOTP(newEmail, otp);

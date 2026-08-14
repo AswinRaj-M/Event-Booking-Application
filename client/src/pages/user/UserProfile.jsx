@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../components/layout/Navbar";
 import UserSideBar from "../../components/user/UserSideBar";
-import { User, Mail, Wallet, Calendar, Pencil, KeyRound, CheckCircle, Shield, Sparkles, Phone, Camera, Loader2 } from "lucide-react";
+import { User, Mail, Wallet, Calendar, Pencil, KeyRound, CheckCircle, Shield, Sparkles, Phone, Camera, Loader2, Lock, Eye, EyeOff } from "lucide-react";
 import { updateUserData } from "../../features/user.slice";
 import { getUserProfile, updateUserProfile, updateUserProfilePicture, sendEmailUpdateOtp, verifyEmailUpdateOtp, resendEmailUpdateOtp } from "../../services/user.api";
 import { toast } from "sonner";
@@ -27,7 +27,12 @@ const UserProfile = () => {
   const [email, setEmail] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
-
+  // Password verification states for email change
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+  const [isVerifyingPassword, setIsVerifyingPassword] = useState(false);
 
   // Fetch real profile details on load
   useEffect(() => {
@@ -78,6 +83,9 @@ const UserProfile = () => {
     setFullName(user?.fullName || "");
     setPhoneNumber(user?.phoneNumber || "");
     setEmail(user?.email || "");
+    setPasswordError("");
+    setCurrentPassword("");
+    setShowPassword(false);
     setIsEditModalOpen(true);
   };
 
@@ -120,39 +128,66 @@ const UserProfile = () => {
 
     const emailChanged = email.trim().toLowerCase() !== user?.email?.toLowerCase();
 
+    if (emailChanged) {
+      // Open password verification modal before sending OTP
+      setCurrentPassword("");
+      setPasswordError("");
+      setShowPassword(false);
+      setIsPasswordModalOpen(true);
+      return;
+    }
+
     setIsSaving(true);
     try {
-      if (emailChanged) {
-        const response = await sendEmailUpdateOtp(email.trim());
-        if (response.data?.success) {
-          toast.success("Verification code sent to your new email");
-          setIsSaving(false);
-          navigate(COMMON_ROUTES.VERIFY_OTP, {
-            state: {
-              email: email.trim(),
-              userId: user?.id || user?._id,
-              isVendor: false,
-              isEmailUpdate: true,
-              profileData: {
-                fullName,
-                phoneNumber,
-              }
-            }
-          });
-          return;
-        }
-      } else {
-        const response = await updateUserProfile({ fullName, phoneNumber });
-        if (response.data?.success) {
-          dispatch(updateUserData(response.data.user));
-          toast.success("Profile updated successfully");
-          setIsEditModalOpen(false);
-        }
+      const response = await updateUserProfile({ fullName: trimmedFullName, phoneNumber: phoneNumber.trim() });
+      if (response.data?.success) {
+        dispatch(updateUserData(response.data.user));
+        toast.success("Profile updated successfully");
+        setIsEditModalOpen(false);
       }
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to update profile");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleVerifyPasswordAndSendOtp = async (e) => {
+    e.preventDefault();
+    if (!currentPassword) {
+      setPasswordError("Password is required to change email");
+      return;
+    }
+    setPasswordError("");
+    setIsVerifyingPassword(true);
+    try {
+      const response = await sendEmailUpdateOtp({
+        newEmail: email.trim(),
+        password: currentPassword,
+      });
+      if (response.data?.success) {
+        toast.success("Verification code sent to your new email");
+        setIsPasswordModalOpen(false);
+        setIsEditModalOpen(false);
+        navigate(COMMON_ROUTES.VERIFY_OTP, {
+          state: {
+            email: email.trim(),
+            userId: user?.id || user?._id,
+            isVendor: false,
+            isEmailUpdate: true,
+            profileData: {
+              fullName: fullName.trim(),
+              phoneNumber: phoneNumber.trim(),
+            },
+          },
+        });
+      }
+    } catch (error) {
+      const errorMsg = error.response?.data?.message || "Failed to verify password";
+      setPasswordError(errorMsg);
+      toast.error(errorMsg);
+    } finally {
+      setIsVerifyingPassword(false);
     }
   };
 
@@ -459,16 +494,106 @@ const UserProfile = () => {
                 <button
                   type="button"
                   onClick={() => setIsEditModalOpen(false)}
-                  className="px-5 py-2.5 rounded-xl border border-white/10 text-zinc-300 hover:text-white hover:bg-white/5 text-sm font-semibold transition-all duration-300"
+                  className="px-5 py-2.5 rounded-xl border border-white/10 text-zinc-300 hover:text-white hover:bg-white/5 text-sm font-semibold transition-all duration-300 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSaving}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-sm font-bold shadow-[0_4px_15px_rgba(139,92,246,0.3)] transition-all duration-300 disabled:opacity-50"
+                  className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-sm font-bold shadow-[0_4px_15px_rgba(139,92,246,0.3)] transition-all duration-300 disabled:opacity-50 cursor-pointer"
                 >
                   {isSaving ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Password Verification Modal before changing Email */}
+      {isPasswordModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 bg-black/75 backdrop-blur-md"
+            onClick={() => {
+              if (!isVerifyingPassword) setIsPasswordModalOpen(false);
+            }}
+          />
+          
+          <div className="relative w-full max-w-md bg-[#0d0722]/95 border border-purple-500/30 rounded-3xl p-6 md:p-8 shadow-[0_25px_60px_rgba(0,0,0,0.85)] overflow-hidden animate-in fade-in zoom-in-95 duration-300">
+            <div className="absolute top-0 inset-x-0 h-[3px] bg-gradient-to-r from-purple-500 via-indigo-500 to-fuchsia-500" />
+            
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-2xl text-purple-400">
+                <Lock className="w-6 h-6" />
+              </div>
+              <div>
+                <h2 className="text-lg font-extrabold text-white">Verify Your Password</h2>
+                <p className="text-xs text-zinc-400">Security confirmation required</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-zinc-300 mb-5 leading-relaxed">
+              Please enter your current account password to authorize changing your email address to <span className="text-purple-300 font-bold break-all">{email}</span>.
+            </p>
+
+            <form onSubmit={handleVerifyPasswordAndSendOtp} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] uppercase font-bold tracking-widest text-zinc-400">
+                  Current Password
+                </label>
+                <div className="relative">
+                  <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-400/70" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={currentPassword}
+                    onChange={(e) => {
+                      setCurrentPassword(e.target.value);
+                      setPasswordError("");
+                    }}
+                    placeholder="Enter your current password"
+                    autoFocus
+                    autoComplete="current-password"
+                    className={`w-full bg-[#04020a]/80 text-white pl-11 pr-11 py-3 rounded-xl border ${
+                      passwordError ? "border-rose-500" : "border-white/10 hover:border-purple-500/30 focus:border-purple-500"
+                    } focus:outline-none transition-all duration-300 text-sm`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                {passwordError && (
+                  <p className="text-xs text-rose-400 font-medium mt-1">{passwordError}</p>
+                )}
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/5">
+                <button
+                  type="button"
+                  disabled={isVerifyingPassword}
+                  onClick={() => setIsPasswordModalOpen(false)}
+                  className="px-5 py-2.5 rounded-xl border border-white/10 text-zinc-300 hover:text-white hover:bg-white/5 text-sm font-semibold transition-all duration-300 cursor-pointer disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isVerifyingPassword}
+                  className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-sm font-bold shadow-[0_4px_15px_rgba(139,92,246,0.3)] transition-all duration-300 disabled:opacity-50 cursor-pointer"
+                >
+                  {isVerifyingPassword ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Verifying...</span>
+                    </>
+                  ) : (
+                    <span>Verify & Send OTP</span>
+                  )}
                 </button>
               </div>
             </form>

@@ -1,3 +1,4 @@
+import bcrypt from "bcryptjs";
 import { AppError } from "../../utils/AppError.js";
 import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
 import Otp from "../../models/user.otp.model.js";
@@ -18,9 +19,18 @@ export const updateVendorProfileService = async (vendorId, profileData) => {
   return await findVendorByIdAndUpdate(vendorId, profileData);
 };
 
-export const sendVendorEmailUpdateOtpService = async (vendorId, newEmail, otp) => {
+export const sendVendorEmailUpdateOtpService = async (vendorId, newEmail, password, otp) => {
   const vendor = await Vendor.findById(vendorId);
   if (!vendor) throw new AppError("Vendor not found", HTTP_STATUS.NOT_FOUND);
+
+  if (!password) {
+    throw new AppError("Password is required to change email", HTTP_STATUS.BAD_REQUEST);
+  }
+
+  const isMatch = await bcrypt.compare(password, vendor.password);
+  if (!isMatch) {
+    throw new AppError("Incorrect password. Please enter your valid password.", HTTP_STATUS.BAD_REQUEST);
+  }
 
   const existingVendor = await Vendor.findOne({ businessEmail: newEmail });
   if (existingVendor && existingVendor._id.toString() !== vendorId.toString()) {

@@ -11,6 +11,7 @@ import {
   Check, 
   X, 
   ChevronRight, 
+  ChevronLeft,
   ArrowUpRight,
   HandCoins,
   ShieldCheck,
@@ -22,7 +23,9 @@ import {
   AlertCircle,
   Loader2,
   CreditCard,
-  ArrowDownLeft
+  ArrowDownLeft,
+  Calendar,
+  RotateCcw
 } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
@@ -69,6 +72,16 @@ const AdminPaymentPage = () => {
   const [withdrawalTab, setWithdrawalTab] = useState("pending");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
+  const [pagination, setPagination] = useState({
+    total: 0,
+    page: 1,
+    limit: 10,
+    totalPages: 1,
+  });
 
   // Dynamic Script Loader for Razorpay Checkout SDK
   const loadRazorpayScript = () => {
@@ -85,13 +98,20 @@ const AdminPaymentPage = () => {
     });
   };
 
-  // Fetch Full Financial Data & Unified Transactions Ledger
+  // Fetch Full Financial Data & Unified Transactions Ledger with Backend Pagination
   const fetchFinancialData = async () => {
     try {
       setLoading(true);
 
       const [walletRes, withdrawalsRes] = await Promise.all([
-        getAdminWalletDetailsApi().catch((err) => {
+        getAdminWalletDetailsApi({
+          page: currentPage,
+          limit: pageSize,
+          type: typeFilter !== "all" ? typeFilter : undefined,
+          status: statusFilter !== "all" ? statusFilter : undefined,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
+        }).catch((err) => {
           console.error("Error fetching admin wallet details:", err);
           return null;
         }),
@@ -103,7 +123,7 @@ const AdminPaymentPage = () => {
 
       // 1. Process Wallet Details & Metrics
       if (walletRes?.data?.success && walletRes.data.data) {
-        const { metrics, wallet } = walletRes.data.data;
+        const { metrics, wallet, pagination: pgn } = walletRes.data.data;
         setPlatformBalance(Number(metrics.platformBalance) || 0);
         setTotalDeposited(Number(metrics.totalDeposited ?? wallet?.totalDeposited) || 0);
         setVendorPayouts(Number(metrics.vendorPayouts) || 0);
@@ -111,6 +131,10 @@ const AdminPaymentPage = () => {
         setCommissionEarned(Number(metrics.commissionEarned) || 0);
         setTotalCouponCostSponsored(Number(metrics.totalCouponCostSponsored) || 0);
         setNetPlatformRevenue(Number(metrics.netPlatformRevenue) || 0);
+
+        if (pgn) {
+          setPagination(pgn);
+        }
       }
 
       // 2. Process Withdrawal Requests
@@ -139,28 +163,25 @@ const AdminPaymentPage = () => {
         setWithdrawalRequests(mappedWithdrawals);
       }
 
-      // 3. Build Unified Transactions Ledger (Admin Deposits + Vendor Payouts)
-      const allTx = [];
-
-      // Add Admin Wallet Transactions (Deposits, Platform Commissions, Refunds)
+      // 3. Process Paginated Ledger Transactions from Backend
       if (walletRes?.data?.data?.transactions) {
-        walletRes.data.data.transactions.forEach((tx) => {
+        const txList = walletRes.data.data.transactions.map((tx) => {
           const isCredit = tx.amount >= 0;
           let category = "Admin Deposit";
-          let from = "Razorpay Payment";
+          let from = "Razorpay Gateway";
           if (tx.transactionType === "commission") {
             category = "Platform Commission";
-            from = "Booking Platform Fee";
+            from = "Booking Platform Cut";
           } else if (tx.transactionType === "refund") {
             category = "Refund Reversal";
             from = "Booking Cancellation";
           } else if (tx.transactionType === "payout") {
             category = "Vendor Payout";
-            from = "Admin Wallet";
+            from = "Admin Reserve Wallet";
           }
 
-          allTx.push({
-            id: tx.razorpayPaymentId || `TXN-${tx._id.slice(-6).toUpperCase()}`,
+          return {
+            id: tx.razorpayPaymentId || `TXN-${(tx._id || "").toString().slice(-6).toUpperCase()}`,
             type: isCredit ? "Credit" : "Debit",
             category,
             typeBg: isCredit
@@ -173,39 +194,13 @@ const AdminPaymentPage = () => {
             status: tx.status === "completed" ? "Completed" : (tx.status === "failed" ? "Failed" : "Pending"),
             statusBg: tx.status === "completed"
               ? "bg-emerald-950/60 border-emerald-500/30 text-emerald-400"
-              : "bg-rose-950/60 border-rose-500/30 text-rose-400",
+              : (tx.status === "failed" ? "bg-rose-950/60 border-rose-500/30 text-rose-400" : "bg-amber-950/60 border-amber-500/30 text-amber-400"),
             date: new Date(tx.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
             rawDate: new Date(tx.createdAt),
-          });
+          };
         });
+        setTransactions(txList);
       }
-
-      // Add Vendor Payouts/Withdrawals
-      mappedWithdrawals.forEach((req) => {
-        const isApproved = req.status === "approved";
-        const isRejected = req.status === "rejected";
-        allTx.push({
-          id: `TXN-${req.id.slice(-6).toUpperCase()}`,
-          type: "Debit",
-          category: "Vendor Payout",
-          typeBg: "bg-rose-950/60 border-rose-500/30 text-rose-400",
-          amount: -req.amount,
-          from: req.vendorName,
-          reason: "Vendor payout disbursement",
-          paymentId: req.destinationAccount,
-          status: isApproved ? "Completed" : (isRejected ? "Rejected" : "Pending"),
-          statusBg: isApproved 
-            ? "bg-emerald-950/60 border-emerald-500/30 text-emerald-400" 
-            : (isRejected ? "bg-rose-950/60 border-rose-500/30 text-rose-400" : "bg-amber-950/60 border-amber-500/30 text-amber-400"),
-          date: req.reqDate,
-          rawDate: req.rawDate,
-        });
-      });
-
-      // Sort by newest first
-      allTx.sort((a, b) => b.rawDate - a.rawDate);
-      setTransactions(allTx);
-
     } catch (err) {
       console.error("Error fetching admin financial data:", err);
     } finally {
@@ -215,7 +210,7 @@ const AdminPaymentPage = () => {
 
   useEffect(() => {
     fetchFinancialData();
-  }, []);
+  }, [currentPage, typeFilter, statusFilter, startDate, endDate]);
 
   // Action Handlers for Vendor Withdrawals
   const handleApproveRequest = async (id, vendorName, amount) => {
@@ -406,9 +401,37 @@ const AdminPaymentPage = () => {
   };
 
   // Generate and Download PDF Financial Report
-  const handleExportReport = () => {
+  const handleExportReport = async () => {
     try {
       toast.loading("Generating financial report PDF...", { id: "export-pdf" });
+
+      let exportTxs = transactions;
+      try {
+        const fullRes = await getAdminWalletDetailsApi({
+          page: 1,
+          limit: 500,
+          type: typeFilter !== "all" ? typeFilter : undefined,
+          status: statusFilter !== "all" ? statusFilter : undefined,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
+        });
+        if (fullRes?.data?.data?.transactions) {
+          exportTxs = fullRes.data.data.transactions.map((tx) => {
+            const isCredit = tx.amount >= 0;
+            return {
+              date: new Date(tx.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+              title: tx.description || (isCredit ? "Deposit" : "Payout"),
+              type: isCredit ? "Credit" : "Debit",
+              status: tx.status === "completed" ? "Completed" : (tx.status === "failed" ? "Failed" : "Pending"),
+              amount: isCredit
+                ? `+INR ${tx.amount.toLocaleString("en-IN")}`
+                : `-INR ${Math.abs(tx.amount).toLocaleString("en-IN")}`,
+            };
+          });
+        }
+      } catch (e) {
+        exportTxs = transactions;
+      }
 
       const doc = new jsPDF();
 
@@ -416,9 +439,18 @@ const AdminPaymentPage = () => {
       doc.setFontSize(18);
       doc.text("Festivo Platform - Financial Report", 14, 20);
 
+      // Metadata Subtitle
+      const dateSubtitle = startDate && endDate
+        ? `${startDate} to ${endDate}`
+        : startDate
+        ? `From ${startDate}`
+        : endDate
+        ? `Until ${endDate}`
+        : "All Time";
+
       doc.setFontSize(10);
       doc.setTextColor(100);
-      doc.text(`Generated on: ${new Date().toLocaleString("en-IN")}`, 14, 28);
+      doc.text(`Generated on: ${new Date().toLocaleString("en-IN")} | Report Period: ${dateSubtitle}`, 14, 28);
       doc.setTextColor(0);
 
       // Section 1: Financial KPI Summary Table
@@ -443,14 +475,14 @@ const AdminPaymentPage = () => {
         styles: { fontSize: 10 },
       });
 
-      // Section 2: Recent Transactions Ledger
+      // Section 2: Filtered Transactions Ledger
       const currentY = doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY + 12 : 110;
       doc.setFontSize(13);
       doc.text("Transaction Ledger", 14, currentY);
 
-      const transactionRows = transactions.map((t) => [
+      const transactionRows = exportTxs.map((t) => [
         t.date || "-",
-        t.title || t.type || "Transaction",
+        t.title || t.reason || t.type || "Transaction",
         t.type || "-",
         t.status || "-",
         t.amount || "-",
@@ -459,7 +491,7 @@ const AdminPaymentPage = () => {
       autoTable(doc, {
         startY: currentY + 4,
         head: [["Date", "Description", "Type", "Status", "Amount"]],
-        body: transactionRows.length > 0 ? transactionRows : [["-", "No transactions found", "-", "-", "-"]],
+        body: transactionRows.length > 0 ? transactionRows : [["-", "No transactions found matching filter", "-", "-", "-"]],
         theme: "striped",
         headStyles: { fillColor: [79, 70, 229] }, // Indigo
         styles: { fontSize: 9 },
@@ -472,6 +504,7 @@ const AdminPaymentPage = () => {
       toast.error("Failed to generate PDF report. Please try again.", { id: "export-pdf" });
     }
   };
+
   const pendingRequests = withdrawalRequests.filter(r => r.status === "pending");
   const approvedRequests = withdrawalRequests.filter(r => r.status === "approved");
   const rejectedRequests = withdrawalRequests.filter(r => r.status === "rejected");
@@ -479,24 +512,17 @@ const AdminPaymentPage = () => {
   // Tab-filtered withdrawal requests
   const displayedWithdrawals = withdrawalRequests.filter(r => r.status === withdrawalTab);
 
-  // Filtered transactions list
-  const filteredTransactions = transactions.filter((t) => {
-    const matchesStatus = statusFilter === "all" || t.status.toLowerCase() === statusFilter.toLowerCase();
-    const matchesType = typeFilter === "all" || t.type.toLowerCase() === typeFilter.toLowerCase();
-    return matchesStatus && matchesType;
-  });
-
   return (
     <div className="flex h-screen bg-[#0B0914] text-white font-sans overflow-hidden">
       {/* Sidebar Navigation */}
       <AdminSidebar />
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden">
+      <main className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
         {/* Top Header */}
-        <header className="h-16 flex items-center justify-between px-4 sm:px-8 border-b border-gray-800 bg-[#0B0914] shrink-0">
+        <header className="min-h-16 py-3 flex flex-wrap items-center justify-between px-4 sm:px-8 border-b border-gray-800 bg-[#0B0914] shrink-0 gap-3">
           <div className="flex items-center text-gray-400 text-sm">
-            <Sidebar className="w-5 h-5 mr-3 sm:mr-4 text-gray-500" />
+            <Sidebar className="w-5 h-5 mr-3 sm:mr-4 text-gray-500 shrink-0" />
             <span className="hidden sm:inline">Management</span>
             <span className="hidden sm:inline mx-2 text-gray-600">&gt;</span>
             <span className="text-purple-400 font-medium">Payments & Platform Wallet</span>
@@ -505,7 +531,7 @@ const AdminPaymentPage = () => {
           <div className="flex items-center gap-2.5 sm:gap-3">
             <button 
               onClick={handleExportReport}
-              className="px-3.5 py-2 bg-[#151221] hover:bg-[#201B34] border border-gray-800 text-zinc-300 hover:text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer shadow-sm"
+              className="px-3.5 py-2 bg-[#151221] hover:bg-[#201B34] border border-gray-800 text-zinc-300 hover:text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer shadow-sm shrink-0"
             >
               <Download className="w-4 h-4 text-zinc-400" />
               <span className="hidden sm:inline">Export Report</span>
@@ -517,7 +543,7 @@ const AdminPaymentPage = () => {
                 setAmountError("");
                 setShowAddFundsModal(true);
               }}
-              className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-extrabold rounded-xl transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer shadow-[0_0_20px_rgba(139,92,246,0.35)]"
+              className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-extrabold rounded-xl transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer shadow-[0_0_20px_rgba(139,92,246,0.35)] shrink-0"
             >
               <Plus className="w-4 h-4" />
               <span>Add Money</span>
@@ -526,7 +552,7 @@ const AdminPaymentPage = () => {
         </header>
 
         {/* Scrollable Content Area */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 flex flex-col min-h-0 space-y-8 scrollbar-hide">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 flex flex-col min-h-0 space-y-8 scrollbar-thin scrollbar-thumb-purple-900/50 min-w-0">
           
           {/* Header Title Section */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0">
@@ -784,13 +810,58 @@ const AdminPaymentPage = () => {
                 <p className="text-xs text-zinc-400 font-medium mt-1">Real-time credit (deposits) and debit (vendor payouts) audit trail</p>
               </div>
 
-              <div className="flex items-center gap-2.5">
+              <div className="flex flex-wrap items-center gap-2.5">
                 <Filter className="w-4 h-4 text-zinc-400" />
                 
+                {/* Date Filter Range */}
+                <div className="flex items-center gap-1.5 bg-[#0B0914] border border-gray-800 p-1 rounded-xl">
+                  <div className="flex items-center gap-1 px-1.5 text-zinc-400">
+                    <Calendar className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 hidden lg:inline">Date:</span>
+                  </div>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => {
+                      setStartDate(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    title="Start Date"
+                    className="bg-[#151221] border border-gray-800 text-xs font-semibold text-zinc-200 px-2 py-1 rounded-lg focus:outline-none focus:border-purple-500 cursor-pointer"
+                  />
+                  <span className="text-zinc-600 text-xs font-bold">-</span>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => {
+                      setEndDate(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    title="End Date"
+                    className="bg-[#151221] border border-gray-800 text-xs font-semibold text-zinc-200 px-2 py-1 rounded-lg focus:outline-none focus:border-purple-500 cursor-pointer"
+                  />
+                  {(startDate || endDate) && (
+                    <button
+                      onClick={() => {
+                        setStartDate("");
+                        setEndDate("");
+                        setCurrentPage(1);
+                      }}
+                      title="Reset Date Filter"
+                      className="p-1 text-zinc-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
                 {/* Type Filter */}
                 <select
                   value={typeFilter}
-                  onChange={(e) => setTypeFilter(e.target.value)}
+                  onChange={(e) => {
+                    setTypeFilter(e.target.value);
+                    setCurrentPage(1);
+                  }}
                   className="px-3 py-2 bg-[#0B0914] border border-gray-800 text-zinc-300 text-xs font-bold rounded-xl focus:outline-none focus:border-purple-500 transition-colors cursor-pointer"
                 >
                   <option value="all">All Types</option>
@@ -801,7 +872,10 @@ const AdminPaymentPage = () => {
                 {/* Status Filter */}
                 <select
                   value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
+                  onChange={(e) => {
+                    setStatusFilter(e.target.value);
+                    setCurrentPage(1);
+                  }}
                   className="px-3 py-2 bg-[#0B0914] border border-gray-800 text-zinc-300 text-xs font-bold rounded-xl focus:outline-none focus:border-purple-500 transition-colors cursor-pointer"
                 >
                   <option value="all">All Status</option>
@@ -812,9 +886,9 @@ const AdminPaymentPage = () => {
               </div>
             </div>
 
-            {/* Transactions Table */}
-            <div className="w-full rounded-2xl border border-gray-800/80 bg-[#0B0914] overflow-hidden">
-              <table className="w-full text-left border-collapse table-auto">
+            {/* Transactions Table with Responsive Horizontal Scroll */}
+            <div className="w-full rounded-2xl border border-gray-800/80 bg-[#0B0914] overflow-x-auto min-w-0 scrollbar-thin scrollbar-thumb-purple-900/40">
+              <table className="w-full text-left border-collapse table-auto min-w-[720px]">
                 <thead>
                   <tr className="border-b border-gray-800 text-[10px] sm:text-[11px] uppercase font-black text-zinc-400 tracking-wider bg-white/[0.02]">
                     <th className="px-4 py-3.5 font-bold">Txn / Payment ID</th>
@@ -827,14 +901,14 @@ const AdminPaymentPage = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-800/60 text-xs">
-                  {filteredTransactions.length === 0 ? (
+                  {transactions.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="px-4 py-12 text-center text-zinc-500 font-medium">
                         No transactions found matching the selected filters.
                       </td>
                     </tr>
                   ) : (
-                    filteredTransactions.map((tx, idx) => {
+                    transactions.map((tx, idx) => {
                       const isCredit = tx.type === "Credit";
 
                       return (
@@ -883,6 +957,54 @@ const AdminPaymentPage = () => {
                   )}
                 </tbody>
               </table>
+            </div>
+
+            {/* Pagination Controls */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-3 text-xs text-zinc-400 border-t border-gray-800/60">
+              <div>
+                Showing <span className="font-bold text-white">{(pagination.page - 1) * pagination.limit + (transactions.length > 0 ? 1 : 0)}</span> to{" "}
+                <span className="font-bold text-white">{Math.min(pagination.page * pagination.limit, pagination.total)}</span> of{" "}
+                <span className="font-bold text-white">{pagination.total}</span> transactions
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  disabled={pagination.page <= 1 || loading}
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  className="px-3 py-1.5 bg-[#0B0914] border border-gray-800 rounded-xl text-zinc-300 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center gap-1 cursor-pointer font-bold"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  <span className="hidden sm:inline">Prev</span>
+                </button>
+
+                {/* Page Numbers */}
+                {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
+                  .filter((p) => p === 1 || p === pagination.totalPages || Math.abs(p - pagination.page) <= 1)
+                  .map((p, idx, arr) => (
+                    <React.Fragment key={p}>
+                      {idx > 0 && arr[idx - 1] !== p - 1 && <span className="px-1 text-zinc-600">...</span>}
+                      <button
+                        onClick={() => setCurrentPage(p)}
+                        className={`w-8 h-8 rounded-xl font-bold transition-all cursor-pointer ${
+                          pagination.page === p
+                            ? "bg-purple-600 text-white shadow-md shadow-purple-900/30"
+                            : "bg-[#0B0914] border border-gray-800 text-zinc-400 hover:text-white hover:bg-white/5"
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    </React.Fragment>
+                  ))}
+
+                <button
+                  disabled={pagination.page >= pagination.totalPages || loading}
+                  onClick={() => setCurrentPage((prev) => Math.min(pagination.totalPages, prev + 1))}
+                  className="px-3 py-1.5 bg-[#0B0914] border border-gray-800 rounded-xl text-zinc-300 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center gap-1 cursor-pointer font-bold"
+                >
+                  <span className="hidden sm:inline">Next</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -102,14 +102,14 @@ export const updateVendorProfile = async (req, res) => {
 
 export const sendVendorEmailUpdateOtp = async (req, res) => {
   const vendorId = req.user._id;
-  const { newEmail } = req.body;
+  const { newEmail, password } = req.body;
 
   if (!newEmail) {
     throw new AppError("New email is required", HTTP_STATUS.BAD_REQUEST);
   }
 
   const otp = generateOTP();
-  await sendVendorEmailUpdateOtpService(vendorId, newEmail, otp);
+  await sendVendorEmailUpdateOtpService(vendorId, newEmail, password, otp);
 
   try {
     await sendOTP(newEmail, otp);

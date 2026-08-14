@@ -53,9 +53,10 @@ export const getExploreEvents = (params) => {
   return axiosInstance.get("/users/explore-events", { params });
 };
 
-export const sendEmailUpdateOtp = (newEmail) => {
-  return axiosInstance.post("/users/send-email-update-otp", { newEmail });
-}
+export const sendEmailUpdateOtp = (data) => {
+  const payload = typeof data === "string" ? { newEmail: data } : data;
+  return axiosInstance.post("/users/send-email-update-otp", payload);
+};
 
 export const verifyEmailUpdateOtp = (data) => {
   return axiosInstance.post("/users/verify-email-update-otp", data);

@@ -3,8 +3,8 @@ import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
 
 // Get Admin Analytics Data Controller
 export const getAdminAnalytics = async (req, res) => {
-  const { timeframe, categoryId } = req.query;
-  const data = await getAdminAnalyticsService({ timeframe, categoryId });
+  const { timeframe, categoryId, startDate, endDate } = req.query;
+  const data = await getAdminAnalyticsService({ timeframe, categoryId, startDate, endDate });
 
   res.status(HTTP_STATUS.OK).json({
     success: true,

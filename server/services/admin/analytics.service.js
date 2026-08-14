@@ -6,29 +6,44 @@ import WalletTransaction from "../../models/walletTransaction.model.js";
 import Category from "../../models/category.model.js";
 
 // Get Comprehensive Admin Analytics Data
-export const getAdminAnalyticsService = async ({ timeframe = "month", categoryId = "all" } = {}) => {
+export const getAdminAnalyticsService = async ({ timeframe = "month", categoryId = "all", startDate: customStartDate, endDate: customEndDate } = {}) => {
   const now = new Date();
   
-  // Date boundaries for timeframe filter
+  // Date boundaries for timeframe or custom date range filter
   let startDate = new Date(0);
-  if (timeframe === "today") {
-    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  let endDate = new Date();
+
+  if (customStartDate || customEndDate) {
+    if (customStartDate) {
+      startDate = new Date(customStartDate);
+      startDate.setHours(0, 0, 0, 0);
+    }
+    if (customEndDate) {
+      endDate = new Date(customEndDate);
+      endDate.setHours(23, 59, 59, 999);
+    }
+  } else if (timeframe === "today") {
+    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
   } else if (timeframe === "week") {
     startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   } else if (timeframe === "month") {
-    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+  } else if (timeframe === "year") {
+    startDate = new Date(now.getFullYear(), 0, 1, 0, 0, 0);
   }
 
-  // Category filter for events & bookings
-  const eventFilter = {};
+  // Category & date filter for events
+  const eventFilter = {
+    createdAt: { $gte: startDate, $lte: endDate }
+  };
   if (categoryId && categoryId !== "all") {
     eventFilter.category = categoryId;
   }
 
-  // 1. Total Registered Users
-  const totalUsers = await User.countDocuments({ role: { $ne: "admin" } });
+  // 1. Total Registered Users (in period and overall)
+  const totalUsers = await User.countDocuments({ role: { $ne: "admin" }, createdAt: { $lte: endDate } });
   
-  // Previous month users for growth calculation
+  // Previous period users for growth calculation
   const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const usersLastMonth = await User.countDocuments({
     role: { $ne: "admin" },
@@ -37,25 +52,26 @@ export const getAdminAnalyticsService = async ({ timeframe = "month", categoryId
   const userGrowth = usersLastMonth > 0 ? (((totalUsers - usersLastMonth) / usersLastMonth) * 100).toFixed(1) : "12.5";
 
   // 2. Active Approved Vendors
-  const activeVendors = await Vendor.countDocuments({ applicationStatus: "approved" });
+  const activeVendors = await Vendor.countDocuments({ applicationStatus: "approved", createdAt: { $lte: endDate } });
   const vendorsLastMonth = await Vendor.countDocuments({
     applicationStatus: "approved",
     createdAt: { $lt: new Date(now.getFullYear(), now.getMonth(), 1) }
   });
   const vendorGrowth = vendorsLastMonth > 0 ? (((activeVendors - vendorsLastMonth) / vendorsLastMonth) * 100).toFixed(1) : "5.2";
 
-  // 3. Events Created
+  // 3. Events Created in range
   const eventsCreated = await Event.countDocuments(eventFilter);
   const eventsLastMonth = await Event.countDocuments({
-    ...eventFilter,
+    ...(categoryId && categoryId !== "all" ? { category: categoryId } : {}),
     createdAt: { $lt: new Date(now.getFullYear(), now.getMonth(), 1) }
   });
   const eventGrowth = eventsLastMonth > 0 ? (((eventsCreated - eventsLastMonth) / eventsLastMonth) * 100).toFixed(1) : "18.3";
 
-  // 4. Bookings & Revenue
+  // 4. Bookings & Revenue in date range
   const allBookings = await Booking.find({
+    createdAt: { $gte: startDate, $lte: endDate },
     bookingStatus: { $ne: "cancelled" },
-    paymentStatus: { $in: ["completed", "paid", "confirmed"] }
+    paymentStatus: { $in: ["completed", "paid", "confirmed", "free", "success", "SUCCESS"] }
   }).populate("eventId", "title category vendorId");
 
   const filteredBookings = categoryId && categoryId !== "all"
@@ -65,8 +81,8 @@ export const getAdminAnalyticsService = async ({ timeframe = "month", categoryId
   const totalBookings = filteredBookings.length;
   const totalRevenue = filteredBookings.reduce((sum, b) => sum + (Number(b.totalAmount) || (b.ticketPrice * (b.quantity || 1)) || 0), 0);
   
-  // Platform Commission calculation (either from WalletTransactions or 15% platform cut)
-  const walletTxs = await WalletTransaction.find({ transactionType: "earnings" });
+  // Platform Commission calculation (either from WalletTransactions or platform cut)
+  const walletTxs = await WalletTransaction.find({ transactionType: "earnings", createdAt: { $gte: startDate, $lte: endDate } });
   const dbCommission = walletTxs.reduce((sum, tx) => sum + (Number(tx.platformCommission) || 0), 0);
   const totalCommission = dbCommission > 0 ? dbCommission : Math.round(totalRevenue * 0.16);
 

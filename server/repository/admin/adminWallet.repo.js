@@ -59,29 +59,68 @@ export const createAdminWalletTransactionRepo = async (data) => {
  * Find transactions for Admin Wallet with pagination & sorting
  */
 export const findAdminWalletTransactionsRepo = async (adminId, options = {}) => {
-  const { page = 1, limit = 50, transactionType, status } = options;
-  const filter = { adminId };
-  if (transactionType && transactionType !== "all") {
-    filter.transactionType = transactionType;
-  }
-  if (status && status !== "all") {
-    filter.status = status;
+  const { page = 1, limit = 10, transactionType, type, status, startDate, endDate, search } = options;
+  const filter = {};
+  
+  // Type filter
+  const filterType = transactionType || type;
+  if (filterType && filterType !== "all") {
+    if (filterType.toLowerCase() === "credit") {
+      filter.amount = { $gte: 0 };
+    } else if (filterType.toLowerCase() === "debit") {
+      filter.amount = { $lt: 0 };
+    } else {
+      filter.transactionType = filterType.toLowerCase();
+    }
   }
 
-  const skip = (Number(page) - 1) * Number(limit);
+  // Status filter
+  if (status && status !== "all") {
+    filter.status = status.toLowerCase();
+  }
+
+  // Date Range filter
+  if (startDate || endDate) {
+    filter.createdAt = {};
+    if (startDate) {
+      filter.createdAt.$gte = new Date(new Date(startDate).setHours(0, 0, 0, 0));
+    }
+    if (endDate) {
+      filter.createdAt.$lte = new Date(new Date(endDate).setHours(23, 59, 59, 999));
+    }
+  }
+
+  // Search filter
+  if (search && search.trim() !== "") {
+    const searchRegex = new RegExp(search.trim(), "i");
+    filter.$or = [
+      { description: searchRegex },
+      { razorpayPaymentId: searchRegex },
+      { razorpayOrderId: searchRegex },
+      { "metadata.bookingCode": searchRegex },
+      { "metadata.ticketId": searchRegex },
+    ];
+  }
+
+  const pageNum = Math.max(1, parseInt(page, 10) || 1);
+  const limitNum = Math.max(1, parseInt(limit, 10) || 10);
+  const skip = (pageNum - 1) * limitNum;
+
   const [transactions, total] = await Promise.all([
     AdminWalletTransaction.find(filter)
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(Number(limit)),
+      .limit(limitNum)
+      .lean(),
     AdminWalletTransaction.countDocuments(filter),
   ]);
 
   return {
     transactions,
     total,
-    page: Number(page),
-    totalPages: Math.ceil(total / Number(limit)) || 1,
+    page: pageNum,
+    limit: limitNum,
+    totalPages: Math.ceil(total / limitNum) || 1,
   };
 };
 

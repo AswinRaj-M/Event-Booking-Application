@@ -48,9 +48,19 @@ export const changePasswordService = async (userId, currentPassword, newPassword
   return true;
 };
 
-export const sendEmailUpdateOtpService = async (userId, newEmail, otp) => {
+export const sendEmailUpdateOtpService = async (userId, newEmail, password, otp) => {
   const user = await findUserById(userId);
   if (!user) throw new AppError("User not found", HTTP_STATUS.NOT_FOUND);
+
+  if (user.password) {
+    if (!password) {
+      throw new AppError("Password is required to change email", HTTP_STATUS.BAD_REQUEST);
+    }
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      throw new AppError("Incorrect password. Please enter your valid password.", HTTP_STATUS.BAD_REQUEST);
+    }
+  }
 
   const existingUser = await findUserByEmail(newEmail);
   if (existingUser && existingUser._id.toString() !== userId.toString()) {
