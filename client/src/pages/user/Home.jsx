@@ -444,13 +444,26 @@ const Home = () => {
                     {/* Metrics Row (Rating & Events Count) */}
                     <div className="w-full grid grid-cols-2 gap-2 bg-white/[0.03] border border-white/5 rounded-xl p-2.5 mb-5 text-xs">
                       <div className="flex flex-col items-center justify-center border-r border-white/5 pr-1">
-                        <div className="flex items-center gap-1 text-amber-400 font-bold">
-                          <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                          <span>{hasRating ? org.rating.toFixed(1) : "New"}</span>
-                        </div>
-                        <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold mt-0.5">
-                          {org.totalReviews > 0 ? `${org.totalReviews} Reviews` : "Rating"}
-                        </span>
+                        {org.totalReviews > 0 ? (
+                          <>
+                            <div className="flex items-center gap-1 text-amber-400 font-bold">
+                              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                              <span>{Number(org.rating).toFixed(org.rating % 1 === 0 ? 1 : 2)}</span>
+                            </div>
+                            <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold mt-0.5 truncate">
+                              {org.totalReviews} {org.totalReviews === 1 ? "Review" : "Reviews"}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-zinc-400 font-semibold text-[11px]">
+                              No ratings yet
+                            </span>
+                            <span className="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold mt-0.5">
+                              0 Reviews
+                            </span>
+                          </>
+                        )}
                       </div>
 
                       <div className="flex flex-col items-center justify-center pl-1">
@@ -463,6 +476,37 @@ const Home = () => {
                         </span>
                       </div>
                     </div>
+
+                    {/* Recent Written Feedback Section */}
+                    {org.recentReviews && org.recentReviews.length > 0 ? (
+                      <div className="w-full bg-[#120f26]/70 border border-purple-500/15 rounded-xl p-3 mb-4 text-left shadow-inner flex flex-col justify-between flex-grow">
+                        <p className="text-xs text-zinc-300 italic line-clamp-2 leading-relaxed font-light mb-2">
+                          "{org.recentReviews[0].feedback}"
+                        </p>
+                        <div className="flex items-center gap-2 mt-auto pt-1 border-t border-white/5">
+                          <div className="w-4 h-4 rounded-full bg-purple-900/60 border border-purple-500/30 overflow-hidden flex items-center justify-center text-[8px] font-bold text-purple-300 shrink-0 select-none">
+                            {org.recentReviews[0].reviewerAvatar ? (
+                              <img
+                                src={org.recentReviews[0].reviewerAvatar}
+                                alt={org.recentReviews[0].reviewerName}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              org.recentReviews[0].reviewerName?.charAt(0).toUpperCase() || "U"
+                            )}
+                          </div>
+                          <span className="text-[10px] text-zinc-400 font-medium truncate">
+                            — {org.recentReviews[0].reviewerName || "Verified Attendee"}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="w-full bg-white/[0.02] border border-white/5 rounded-xl p-3 mb-4 text-center flex items-center justify-center flex-grow">
+                        <p className="text-xs text-zinc-500 italic font-light">
+                          "No reviews yet"
+                        </p>
+                      </div>
+                    )}
 
                     {/* Explore Events Button */}
                     <Link

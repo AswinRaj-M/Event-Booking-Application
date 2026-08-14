@@ -40,6 +40,12 @@ import {
   getUserWalletDetails,
   requestUserWithdrawal,
 } from "../controllers/user/userWallet.controller.js"
+import {
+  createOrganizerReview,
+  getMyReviews,
+  getEventReviewStatus,
+  getOrganizerReviews,
+} from "../controllers/user/review.controller.js"
 import passport from "passport"
 import upload from "../middleware/upload.js"
 import { protect } from "../middleware/auth.middleware.js"
@@ -51,7 +57,8 @@ import {
   loginValidation, 
   verifyOTPValidation,
   changePasswordValidation,
-  userProfileUpdateValidation
+  userProfileUpdateValidation,
+  createReviewValidation,
 } from "../validations/user.validation.js"
 
 const router = express.Router()
@@ -108,5 +115,11 @@ router.post('/wallet/verify-payment', protect, requireRole("user"), asyncHandler
 router.post('/wallet/record-failure', protect, requireRole("user"), asyncHandler(recordUserWalletFailure))
 router.get('/wallet/details', protect, requireRole("user"), asyncHandler(getUserWalletDetails))
 router.post('/wallet/withdraw', protect, requireRole("user"), asyncHandler(requestUserWithdrawal))
+
+// Organizer Review & Rating Routes
+router.post('/reviews', protect, requireRole("user"), createReviewValidation, validate, asyncHandler(createOrganizerReview))
+router.get('/reviews/my-reviews', protect, requireRole("user"), asyncHandler(getMyReviews))
+router.get('/reviews/event/:eventId', protect, requireRole("user"), asyncHandler(getEventReviewStatus))
+router.get('/reviews/organizer/:vendorId', protect, requireRole("user"), asyncHandler(getOrganizerReviews))
 
 export default router

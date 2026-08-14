@@ -3,9 +3,8 @@ import crypto from "crypto";
 import { AppError } from "../utils/AppError.js";
 import { HTTP_STATUS } from "../utils/enums/http.status.enum.js";
 
-/**
- * Get shared Razorpay instance initialized with env keys
- */
+//Get shared Razorpay instance initialized with env keys
+ 
 export const getRazorpayInstance = () => {
   const key_id = process.env.RAZORPAY_KEY_ID;
   const key_secret = process.env.RAZORPAY_KEY_SECRET;
@@ -23,9 +22,9 @@ export const getRazorpayInstance = () => {
   });
 };
 
-/**
- * Verify Razorpay payment signature using HMAC SHA256
- */
+
+// Verify Razorpay payment signature using HMAC SHA256
+ 
 export const verifyRazorpaySignature = (orderId, paymentId, signature) => {
   const secret = process.env.RAZORPAY_KEY_SECRET;
   if (!secret) {

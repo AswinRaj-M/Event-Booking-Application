@@ -92,17 +92,7 @@ export const getOrganizersRepo = async (limit = 8) => {
     {
       $group: {
         _id: "$vendorId",
-        totalEvents: { $sum: 1 },
-        avgRating: {
-          $avg: {
-            $cond: [
-              { $gt: ["$averageRating", 0] },
-              "$averageRating",
-              "$$REMOVE"
-            ]
-          }
-        },
-        totalReviews: { $sum: "$totalReviews" }
+        totalEvents: { $sum: 1 }
       }
     },
     {
@@ -128,6 +118,70 @@ export const getOrganizersRepo = async (limit = 8) => {
       }
     },
     {
+      $lookup: {
+        from: "reviews",
+        localField: "_id",
+        foreignField: "vendorId",
+        as: "allReviews"
+      }
+    },
+    {
+      $lookup: {
+        from: "reviews",
+        let: { vendorId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ["$vendorId", "$$vendorId"] }
+            }
+          },
+          {
+            $sort: { createdAt: -1 }
+          },
+          {
+            $limit: 3
+          },
+          {
+            $lookup: {
+              from: "users",
+              localField: "userId",
+              foreignField: "_id",
+              as: "userDoc"
+            }
+          },
+          {
+            $unwind: {
+              path: "$userDoc",
+              preserveNullAndEmptyArrays: true
+            }
+          },
+          {
+            $project: {
+              _id: 1,
+              rating: 1,
+              feedback: 1,
+              createdAt: 1,
+              reviewerName: { $ifNull: ["$userDoc.fullName", "Verified Attendee"] },
+              reviewerAvatar: "$userDoc.profilePicture.fileUrl"
+            }
+          }
+        ],
+        as: "recentReviews"
+      }
+    },
+    {
+      $addFields: {
+        totalReviews: { $size: "$allReviews" },
+        avgRating: {
+          $cond: [
+            { $gt: [{ $size: "$allReviews" }, 0] },
+            { $avg: "$allReviews.rating" },
+            0
+          ]
+        }
+      }
+    },
+    {
       $project: {
         _id: "$vendor._id",
         organizerName: "$vendor.organizerName",
@@ -137,14 +191,16 @@ export const getOrganizersRepo = async (limit = 8) => {
         location: "$vendor.location",
         description: "$vendor.description",
         totalEvents: 1,
-        rating: { $ifNull: [{ $round: ["$avgRating", 1] }, 0] },
-        totalReviews: 1
+        rating: { $round: ["$avgRating", 2] },
+        totalReviews: 1,
+        recentReviews: 1
       }
     },
     {
       $sort: {
-        totalEvents: -1,
-        rating: -1
+        rating: -1,
+        totalReviews: -1,
+        totalEvents: -1
       }
     },
     {

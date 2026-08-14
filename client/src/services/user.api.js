@@ -125,3 +125,20 @@ export const getUserWalletDetailsApi = (params) => {
 export const requestUserWithdrawalApi = (data) => {
   return axiosInstance.post("/users/wallet/withdraw", data);
 };
+
+// Organizer Review APIs
+export const submitOrganizerReviewApi = (data) => {
+  return axiosInstance.post("/users/reviews", data);
+};
+
+export const getMyReviewsApi = () => {
+  return axiosInstance.get("/users/reviews/my-reviews");
+};
+
+export const getEventReviewStatusApi = (eventId) => {
+  return axiosInstance.get(`/users/reviews/event/${eventId}`);
+};
+
+export const getOrganizerReviewsApi = (vendorId, params) => {
+  return axiosInstance.get(`/users/reviews/organizer/${vendorId}`, { params });
+};

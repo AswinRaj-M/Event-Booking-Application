@@ -13,12 +13,22 @@ import {
   Eye, 
   Plus,
   ShieldCheck,
-  Info
+  Info,
+  Star,
+  X,
+  Check,
+  Loader2
 } from "lucide-react";
 import { toast } from "sonner";
 import UserSideBar from "../../components/user/UserSideBar";
 import { USER_ROUTES } from "../../constants/Routes";
-import { getBookingHistory, cancelTicketApi, cancelBookingApi } from "../../services/user.api.js";
+import { 
+  getBookingHistory, 
+  cancelTicketApi, 
+  cancelBookingApi,
+  submitOrganizerReviewApi,
+  getMyReviewsApi
+} from "../../services/user.api.js";
 
 const MyBookings = () => {
   const navigate = useNavigate();
@@ -26,20 +36,45 @@ const MyBookings = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("upcoming"); // upcoming, past, cancelled
   const [bookings, setBookings] = useState([]);
+  const [userReviews, setUserReviews] = useState({}); // { [eventId]: review }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch bookings helper
+  // Review Modal States
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [selectedBookingForReview, setSelectedBookingForReview] = useState(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewHoverRating, setReviewHoverRating] = useState(0);
+  const [reviewFeedback, setReviewFeedback] = useState("");
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewError, setReviewError] = useState(null);
+
+  // Fetch bookings and user reviews helper
   const fetchBookings = async () => {
     try {
       setLoading(true);
       setError(null);
-      const res = await getBookingHistory();
-      if (res.data?.success) {
-        const rawList = res.data.history || res.data.bookings || [];
+      const [bookingsRes, reviewsRes] = await Promise.all([
+        getBookingHistory(),
+        getMyReviewsApi().catch(() => ({ data: { success: false, reviews: [] } })),
+      ]);
+
+      if (bookingsRes.data?.success) {
+        const rawList = bookingsRes.data.history || bookingsRes.data.bookings || [];
         setBookings(Array.isArray(rawList) ? rawList : []);
       } else {
         setError("Failed to fetch booking history.");
+      }
+
+      if (reviewsRes.data?.success && Array.isArray(reviewsRes.data.reviews)) {
+        const reviewMap = {};
+        reviewsRes.data.reviews.forEach((r) => {
+          const evId = r.eventId?._id || r.eventId;
+          if (evId) {
+            reviewMap[evId] = r;
+          }
+        });
+        setUserReviews(reviewMap);
       }
     } catch (err) {
       console.error("Fetch bookings error:", err);
@@ -52,6 +87,77 @@ const MyBookings = () => {
   useEffect(() => {
     fetchBookings();
   }, []);
+
+  const openReviewModal = (booking) => {
+    setSelectedBookingForReview(booking);
+    setReviewRating(5);
+    setReviewHoverRating(0);
+    setReviewFeedback("");
+    setReviewError(null);
+    setIsReviewModalOpen(true);
+  };
+
+  const closeReviewModal = () => {
+    if (submittingReview) return;
+    setIsReviewModalOpen(false);
+    setSelectedBookingForReview(null);
+    setReviewFeedback("");
+    setReviewError(null);
+  };
+
+  const handleReviewSubmit = async () => {
+    if (!selectedBookingForReview) return;
+
+    if (!reviewFeedback || reviewFeedback.trim().length < 5) {
+      setReviewError("Please write at least 5 characters of feedback.");
+      return;
+    }
+
+    if (reviewFeedback.trim().length > 1000) {
+      setReviewError("Feedback cannot exceed 1000 characters.");
+      return;
+    }
+
+    const eventId = selectedBookingForReview.eventId?._id;
+    if (!eventId) {
+      toast.error("Invalid event reference for review.");
+      return;
+    }
+
+    try {
+      setSubmittingReview(true);
+      setReviewError(null);
+
+      const res = await submitOrganizerReviewApi({
+        eventId,
+        rating: reviewRating,
+        feedback: reviewFeedback.trim(),
+      });
+
+      if (res.data?.success) {
+        toast.success("Thank you for your feedback! Your review has been submitted.");
+        // Immediately record in local userReviews map
+        const newReview = res.data.review || {
+          eventId,
+          rating: reviewRating,
+          feedback: reviewFeedback.trim(),
+          createdAt: new Date().toISOString(),
+        };
+        setUserReviews((prev) => ({
+          ...prev,
+          [eventId]: newReview,
+        }));
+        closeReviewModal();
+      }
+    } catch (err) {
+      console.error("Error submitting review:", err);
+      const msg = err.response?.data?.message || "Failed to submit review. Please try again.";
+      setReviewError(msg);
+      toast.error(msg);
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
 
   // Format Date Helper
   const getFormattedDate = (dateStr) => {
@@ -443,16 +549,49 @@ const MyBookings = () => {
                         {/* Actions Grid */}
                         <div className="w-full space-y-2 pt-4">
                           {isCompleted ? (
-                            <div className="flex flex-col gap-2 w-full">
-                              {/* Review, Details, Invoice Actions */}
-                              <div className="flex justify-end gap-3 text-zinc-400 text-xs font-semibold">
+                            <div className="flex flex-col gap-2.5 w-full">
+                              {/* If user already reviewed this event, display their rating and feedback */}
+                              {userReviews[event?._id] ? (
+                                <div className="w-full bg-[#120f26]/90 border border-purple-500/25 rounded-2xl p-3 flex flex-col gap-1 shadow-sm text-left">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-purple-300 flex items-center gap-1">
+                                      <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                                      Your Review
+                                    </span>
+                                    <div className="flex items-center gap-0.5 text-amber-400">
+                                      {[1, 2, 3, 4, 5].map((s) => (
+                                        <Star
+                                          key={s}
+                                          className={`w-3 h-3 ${
+                                            s <= (userReviews[event._id]?.rating || 0)
+                                              ? "fill-amber-400 text-amber-400"
+                                              : "text-zinc-700"
+                                          }`}
+                                        />
+                                      ))}
+                                      <span className="text-xs font-bold text-white ml-1">
+                                        {userReviews[event._id]?.rating}.0
+                                      </span>
+                                    </div>
+                                  </div>
+                                  {userReviews[event._id]?.feedback && (
+                                    <p className="text-xs text-zinc-300 italic line-clamp-2 leading-relaxed font-light">
+                                      "{userReviews[event._id].feedback}"
+                                    </p>
+                                  )}
+                                </div>
+                              ) : (
                                 <button 
-                                  onClick={() => handleActionClick("Add Review")}
-                                  className="hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer"
+                                  onClick={() => openReviewModal(booking)}
+                                  className="w-full py-2.5 px-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold rounded-xl shadow-[0_0_15px_rgba(147,51,234,0.25)] hover:shadow-[0_0_20px_rgba(147,51,234,0.4)] transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                                 >
-                                  <MessageSquare className="w-3.5 h-3.5" />
-                                  Add Review
+                                  <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                                  Rate Event Organizer
                                 </button>
+                              )}
+
+                              {/* Details Action */}
+                              <div className="flex justify-end gap-3 text-zinc-400 text-xs font-semibold">
                                 <button 
                                   onClick={() => handleActionClick("View Details", booking._id)}
                                   className="hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer"
@@ -515,6 +654,142 @@ const MyBookings = () => {
                 </Link>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Rate Event Organizer Modal */}
+        {isReviewModalOpen && selectedBookingForReview && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+            <div className="bg-[#0b0914] border border-purple-500/30 rounded-3xl w-full max-w-lg p-6 sm:p-8 shadow-[0_0_50px_rgba(147,51,234,0.15)] relative text-left">
+              {/* Close Button */}
+              <button
+                onClick={closeReviewModal}
+                disabled={submittingReview}
+                className="absolute top-5 right-5 text-zinc-400 hover:text-white p-1.5 rounded-xl hover:bg-white/5 transition-colors cursor-pointer"
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              {/* Header */}
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 rounded-2xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0">
+                  <Star className="w-6 h-6 fill-amber-400 text-amber-400" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-extrabold text-white tracking-tight">
+                    Rate Event Organizer
+                  </h3>
+                  <p className="text-xs text-zinc-400 mt-0.5 line-clamp-1">
+                    {selectedBookingForReview.eventId?.title || "Event Feedback"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Organizer Info Box */}
+              <div className="bg-[#120f26] border border-purple-500/20 rounded-2xl p-4 mb-6 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Organizer</span>
+                  <p className="text-sm font-bold text-white mt-0.5">
+                    {selectedBookingForReview.eventId?.vendorId?.organizerName ||
+                     selectedBookingForReview.eventId?.vendorId?.businessName ||
+                     "Event Organizer"}
+                  </p>
+                </div>
+                <span className="px-2.5 py-1 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-300 text-[10px] font-bold uppercase tracking-wider">
+                  Verified Attendee
+                </span>
+              </div>
+
+              {/* Star Rating Picker */}
+              <div className="mb-6 text-center bg-white/[0.02] border border-white/5 rounded-2xl p-5">
+                <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-3">
+                  Select your rating
+                </label>
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setReviewRating(star)}
+                      onMouseEnter={() => setReviewHoverRating(star)}
+                      onMouseLeave={() => setReviewHoverRating(0)}
+                      className="p-1 transition-transform hover:scale-125 cursor-pointer focus:outline-none"
+                      title={`${star} Star${star > 1 ? 's' : ''}`}
+                    >
+                      <Star
+                        className={`w-8 h-8 transition-colors ${
+                          star <= (reviewHoverRating || reviewRating)
+                            ? "fill-amber-400 text-amber-400 filter drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]"
+                            : "text-zinc-700 hover:text-zinc-500"
+                        }`}
+                      />
+                    </button>
+                  ))}
+                </div>
+                <span className="text-xs font-bold text-purple-400">
+                  {reviewRating === 5 && "5.0 — Excellent! Outstanding experience"}
+                  {reviewRating === 4 && "4.0 — Very Good! Really enjoyed it"}
+                  {reviewRating === 3 && "3.0 — Good, average experience"}
+                  {reviewRating === 2 && "2.0 — Fair, needs improvement"}
+                  {reviewRating === 1 && "1.0 — Poor, unsatisfactory"}
+                </span>
+              </div>
+
+              {/* Written Feedback Textarea */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-bold text-zinc-300 uppercase tracking-wider">
+                    Feedback <span className="text-rose-400">*</span>
+                  </label>
+                  <span className="text-[11px] text-zinc-500">
+                    {reviewFeedback.length}/1000
+                  </span>
+                </div>
+                <textarea
+                  rows={4}
+                  value={reviewFeedback}
+                  onChange={(e) => {
+                    setReviewFeedback(e.target.value);
+                    if (reviewError) setReviewError(null);
+                  }}
+                  placeholder="Enter your experience with the event organizer, organization, venue, and quality..."
+                  className="w-full bg-[#05050c] border border-white/10 rounded-2xl p-4 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all resize-none font-light"
+                />
+                {reviewError && (
+                  <p className="text-xs text-rose-400 mt-2 font-medium">
+                    {reviewError}
+                  </p>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={closeReviewModal}
+                  disabled={submittingReview}
+                  className="flex-1 py-3 bg-white/5 hover:bg-white/10 text-zinc-300 text-xs font-bold rounded-xl border border-white/10 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleReviewSubmit}
+                  disabled={submittingReview}
+                  className="flex-1 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold rounded-xl shadow-[0_0_20px_rgba(147,51,234,0.3)] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {submittingReview ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    "Submit Review"
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </main>
