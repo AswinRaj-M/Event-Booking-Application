@@ -10,7 +10,9 @@ import {
   Ticket as TicketIcon,
   CreditCard,
   ChevronDown,
-  LayoutGrid
+  LayoutGrid,
+  Info,
+  ArrowRight
 } from "lucide-react";
 import { toast } from "sonner";
 import VendorSidebar from "../../components/vendor/VendorSidebar";
