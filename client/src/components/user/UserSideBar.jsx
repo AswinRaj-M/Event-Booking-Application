@@ -5,7 +5,6 @@ import {
   Ticket,
   Wallet,
   User,
-  Settings,
   HelpCircle,
   LogOut
 } from "lucide-react";
@@ -37,7 +36,6 @@ const UserSideBar = () => {
 
   const accountLinks = [
     { path: USER_ROUTES.PROFILE, icon: User, label: "Profile" },
-    { path : "#", icon: Settings, label: "Settings" },
     { path: "#", icon: HelpCircle, label: "Help & Support" }
   ];
 

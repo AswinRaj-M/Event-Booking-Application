@@ -10,7 +10,6 @@ import {
     Wallet,
     ScanLine,
     UserCircle,
-    Settings,
     LogOut
 } from "lucide-react";
 import { vendorLogoutThunk, vendorLogoutState } from "../../features/vendorSlice";
@@ -46,7 +45,6 @@ const VendorSidebar = () => {
 
     const accountLinks = [
         { path: VENDOR_ROUTES.PROFILE, icon: UserCircle, label: "Vendor Profile" },
-        { path: "#", icon: Settings, label: "Settings" },
     ];
 
     return (

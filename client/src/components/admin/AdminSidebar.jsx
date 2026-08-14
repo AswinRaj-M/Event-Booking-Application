@@ -11,7 +11,6 @@ import {
     Ticket,
     CreditCard,
     BarChart3,
-    Settings,
     Layers,
     Tag,
     LogOut
@@ -88,16 +87,6 @@ function AdminSidebar() {
                         <Link to={ADMIN_ROUTES.ANALYTICS} className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive(ADMIN_ROUTES.ANALYTICS) ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
                             <BarChart3 className={`mr-3 h-5 w-5 ${isActive(ADMIN_ROUTES.ANALYTICS) ? 'text-purple-400' : 'text-gray-500'}`} />
                             Analytics
-                        </Link>
-                    </nav>
-                </div>
-
-                <div className="px-4">
-                    <p className="px-4 text-[11px] font-semibold text-gray-500 mb-2 uppercase">System</p>
-                    <nav className="space-y-1">
-                        <Link to="#" className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive('/admin/settings') ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
-                            <Settings className={`mr-3 h-5 w-5 ${isActive('/admin/settings') ? 'text-purple-400' : 'text-gray-500'}`} />
-                            Settings
                         </Link>
                     </nav>
                 </div>
