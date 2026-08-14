@@ -73,8 +73,8 @@ function AdminSidebar() {
                             <Tag className={`mr-3 h-5 w-5 ${isActive(ADMIN_ROUTES.COUPONS) ? 'text-purple-400' : 'text-gray-500'}`} />
                             Coupons
                         </Link>
-                        <Link to="#" className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive('/admin/bookings') ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
-                            <Ticket className={`mr-3 h-5 w-5 ${isActive('/admin/bookings') ? 'text-purple-400' : 'text-gray-500'}`} />
+                        <Link to={ADMIN_ROUTES.BOOKINGS} className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive(ADMIN_ROUTES.BOOKINGS) ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>
+                            <Ticket className={`mr-3 h-5 w-5 ${isActive(ADMIN_ROUTES.BOOKINGS) ? 'text-purple-400' : 'text-gray-500'}`} />
                             Bookings
                         </Link>
                         <Link to={ADMIN_ROUTES.CATEGORIES} className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive(ADMIN_ROUTES.CATEGORIES) ? 'bg-[#2A204C] text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'}`}>

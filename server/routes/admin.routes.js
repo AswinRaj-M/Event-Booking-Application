@@ -104,4 +104,8 @@ router.get('/wallet/details', protect, requireRole("admin"), asyncHandler(getAdm
 import { getAdminAnalytics } from "../controllers/admin/analytics.controller.js"
 router.get('/analytics', protect, requireRole("admin"), asyncHandler(getAdminAnalytics))
 
+// Admin Booking Management
+import { getAllBookingsAdmin } from "../controllers/admin/booking.controller.js"
+router.get('/bookings', protect, requireRole("admin"), asyncHandler(getAllBookingsAdmin))
+
 export default router
