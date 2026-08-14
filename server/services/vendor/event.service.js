@@ -64,8 +64,51 @@ const validateOfferDates = (offerEnabled, validFrom, validUntil, eventDate) => {
   }
 };
 
+const parseEventDateTime = (dateStr, timeStr) => {
+  if (!dateStr) return null;
+  const parts = typeof timeStr === 'string' ? timeStr.trim().split(/\s+/) : [];
+  const timePart = parts[0];
+  const modifier = parts[1]; // AM or PM
+  
+  let hours = 0;
+  let minutes = 0;
+  if (timePart) {
+    const timeComponents = timePart.split(':');
+    let h = parseInt(timeComponents[0], 10);
+    let m = parseInt(timeComponents[1] || '0', 10);
+    if (!isNaN(h) && !isNaN(m)) {
+      if (modifier) {
+        const mod = modifier.toUpperCase();
+        if (mod === 'PM' && h < 12) h += 12;
+        if (mod === 'AM' && h === 12) h = 0;
+      }
+      hours = h;
+      minutes = m;
+    }
+  }
+
+  if (typeof dateStr === 'string' && dateStr.includes('-')) {
+    const dateParts = dateStr.split('-');
+    if (dateParts.length === 3) {
+      const year = parseInt(dateParts[0], 10);
+      const month = parseInt(dateParts[1], 10);
+      const day = parseInt(dateParts[2], 10);
+      if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
+        return new Date(year, month - 1, day, hours, minutes, 0, 0);
+      }
+    }
+  }
+
+  const d = new Date(dateStr);
+  if (!isNaN(d.getTime())) {
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate(), hours, minutes, 0, 0);
+  }
+  return null;
+};
+
 export const createEventService = async(data)=>{
   const rawDate = data.date || data.schedule?.date;
+  const rawStartTime = data.startTime || data.schedule?.startTime;
   let parsedDate = undefined;
   if (rawDate) {
     const d = new Date(rawDate);
@@ -74,12 +117,11 @@ export const createEventService = async(data)=>{
     }
   }
 
-  if(parsedDate){
-    const d = new Date()
-    const time  = new Date(rawDate)
-    if(d.getTime() > time.getTime()){
-      throw new AppError("You cant host this event",HTTP_STATUS.BAD_REQUEST)
-      return;
+  if (rawDate) {
+    const startDateTime = parseEventDateTime(rawDate, rawStartTime);
+    const now = new Date();
+    if (startDateTime && startDateTime <= now) {
+      throw new AppError("Event start time must be in the future", HTTP_STATUS.BAD_REQUEST);
     }
   }
   
@@ -338,6 +380,16 @@ export const updateEventService = async (eventId, vendorId, data) => {
       const parsedDate = new Date(rawDate);
       if (!isNaN(parsedDate.getTime())) {
         finalDate = parsedDate;
+      }
+    }
+
+    const effectiveDate = rawDate !== undefined ? rawDate : existingEvent.schedule?.date;
+    const effectiveStartTime = rawStartTime !== undefined ? rawStartTime : existingEvent.schedule?.startTime;
+    if (effectiveDate) {
+      const startDateTime = parseEventDateTime(effectiveDate, effectiveStartTime);
+      const now = new Date();
+      if (startDateTime && startDateTime <= now) {
+        throw new AppError("Event start time must be in the future", HTTP_STATUS.BAD_REQUEST);
       }
     }
 

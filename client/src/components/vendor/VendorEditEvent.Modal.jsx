@@ -242,6 +242,34 @@ const VendorEditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
     setGalleryPreviews((prev) => prev.filter((_, idx) => idx !== indexToRemove));
   };
 
+  const parseEventDateTime = (dateStr, timeStr) => {
+    if (!dateStr || !timeStr) return null;
+    const parts = timeStr.trim().split(/\s+/);
+    const timePart = parts[0];
+    const modifier = parts[1]; // AM or PM
+    if (!timePart) return null;
+    
+    const timeComponents = timePart.split(':');
+    let hours = parseInt(timeComponents[0], 10);
+    let minutes = parseInt(timeComponents[1] || '0', 10);
+    if (isNaN(hours) || isNaN(minutes)) return null;
+    
+    if (modifier) {
+      const mod = modifier.toUpperCase();
+      if (mod === 'PM' && hours < 12) hours += 12;
+      if (mod === 'AM' && hours === 12) hours = 0;
+    }
+    
+    const dateParts = dateStr.split('-');
+    if (dateParts.length !== 3) return null;
+    const year = parseInt(dateParts[0], 10);
+    const month = parseInt(dateParts[1], 10);
+    const day = parseInt(dateParts[2], 10);
+    if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
+    
+    return new Date(year, month - 1, day, hours, minutes, 0, 0);
+  };
+
   const handleSave = async () => {
     if (!eventTitle.trim()) {
       toast.error('Event title is required');
@@ -257,6 +285,24 @@ const VendorEditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
     }
     if (!date) {
       toast.error('Event date is required');
+      return;
+    }
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    const todayStr = `${yyyy}-${mm}-${dd}`;
+    if (date < todayStr) {
+      toast.error('Event date cannot be in the past');
+      return;
+    }
+    const startDateTime = parseEventDateTime(date, startTime);
+    if (!startDateTime) {
+      toast.error('Please enter a valid start time');
+      return;
+    }
+    if (startDateTime <= new Date()) {
+      toast.error('Event start time must be in the future');
       return;
     }
     if (eventType === 'online') {

@@ -30,7 +30,16 @@ const VendorCreateEvent = () => {
   
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
-  
+  const [errors, setErrors] = useState({});
+
+  const clearError = (field) => {
+    setErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
 
   const [eventTitle, setEventTitle] = useState('');
   const [eventCategory, setEventCategory] = useState('');
@@ -43,6 +52,34 @@ const VendorCreateEvent = () => {
     const mm = String(today.getMonth() + 1).padStart(2, '0');
     const dd = String(today.getDate()).padStart(2, '0');
     return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const parseEventDateTime = (dateStr, timeStr) => {
+    if (!dateStr || !timeStr) return null;
+    const parts = timeStr.trim().split(/\s+/);
+    const timePart = parts[0];
+    const modifier = parts[1]; // AM or PM
+    if (!timePart) return null;
+    
+    const timeComponents = timePart.split(':');
+    let hours = parseInt(timeComponents[0], 10);
+    let minutes = parseInt(timeComponents[1] || '0', 10);
+    if (isNaN(hours) || isNaN(minutes)) return null;
+    
+    if (modifier) {
+      const mod = modifier.toUpperCase();
+      if (mod === 'PM' && hours < 12) hours += 12;
+      if (mod === 'AM' && hours === 12) hours = 0;
+    }
+    
+    const dateParts = dateStr.split('-');
+    if (dateParts.length !== 3) return null;
+    const year = parseInt(dateParts[0], 10);
+    const month = parseInt(dateParts[1], 10);
+    const day = parseInt(dateParts[2], 10);
+    if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
+    
+    return new Date(year, month - 1, day, hours, minutes, 0, 0);
   };
 
   const [enableOffer, setEnableOffer] = useState(true);
@@ -91,6 +128,14 @@ const VendorCreateEvent = () => {
 
   const removeTier = (index) => {
     setTicketTiers(prev => prev.filter((_, idx) => idx !== index));
+    setErrors(prev => {
+      const next = { ...prev };
+      delete next[`tier_${index}_name`];
+      delete next[`tier_${index}_price`];
+      delete next[`tier_${index}_capacity`];
+      delete next[`tier_${index}_benefits`];
+      return next;
+    });
   };
 
   const handleTierChange = (index, field, value) => {
@@ -102,6 +147,9 @@ const VendorCreateEvent = () => {
       };
       return updated;
     });
+    if (errors[`tier_${index}_${field}`]) {
+      clearError(`tier_${index}_${field}`);
+    }
   };
 
   const addBenefit = (tierIndex) => {
@@ -137,6 +185,9 @@ const VendorCreateEvent = () => {
       };
       return updated;
     });
+    if (errors[`tier_${tierIndex}_benefits`]) {
+      clearError(`tier_${tierIndex}_benefits`);
+    }
   };
 
 
@@ -261,6 +312,7 @@ const VendorCreateEvent = () => {
 
         setThumbnail(croppedFile);
         setThumbnailPreview(URL.createObjectURL(croppedFile));
+        clearError('thumbnail');
         setShowCropModal(false);
         setCropImageSrc('');
         setCurrentFile(null);
@@ -296,141 +348,164 @@ const VendorCreateEvent = () => {
     setGalleryPreviews(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handlePublish = async (status = 'pending') => {
+  const validateForm = (status) => {
+    const newErrors = {};
+
     if (!eventTitle.trim()) {
-      toast.error('Event title is required');
-      return;
+      newErrors.eventTitle = 'Event title is required';
+    } else if (eventTitle.trim().length < 3) {
+      newErrors.eventTitle = 'Event title must be at least 3 characters';
     }
+
     if (status !== 'draft') {
       if (!eventCategory) {
-        toast.error('Event category is required');
-        return;
+        newErrors.eventCategory = 'Event category is required';
       }
       if (!shortDescription.trim()) {
-        toast.error('Event description is required');
-        return;
+        newErrors.shortDescription = 'Event description is required';
+      } else if (shortDescription.trim().length < 10) {
+        newErrors.shortDescription = 'Description must be at least 10 characters';
       }
       if (!thumbnail) {
-        toast.error('Cover image (thumbnail) is required');
-        return;
+        newErrors.thumbnail = 'Cover image (thumbnail) is required';
       }
       if (!date) {
-        toast.error('Event date is required');
-        return;
+        newErrors.date = 'Event date is required';
+      } else {
+        const todayString = getTodayDateString();
+        if (date < todayString) {
+          newErrors.date = 'Event date cannot be in the past';
+        } else {
+          if (!startTime || !startTime.trim()) {
+            newErrors.startTime = 'Start time is required';
+          } else {
+            const startDateTime = parseEventDateTime(date, startTime);
+            const now = new Date();
+            if (!startDateTime) {
+              newErrors.startTime = 'Please enter a valid start time';
+            } else if (startDateTime <= now) {
+              newErrors.startTime = 'Event start time must be in the future';
+            }
+          }
+        }
       }
-      const todayString = getTodayDateString();
-      if (date < todayString) {
-        toast.error('Event date cannot be in the past');
-        return;
-      }
+
       if (eventType === 'online') {
         if (!onlineLink.trim()) {
-          toast.error('Google Meet / Online Link is required');
-          return;
-        }
-        try {
-          new URL(onlineLink.trim());
-        } catch (_) {
-          toast.error('Please enter a valid Google Meet or Online Link URL');
-          return;
+          newErrors.onlineLink = 'Google Meet / Online Link is required';
+        } else {
+          try {
+            new URL(onlineLink.trim());
+          } catch (_) {
+            newErrors.onlineLink = 'Please enter a valid URL (e.g. https://meet.google.com/...)';
+          }
         }
       } else {
         if (!venueName.trim()) {
-          toast.error('Venue name is required');
-          return;
+          newErrors.venueName = 'Venue name is required';
         }
         if (!address.trim()) {
-          toast.error('Address is required');
-          return;
+          newErrors.address = 'Street address is required';
         }
         if (!city.trim()) {
-          toast.error('City is required');
-          return;
+          newErrors.city = 'City is required';
         }
         if (!state.trim()) {
-          toast.error('State is required');
-          return;
+          newErrors.state = 'State is required';
         }
       }
+
       if (ticketType === 'paid') {
         if (!ticketTiers || ticketTiers.length === 0) {
-          toast.error('At least one ticket tier is required for paid events');
-          return;
-        }
-        for (let i = 0; i < ticketTiers.length; i++) {
-          const tier = ticketTiers[i];
-          if (!tier.name || !tier.name.trim()) {
-            toast.error(`Tier ${i + 1} name is required`);
-            return;
-          }
-          const priceNum = parseFloat(tier.price);
-          if (isNaN(priceNum) || priceNum <= 0) {
-            toast.error(`Tier ${i + 1} price must be greater than 0`);
-            return;
-          }
-          const capacityNum = parseInt(tier.capacity, 10);
-          if (isNaN(capacityNum) || capacityNum <= 0) {
-            toast.error(`Tier ${i + 1} capacity must be greater than 0`);
-            return;
-          }
-          const validBenefits = tier.benefits ? tier.benefits.filter(b => b.trim() !== '') : [];
-          if (validBenefits.length === 0) {
-            toast.error(`Tier ${i + 1} must have at least one benefit`);
-            return;
-          }
+          newErrors.ticketTiers = 'At least one ticket tier is required for paid events';
+        } else {
+          ticketTiers.forEach((tier, i) => {
+            if (!tier.name || !tier.name.trim()) {
+              newErrors[`tier_${i}_name`] = `Tier ${i + 1} name is required`;
+            }
+            const priceNum = parseFloat(tier.price);
+            if (isNaN(priceNum) || priceNum <= 0) {
+              newErrors[`tier_${i}_price`] = `Tier ${i + 1} price must be greater than 0`;
+            }
+            const capacityNum = parseInt(tier.capacity, 10);
+            if (isNaN(capacityNum) || capacityNum <= 0) {
+              newErrors[`tier_${i}_capacity`] = `Tier ${i + 1} capacity must be greater than 0`;
+            }
+            const validBenefits = tier.benefits ? tier.benefits.filter(b => b.trim() !== '') : [];
+            if (validBenefits.length === 0) {
+              newErrors[`tier_${i}_benefits`] = `Tier ${i + 1} must have at least one benefit`;
+            }
+          });
         }
       } else {
         if (!totalSeats) {
-          toast.error('Total seats limit is required');
-          return;
+          newErrors.totalSeats = 'Total seats limit is required';
+        } else if (parseInt(totalSeats, 10) <= 0) {
+          newErrors.totalSeats = 'Total seats must be greater than 0';
         }
       }
+
       if (enableOffer) {
         if (!discountValue) {
-          toast.error('Discount value is required when offer is enabled');
-          return;
+          newErrors.discountValue = 'Discount value is required when offer is enabled';
+        } else {
+          const val = parseFloat(discountValue);
+          if (offerType === 'percentage') {
+            if (isNaN(val) || val <= 0 || val > 100) {
+              newErrors.discountValue = 'Discount percentage must be between 1 and 100';
+            }
+          } else {
+            if (isNaN(val) || val <= 0) {
+              newErrors.discountValue = 'Discount amount must be greater than 0';
+            }
+          }
         }
-        const val = parseFloat(discountValue);
-        if (isNaN(val) || val <= 0 || val > 100) {
-          toast.error('Discount percentage must be between 1 and 100');
-          return;
-        }
+
         if (!minTickets) {
-          toast.error('Minimum tickets required is required when offer is enabled');
-          return;
+          newErrors.minTickets = 'Minimum tickets is required';
+        } else {
+          const minTkts = parseInt(minTickets, 10);
+          if (isNaN(minTkts) || minTkts < 1) {
+            newErrors.minTickets = 'Minimum tickets must be at least 1';
+          }
         }
-        const minTkts = parseInt(minTickets, 10);
-        if (isNaN(minTkts) || minTkts < 1) {
-          toast.error('Minimum tickets must be at least 1');
-          return;
-        }
+
         if (!validFrom) {
-          toast.error('Offer Start Date is required when offer is enabled');
-          return;
+          newErrors.validFrom = 'Offer start date is required';
+        } else {
+          const todayStr = getTodayDateString();
+          if (validFrom < todayStr) {
+            newErrors.validFrom = 'Offer start date cannot be in the past';
+          }
         }
+
         if (!validUntil) {
-          toast.error('Offer End Date is required when offer is enabled');
-          return;
-        }
-        const todayStr = getTodayDateString();
-        if (validFrom < todayStr) {
-          toast.error('Offer Start Date cannot be in the past');
-          return;
-        }
-        if (validUntil <= validFrom) {
-          toast.error('Offer End Date must be after Offer Start Date');
-          return;
-        }
-        if (date && validUntil > date) {
-          toast.error('Offer End Date cannot be set after the Event Date');
-          return;
+          newErrors.validUntil = 'Offer end date is required';
+        } else if (validFrom && validUntil <= validFrom) {
+          newErrors.validUntil = 'Offer end date must be after start date';
+        } else if (date && validUntil > date) {
+          newErrors.validUntil = 'Offer end date cannot be after event date';
         }
       }
 
       if (!agreedTerms) {
-        toast.error('You must agree to the Vendor Terms to publish the event');
-        return;
+        newErrors.agreedTerms = 'You must agree to the Vendor Terms to publish the event';
       }
+    }
+
+    setErrors(newErrors);
+    return {
+      isValid: Object.keys(newErrors).length === 0,
+      errors: newErrors
+    };
+  };
+
+  const handlePublish = async (status = 'pending') => {
+    const { isValid, errors: validationErrors } = validateForm(status);
+    if (!isValid) {
+      const firstError = Object.values(validationErrors)[0];
+      toast.error(firstError || 'Please fix the highlighted errors before publishing');
+      return;
     }
 
     const formData = new FormData();
@@ -575,20 +650,38 @@ const VendorCreateEvent = () => {
                   type="text" 
                   placeholder="e.g. Neon Nights Music Festival 2024"
                   value={eventTitle}
-                  onChange={(e) => setEventTitle(e.target.value)}
-                  className="w-full bg-[#12101F] text-white placeholder-zinc-600 px-4 py-3.5 rounded-xl border border-zinc-800/80 focus:outline-none focus:border-purple-500 transition-colors"
+                  onChange={(e) => {
+                    setEventTitle(e.target.value);
+                    if (errors.eventTitle) clearError('eventTitle');
+                  }}
+                  className={`w-full bg-[#12101F] text-white placeholder-zinc-600 px-4 py-3.5 rounded-xl border transition-colors ${
+                    errors.eventTitle ? 'border-red-500/80 focus:border-red-500' : 'border-zinc-800/80 focus:border-purple-500'
+                  }`}
                 />
+                {errors.eventTitle && (
+                  <p className="text-red-400 text-[11px] font-medium mt-1 flex items-center gap-1">
+                    <span className="w-1 h-1 rounded-full bg-red-400"></span>
+                    {errors.eventTitle}
+                  </p>
+                )}
               </div>
 
               {/* Category & Event Type */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold text-zinc-400">Event Category</label>
+                  <label className="text-xs font-semibold text-zinc-400">
+                    Event Category <span className="text-red-500">*</span>
+                  </label>
                   <div className="relative">
                     <select 
                       value={eventCategory}
-                      onChange={(e) => setEventCategory(e.target.value)}
-                      className="w-full bg-[#12101F] text-white px-4 py-3.5 rounded-xl border border-zinc-800/80 focus:outline-none focus:border-purple-500 transition-colors appearance-none cursor-pointer"
+                      onChange={(e) => {
+                        setEventCategory(e.target.value);
+                        if (errors.eventCategory) clearError('eventCategory');
+                      }}
+                      className={`w-full bg-[#12101F] text-white px-4 py-3.5 rounded-xl border transition-colors appearance-none cursor-pointer ${
+                        errors.eventCategory ? 'border-red-500/80 focus:border-red-500' : 'border-zinc-800/80 focus:border-purple-500'
+                      }`}
                     >
                       <option value="">Select category</option>
                       {categories.map((cat) => (
@@ -599,6 +692,12 @@ const VendorCreateEvent = () => {
                     </select>
                     <ChevronDown className="absolute right-4 top-4 w-4 h-4 text-zinc-500 pointer-events-none" />
                   </div>
+                  {errors.eventCategory && (
+                    <p className="text-red-400 text-[11px] font-medium mt-1 flex items-center gap-1">
+                      <span className="w-1 h-1 rounded-full bg-red-400"></span>
+                      {errors.eventCategory}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -635,16 +734,29 @@ const VendorCreateEvent = () => {
               {/* Short Description */}
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <label className="text-xs font-semibold text-zinc-400">Short Description</label>
+                  <label className="text-xs font-semibold text-zinc-400">
+                    Short Description <span className="text-red-500">*</span>
+                  </label>
                   <span className="text-[10px] text-zinc-500 font-semibold">{shortDescription.length}/500</span>
                 </div>
                 <textarea 
                   maxLength={500}
                   placeholder="Describe what makes your event special..."
                   value={shortDescription}
-                  onChange={(e) => setShortDescription(e.target.value)}
-                  className="w-full bg-[#12101F] text-white placeholder-zinc-600 p-4 rounded-xl border border-zinc-800/80 focus:outline-none focus:border-purple-500 transition-colors h-32 resize-none leading-relaxed text-sm"
+                  onChange={(e) => {
+                    setShortDescription(e.target.value);
+                    if (errors.shortDescription) clearError('shortDescription');
+                  }}
+                  className={`w-full bg-[#12101F] text-white placeholder-zinc-600 p-4 rounded-xl border transition-colors h-32 resize-none leading-relaxed text-sm ${
+                    errors.shortDescription ? 'border-red-500/80 focus:border-red-500' : 'border-zinc-800/80 focus:border-purple-500'
+                  }`}
                 />
+                {errors.shortDescription && (
+                  <p className="text-red-400 text-[11px] font-medium mt-1 flex items-center gap-1">
+                    <span className="w-1 h-1 rounded-full bg-red-400"></span>
+                    {errors.shortDescription}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -655,45 +767,57 @@ const VendorCreateEvent = () => {
                   2
                 </div>
                 <div className="space-y-0.5">
-                  <h2 className="text-lg font-bold text-white tracking-wide">Event Media</h2>
+                  <h2 className="text-lg font-bold text-white tracking-wide">
+                    Event Media <span className="text-red-500">*</span>
+                  </h2>
                   <p className="text-xs text-zinc-400">Upload high-quality images to attract more attendees.</p>
                 </div>
               </div>
 
               {/* Cover Image Box */}
-              <div 
-                onClick={() => thumbnailInputRef.current.click()}
-                className="border border-dashed border-zinc-800 hover:border-purple-500/40 bg-[#12101F]/50 rounded-2xl p-8 flex flex-col items-center justify-center gap-4 transition-all duration-300 cursor-pointer overflow-hidden relative min-h-[200px]"
-              >
-                <input 
-                  type="file" 
-                  ref={thumbnailInputRef} 
-                  onChange={handleThumbnailChange} 
-                  className="hidden" 
-                  accept="image/*" 
-                />
-                {thumbnailPreview ? (
-                  <div className="absolute inset-0 w-full h-full">
-                    <img src={thumbnailPreview} alt="Cover Preview" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-300">
-                      <p className="text-white text-xs font-bold bg-[#1C1A30]/85 px-3 py-1.5 rounded-lg border border-purple-500/35">Change Cover Image</p>
+              <div>
+                <div 
+                  onClick={() => thumbnailInputRef.current.click()}
+                  className={`border border-dashed bg-[#12101F]/50 rounded-2xl p-8 flex flex-col items-center justify-center gap-4 transition-all duration-300 cursor-pointer overflow-hidden relative min-h-[200px] ${
+                    errors.thumbnail ? 'border-red-500/80 hover:border-red-400 bg-red-950/10' : 'border-zinc-800 hover:border-purple-500/40'
+                  }`}
+                >
+                  <input 
+                    type="file" 
+                    ref={thumbnailInputRef} 
+                    onChange={handleThumbnailChange} 
+                    className="hidden" 
+                    accept="image/*" 
+                  />
+                  {thumbnailPreview ? (
+                    <div className="absolute inset-0 w-full h-full">
+                      <img src={thumbnailPreview} alt="Cover Preview" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-300">
+                        <p className="text-white text-xs font-bold bg-[#1C1A30]/85 px-3 py-1.5 rounded-lg border border-purple-500/35">Change Cover Image</p>
+                      </div>
                     </div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
-                      <Upload className="w-5 h-5" />
-                    </div>
-                    <div className="text-center space-y-1">
-                      <h3 className="text-sm font-bold text-white">Upload Cover Image</h3>
-                      <p className="text-xs text-zinc-500 max-w-[280px] mx-auto">
-                        Drag and drop or click to upload. Recommended size: 1920x1080px (Max 5MB)
-                      </p>
-                    </div>
-                    <button type="button" className="px-5 py-2.5 bg-[#1C1A30] hover:bg-[#252245] border border-purple-500/30 text-purple-300 text-xs font-semibold rounded-xl transition-all">
-                      Choose File
-                    </button>
-                  </>
+                  ) : (
+                    <>
+                      <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+                        <Upload className="w-5 h-5" />
+                      </div>
+                      <div className="text-center space-y-1">
+                        <h3 className="text-sm font-bold text-white">Upload Cover Image</h3>
+                        <p className="text-xs text-zinc-500 max-w-[280px] mx-auto">
+                          Drag and drop or click to upload. Recommended size: 1920x1080px (Max 5MB)
+                        </p>
+                      </div>
+                      <button type="button" className="px-5 py-2.5 bg-[#1C1A30] hover:bg-[#252245] border border-purple-500/30 text-purple-300 text-xs font-semibold rounded-xl transition-all">
+                        Choose File
+                      </button>
+                    </>
+                  )}
+                </div>
+                {errors.thumbnail && (
+                  <p className="text-red-400 text-[11px] font-medium mt-1.5 flex items-center gap-1">
+                    <span className="w-1 h-1 rounded-full bg-red-400"></span>
+                    {errors.thumbnail}
+                  </p>
                 )}
               </div>
 
@@ -757,8 +881,16 @@ const VendorCreateEvent = () => {
                 <div className="flex items-center gap-3">
                   <span className="text-xs font-semibold text-zinc-400">Enable Offer</span>
                   <button 
-                    type="button"
-                    onClick={() => setEnableOffer(!enableOffer)}
+                    type="button" 
+                    onClick={() => {
+                      setEnableOffer(!enableOffer);
+                      if (enableOffer) {
+                        clearError('discountValue');
+                        clearError('minTickets');
+                        clearError('validFrom');
+                        clearError('validUntil');
+                      }
+                    }}
                     className={`w-11 h-6 rounded-full transition-all relative p-0.5 cursor-pointer ${enableOffer ? 'bg-purple-600' : 'bg-zinc-800'}`}
                   >
                     <span className={`w-5 h-5 rounded-full bg-white transition-all block ${enableOffer ? 'translate-x-5' : 'translate-x-0'}`} />
@@ -785,64 +917,114 @@ const VendorCreateEvent = () => {
                           className="w-full bg-[#12101F] text-white px-4 py-3.5 rounded-xl border border-zinc-800/80 focus:outline-none focus:border-purple-500 transition-colors appearance-none cursor-pointer"
                         >
                           <option value="percentage">Percentage Discount (%)</option>
-                          <option value="flat">Flat Discount ($)</option>
+                          <option value="flat">Flat Discount (₹)</option>
                         </select>
                         <ChevronDown className="absolute right-4 top-4 w-4 h-4 text-zinc-500 pointer-events-none" />
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-xs font-semibold text-zinc-400">Discount Value</label>
+                      <label className="text-xs font-semibold text-zinc-400">
+                        Discount Value <span className="text-red-500">*</span>
+                      </label>
                       <div className="relative">
                         <input 
                           type="number" 
                           placeholder="e.g. 10"
                           value={discountValue}
-                          onChange={(e) => setDiscountValue(e.target.value)}
-                          className="w-full bg-[#12101F] text-white px-4 py-3.5 rounded-xl border border-zinc-800/80 focus:outline-none focus:border-purple-500 transition-colors pr-12 text-sm font-semibold"
+                          onChange={(e) => {
+                            setDiscountValue(e.target.value);
+                            if (errors.discountValue) clearError('discountValue');
+                          }}
+                          className={`w-full bg-[#12101F] text-white px-4 py-3.5 rounded-xl border transition-colors pr-12 text-sm font-semibold ${
+                            errors.discountValue ? 'border-red-500/80 focus:border-red-500' : 'border-zinc-800/80 focus:border-purple-500'
+                          }`}
                         />
-                        <span className="absolute right-4 top-3.5 text-sm text-zinc-500 font-bold">%</span>
+                        <span className="absolute right-4 top-3.5 text-sm text-zinc-500 font-bold">{offerType === 'percentage' ? '%' : '₹'}</span>
                       </div>
+                      {errors.discountValue && (
+                        <p className="text-red-400 text-[11px] font-medium mt-1 flex items-center gap-1">
+                          <span className="w-1 h-1 rounded-full bg-red-400"></span>
+                          {errors.discountValue}
+                        </p>
+                      )}
                     </div>
                   </div>
 
                   {/* Minimum Tickets constraint */}
                   <div className="space-y-2">
                     <label className="text-xs font-semibold text-zinc-400">
-                      Minimum Tickets (How many tickets user have to purchase to unlock this offer)
+                      Minimum Tickets (How many tickets user have to purchase to unlock this offer) <span className="text-red-500">*</span>
                     </label>
                     <input 
                       type="number" 
                       placeholder="e.g. 2"
                       value={minTickets}
-                      onChange={(e) => setMinTickets(e.target.value)}
-                      className="w-full bg-[#12101F] text-white px-4 py-3.5 rounded-xl border border-zinc-800/80 focus:outline-none focus:border-purple-500 transition-colors text-sm"
+                      onChange={(e) => {
+                        setMinTickets(e.target.value);
+                        if (errors.minTickets) clearError('minTickets');
+                      }}
+                      className={`w-full bg-[#12101F] text-white px-4 py-3.5 rounded-xl border transition-colors text-sm ${
+                        errors.minTickets ? 'border-red-500/80 focus:border-red-500' : 'border-zinc-800/80 focus:border-purple-500'
+                      }`}
                     />
+                    {errors.minTickets && (
+                      <p className="text-red-400 text-[11px] font-medium mt-1 flex items-center gap-1">
+                        <span className="w-1 h-1 rounded-full bg-red-400"></span>
+                        {errors.minTickets}
+                      </p>
+                    )}
                   </div>
 
                   {/* Validity periods */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <label className="text-xs font-semibold text-zinc-400">Valid From</label>
+                      <label className="text-xs font-semibold text-zinc-400">
+                        Valid From <span className="text-red-500">*</span>
+                      </label>
                       <input 
                         type="date" 
                         value={validFrom}
                         min={getTodayDateString()}
-                        onChange={(e) => setValidFrom(e.target.value)}
-                        className="w-full bg-[#12101F] text-zinc-400 px-4 py-3.5 rounded-xl border border-zinc-800/80 focus:outline-none focus:border-purple-500 transition-colors text-sm"
+                        onChange={(e) => {
+                          setValidFrom(e.target.value);
+                          if (errors.validFrom) clearError('validFrom');
+                        }}
+                        className={`w-full bg-[#12101F] text-zinc-400 px-4 py-3.5 rounded-xl border transition-colors text-sm ${
+                          errors.validFrom ? 'border-red-500/80 focus:border-red-500' : 'border-zinc-800/80 focus:border-purple-500'
+                        }`}
                       />
+                      {errors.validFrom && (
+                        <p className="text-red-400 text-[11px] font-medium mt-1 flex items-center gap-1">
+                          <span className="w-1 h-1 rounded-full bg-red-400"></span>
+                          {errors.validFrom}
+                        </p>
+                      )}
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-xs font-semibold text-zinc-400">Valid Until</label>
+                      <label className="text-xs font-semibold text-zinc-400">
+                        Valid Until <span className="text-red-500">*</span>
+                      </label>
                       <input 
                         type="date" 
                         value={validUntil}
                         min={validFrom || getTodayDateString()}
                         max={date || undefined}
-                        onChange={(e) => setValidUntil(e.target.value)}
-                        className="w-full bg-[#12101F] text-zinc-400 px-4 py-3.5 rounded-xl border border-zinc-800/80 focus:outline-none focus:border-purple-500 transition-colors text-sm"
+                        onChange={(e) => {
+                          setValidUntil(e.target.value);
+                          if (errors.validUntil) clearError('validUntil');
+                        }}
+                        className={`w-full bg-[#12101F] text-zinc-400 px-4 py-3.5 rounded-xl border transition-colors text-sm ${
+                          errors.validUntil ? 'border-red-500/80 focus:border-red-500' : 'border-zinc-800/80 focus:border-purple-500'
+                        }`}
                       />
+                      {errors.validUntil && (
+                        <p className="text-red-400 text-[11px] font-medium mt-1 flex items-center gap-1">
+                          <span className="w-1 h-1 rounded-full bg-red-400"></span>
+                          {errors.validUntil}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -864,20 +1046,38 @@ const VendorCreateEvent = () => {
 
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold text-zinc-400">Date</label>
+                  <label className="text-xs font-semibold text-zinc-400">
+                    Date <span className="text-red-500">*</span>
+                  </label>
                   <input 
                     type="date" 
                     value={date}
                     min={getTodayDateString()}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="w-full bg-[#12101F] text-zinc-400 px-4 py-3.5 rounded-xl border border-zinc-800/80 focus:outline-none focus:border-purple-500 transition-colors text-sm"
+                    onChange={(e) => {
+                      setDate(e.target.value);
+                      if (errors.date) clearError('date');
+                      if (errors.startTime) clearError('startTime');
+                    }}
+                    className={`w-full bg-[#12101F] text-zinc-400 px-4 py-3.5 rounded-xl border transition-colors text-sm ${
+                      errors.date ? 'border-red-500/80 focus:border-red-500' : 'border-zinc-800/80 focus:border-purple-500'
+                    }`}
                   />
+                  {errors.date && (
+                    <p className="text-red-400 text-[11px] font-medium mt-1 flex items-center gap-1">
+                      <span className="w-1 h-1 rounded-full bg-red-400"></span>
+                      {errors.date}
+                    </p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-xs font-semibold text-zinc-400">Start Time</label>
-                    <div className="flex items-center bg-[#12101F] rounded-xl border border-zinc-800/80 p-1.5 focus-within:border-purple-500 transition-colors w-full min-w-0">
+                    <label className="text-xs font-semibold text-zinc-400">
+                      Start Time <span className="text-red-500">*</span>
+                    </label>
+                    <div className={`flex items-center bg-[#12101F] rounded-xl border p-1.5 transition-colors w-full min-w-0 ${
+                      errors.startTime ? 'border-red-500/80 focus-within:border-red-500' : 'border-zinc-800/80 focus-within:border-purple-500'
+                    }`}>
                       <input 
                         type="text" 
                         maxLength={2}
@@ -889,6 +1089,7 @@ const VendorCreateEvent = () => {
                           const period = parts[1] || 'PM';
                           const mm = parts[0]?.split(':')[1] || '00';
                           setStartTime(`${val}:${mm} ${period}`);
+                          if (errors.startTime) clearError('startTime');
                         }}
                         onBlur={(e) => {
                           let val = e.target.value.replace(/\D/g, '');
@@ -904,6 +1105,7 @@ const VendorCreateEvent = () => {
                           const period = parts[1] || 'PM';
                           const mm = parts[0]?.split(':')[1] || '00';
                           setStartTime(`${val}:${mm} ${period}`);
+                          if (errors.startTime) clearError('startTime');
                         }}
                         className="w-8 shrink-0 bg-transparent text-white text-center focus:outline-none text-sm font-semibold"
                       />
@@ -919,6 +1121,7 @@ const VendorCreateEvent = () => {
                           const period = parts[1] || 'PM';
                           const hh = parts[0]?.split(':')[0] || '07';
                           setStartTime(`${hh}:${val} ${period}`);
+                          if (errors.startTime) clearError('startTime');
                         }}
                         onBlur={(e) => {
                           let val = e.target.value.replace(/\D/g, '');
@@ -933,6 +1136,7 @@ const VendorCreateEvent = () => {
                           const period = parts[1] || 'PM';
                           const hh = parts[0]?.split(':')[0] || '07';
                           setStartTime(`${hh}:${val} ${period}`);
+                          if (errors.startTime) clearError('startTime');
                         }}
                         className="w-8 shrink-0 bg-transparent text-white text-center focus:outline-none text-sm font-semibold"
                       />
@@ -943,12 +1147,19 @@ const VendorCreateEvent = () => {
                           const period = parts[1] === 'AM' ? 'PM' : 'AM';
                           const timePart = parts[0] || '07:00';
                           setStartTime(`${timePart} ${period}`);
+                          if (errors.startTime) clearError('startTime');
                         }}
                         className="ml-auto px-1.5 py-0.5 shrink-0 bg-[#1C1A30] hover:bg-[#252245] border border-purple-500/20 text-purple-300 text-[10px] font-bold rounded-md transition-all cursor-pointer"
                       >
                         {startTime.split(' ')[1] || 'PM'}
                       </button>
                     </div>
+                    {errors.startTime && (
+                      <p className="text-red-400 text-[11px] font-medium mt-1 flex items-center gap-1">
+                        <span className="w-1 h-1 rounded-full bg-red-400"></span>
+                        {errors.startTime}
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -1044,14 +1255,27 @@ const VendorCreateEvent = () => {
               {eventType === 'online' ? (
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-xs font-semibold text-zinc-400">Google Meet / Online Link</label>
+                    <label className="text-xs font-semibold text-zinc-400">
+                      Google Meet / Online Link <span className="text-red-500">*</span>
+                    </label>
                     <input 
                       type="url" 
                       placeholder="e.g. https://meet.google.com/abc-defg-hij"
                       value={onlineLink}
-                      onChange={(e) => setOnlineLink(e.target.value)}
-                      className="w-full bg-[#12101F] text-white placeholder-zinc-600 px-4 py-3.5 rounded-xl border border-zinc-800/80 focus:outline-none focus:border-purple-500 transition-colors text-sm"
+                      onChange={(e) => {
+                        setOnlineLink(e.target.value);
+                        if (errors.onlineLink) clearError('onlineLink');
+                      }}
+                      className={`w-full bg-[#12101F] text-white placeholder-zinc-600 px-4 py-3.5 rounded-xl border transition-colors text-sm ${
+                        errors.onlineLink ? 'border-red-500/80 focus:border-red-500' : 'border-zinc-800/80 focus:border-purple-500'
+                      }`}
                     />
+                    {errors.onlineLink && (
+                      <p className="text-red-400 text-[11px] font-medium mt-1 flex items-center gap-1">
+                        <span className="w-1 h-1 rounded-full bg-red-400"></span>
+                        {errors.onlineLink}
+                      </p>
+                    )}
                   </div>
 
                   {/* Age Restriction Toggle */}
@@ -1062,7 +1286,7 @@ const VendorCreateEvent = () => {
                     </div>
 
                     <button 
-                      type="button"
+                      type="button" 
                       onClick={() => setAgeRestriction(!ageRestriction)}
                       className={`w-10 h-5.5 rounded-full transition-all relative p-0.5 cursor-pointer ${ageRestriction ? 'bg-purple-600' : 'bg-zinc-800'}`}
                     >
@@ -1073,48 +1297,100 @@ const VendorCreateEvent = () => {
               ) : (
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-xs font-semibold text-zinc-400">Venue Name</label>
+                    <label className="text-xs font-semibold text-zinc-400">
+                      Venue Name <span className="text-red-500">*</span>
+                    </label>
                     <input 
                       type="text" 
                       placeholder="e.g. Grand Arena"
                       value={venueName}
-                      onChange={(e) => setVenueName(e.target.value)}
-                      className="w-full bg-[#12101F] text-white placeholder-zinc-600 px-4 py-3.5 rounded-xl border border-zinc-800/80 focus:outline-none focus:border-purple-500 transition-colors text-sm"
+                      onChange={(e) => {
+                        setVenueName(e.target.value);
+                        if (errors.venueName) clearError('venueName');
+                      }}
+                      className={`w-full bg-[#12101F] text-white placeholder-zinc-600 px-4 py-3.5 rounded-xl border transition-colors text-sm ${
+                        errors.venueName ? 'border-red-500/80 focus:border-red-500' : 'border-zinc-800/80 focus:border-purple-500'
+                      }`}
                     />
+                    {errors.venueName && (
+                      <p className="text-red-400 text-[11px] font-medium mt-1 flex items-center gap-1">
+                        <span className="w-1 h-1 rounded-full bg-red-400"></span>
+                        {errors.venueName}
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-semibold text-zinc-400">Address</label>
+                    <label className="text-xs font-semibold text-zinc-400">
+                      Address <span className="text-red-500">*</span>
+                    </label>
                     <input 
                       type="text" 
                       placeholder="Street address"
                       value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      className="w-full bg-[#12101F] text-white placeholder-zinc-600 px-4 py-3.5 rounded-xl border border-zinc-800/80 focus:outline-none focus:border-purple-500 transition-colors text-sm"
+                      onChange={(e) => {
+                        setAddress(e.target.value);
+                        if (errors.address) clearError('address');
+                      }}
+                      className={`w-full bg-[#12101F] text-white placeholder-zinc-600 px-4 py-3.5 rounded-xl border transition-colors text-sm ${
+                        errors.address ? 'border-red-500/80 focus:border-red-500' : 'border-zinc-800/80 focus:border-purple-500'
+                      }`}
                     />
+                    {errors.address && (
+                      <p className="text-red-400 text-[11px] font-medium mt-1 flex items-center gap-1">
+                        <span className="w-1 h-1 rounded-full bg-red-400"></span>
+                        {errors.address}
+                      </p>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-xs font-semibold text-zinc-400">City</label>
+                      <label className="text-xs font-semibold text-zinc-400">
+                        City <span className="text-red-500">*</span>
+                      </label>
                       <input 
                         type="text" 
                         placeholder="City"
                         value={city}
-                        onChange={(e) => setCity(e.target.value)}
-                        className="w-full bg-[#12101F] text-white placeholder-zinc-600 px-4 py-3.5 rounded-xl border border-zinc-800/80 focus:outline-none focus:border-purple-500 transition-colors text-sm"
+                        onChange={(e) => {
+                          setCity(e.target.value);
+                          if (errors.city) clearError('city');
+                        }}
+                        className={`w-full bg-[#12101F] text-white placeholder-zinc-600 px-4 py-3.5 rounded-xl border transition-colors text-sm ${
+                          errors.city ? 'border-red-500/80 focus:border-red-500' : 'border-zinc-800/80 focus:border-purple-500'
+                        }`}
                       />
+                      {errors.city && (
+                        <p className="text-red-400 text-[11px] font-medium mt-1 flex items-center gap-1">
+                          <span className="w-1 h-1 rounded-full bg-red-400"></span>
+                          {errors.city}
+                        </p>
+                      )}
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-xs font-semibold text-zinc-400">State</label>
+                      <label className="text-xs font-semibold text-zinc-400">
+                        State <span className="text-red-500">*</span>
+                      </label>
                       <input 
                         type="text" 
                         placeholder="State"
                         value={state}
-                        onChange={(e) => setState(e.target.value)}
-                        className="w-full bg-[#12101F] text-white placeholder-zinc-600 px-4 py-3.5 rounded-xl border border-zinc-800/80 focus:outline-none focus:border-purple-500 transition-colors text-sm"
+                        onChange={(e) => {
+                          setState(e.target.value);
+                          if (errors.state) clearError('state');
+                        }}
+                        className={`w-full bg-[#12101F] text-white placeholder-zinc-600 px-4 py-3.5 rounded-xl border transition-colors text-sm ${
+                          errors.state ? 'border-red-500/80 focus:border-red-500' : 'border-zinc-800/80 focus:border-purple-500'
+                        }`}
                       />
+                      {errors.state && (
+                        <p className="text-red-400 text-[11px] font-medium mt-1 flex items-center gap-1">
+                          <span className="w-1 h-1 rounded-full bg-red-400"></span>
+                          {errors.state}
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -1134,7 +1410,7 @@ const VendorCreateEvent = () => {
                     </div>
 
                     <button 
-                      type="button"
+                      type="button" 
                       onClick={() => setAgeRestriction(!ageRestriction)}
                       className={`w-10 h-5.5 rounded-full transition-all relative p-0.5 cursor-pointer ${ageRestriction ? 'bg-purple-600' : 'bg-zinc-800'}`}
                     >
@@ -1158,8 +1434,11 @@ const VendorCreateEvent = () => {
                 {/* Segmented control Paid / Free */}
                 <div className="bg-[#12101F] p-1 rounded-xl grid grid-cols-2 border border-zinc-800/80">
                   <button 
-                    type="button"
-                    onClick={() => setTicketType('paid')}
+                    type="button" 
+                    onClick={() => {
+                      setTicketType('paid');
+                      clearError('totalSeats');
+                    }}
                     className={`py-2 px-4 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                       ticketType === 'paid' 
                         ? 'bg-[#1C1A30] text-white border border-purple-500/15' 
@@ -1169,8 +1448,11 @@ const VendorCreateEvent = () => {
                     Paid
                   </button>
                   <button 
-                    type="button"
-                    onClick={() => setTicketType('free')}
+                    type="button" 
+                    onClick={() => {
+                      setTicketType('free');
+                      clearError('ticketTiers');
+                    }}
                     className={`py-2 px-4 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                       ticketType === 'free' 
                         ? 'bg-[#1C1A30] text-white border border-purple-500/15' 
@@ -1184,7 +1466,9 @@ const VendorCreateEvent = () => {
                 {ticketType === 'paid' ? (
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
-                      <label className="text-xs font-semibold text-zinc-400">Ticket Tiers</label>
+                      <label className="text-xs font-semibold text-zinc-400">
+                        Ticket Tiers <span className="text-red-500">*</span>
+                      </label>
                       <button
                         type="button"
                         onClick={addTier}
@@ -1194,6 +1478,13 @@ const VendorCreateEvent = () => {
                         Add Tier
                       </button>
                     </div>
+
+                    {errors.ticketTiers && (
+                      <p className="text-red-400 text-[11px] font-medium flex items-center gap-1">
+                        <span className="w-1 h-1 rounded-full bg-red-400"></span>
+                        {errors.ticketTiers}
+                      </p>
+                    )}
 
                     <div className="space-y-4">
                       {ticketTiers.map((tier, idx) => (
@@ -1213,44 +1504,76 @@ const VendorCreateEvent = () => {
                           
                           <div className="space-y-3">
                             <div className="space-y-1.5">
-                              <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Tier Name</label>
+                              <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+                                Tier Name <span className="text-red-500">*</span>
+                              </label>
                               <input
                                 type="text"
                                 placeholder="e.g. VIP"
                                 value={tier.name}
                                 onChange={(e) => handleTierChange(idx, 'name', e.target.value)}
-                                className="w-full bg-[#0B0A11] text-white px-3 py-2.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-purple-500 text-xs transition-colors"
+                                className={`w-full bg-[#0B0A11] text-white px-3 py-2.5 rounded-xl border text-xs transition-colors ${
+                                  errors[`tier_${idx}_name`] ? 'border-red-500/80 focus:border-red-500' : 'border-zinc-800 focus:border-purple-500'
+                                }`}
                               />
+                              {errors[`tier_${idx}_name`] && (
+                                <p className="text-red-400 text-[10px] font-medium mt-1 flex items-center gap-1">
+                                  <span className="w-1 h-1 rounded-full bg-red-400"></span>
+                                  {errors[`tier_${idx}_name`]}
+                                </p>
+                              )}
                             </div>
                             
                             <div className="grid grid-cols-2 gap-4">
                               <div className="space-y-1.5">
-                                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Price (₹)</label>
+                                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+                                  Price (₹) <span className="text-red-500">*</span>
+                                </label>
                                 <input
                                   type="number"
                                   placeholder="e.g. 99"
                                   value={tier.price}
                                   onChange={(e) => handleTierChange(idx, 'price', e.target.value)}
-                                  className="w-full bg-[#0B0A11] text-white px-3 py-2.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-purple-500 text-xs transition-colors"
+                                  className={`w-full bg-[#0B0A11] text-white px-3 py-2.5 rounded-xl border text-xs transition-colors ${
+                                    errors[`tier_${idx}_price`] ? 'border-red-500/80 focus:border-red-500' : 'border-zinc-800 focus:border-purple-500'
+                                  }`}
                                 />
+                                {errors[`tier_${idx}_price`] && (
+                                  <p className="text-red-400 text-[10px] font-medium mt-1 flex items-center gap-1">
+                                    <span className="w-1 h-1 rounded-full bg-red-400"></span>
+                                    {errors[`tier_${idx}_price`]}
+                                  </p>
+                                )}
                               </div>
 
                               <div className="space-y-1.5">
-                                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Capacity</label>
+                                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+                                  Capacity <span className="text-red-500">*</span>
+                                </label>
                                 <input
                                   type="number"
                                   placeholder="e.g. 50"
                                   value={tier.capacity}
                                   onChange={(e) => handleTierChange(idx, 'capacity', e.target.value)}
-                                  className="w-full bg-[#0B0A11] text-white px-3 py-2.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-purple-500 text-xs transition-colors"
+                                  className={`w-full bg-[#0B0A11] text-white px-3 py-2.5 rounded-xl border text-xs transition-colors ${
+                                    errors[`tier_${idx}_capacity`] ? 'border-red-500/80 focus:border-red-500' : 'border-zinc-800 focus:border-purple-500'
+                                  }`}
                                 />
+                                {errors[`tier_${idx}_capacity`] && (
+                                  <p className="text-red-400 text-[10px] font-medium mt-1 flex items-center gap-1">
+                                    <span className="w-1 h-1 rounded-full bg-red-400"></span>
+                                    {errors[`tier_${idx}_capacity`]}
+                                  </p>
+                                )}
                               </div>
                             </div>
                           </div>
 
                           {/* Benefits section */}
                           <div className="space-y-2 pt-2 border-t border-zinc-800/40">
-                            <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Benefits</label>
+                            <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
+                              Benefits <span className="text-red-500">*</span>
+                            </label>
                             <div className="space-y-2">
                               {(tier.benefits || []).map((benefit, bIdx) => (
                                 <div key={bIdx} className="flex gap-2 items-center">
@@ -1273,6 +1596,12 @@ const VendorCreateEvent = () => {
                                 </div>
                               ))}
                             </div>
+                            {errors[`tier_${idx}_benefits`] && (
+                              <p className="text-red-400 text-[10px] font-medium mt-1 flex items-center gap-1">
+                                <span className="w-1 h-1 rounded-full bg-red-400"></span>
+                                {errors[`tier_${idx}_benefits`]}
+                              </p>
+                            )}
                             <button
                               type="button"
                               onClick={() => addBenefit(idx)}
@@ -1295,14 +1624,27 @@ const VendorCreateEvent = () => {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <label className="text-xs font-semibold text-zinc-400">Total Seats</label>
+                    <label className="text-xs font-semibold text-zinc-400">
+                      Total Seats <span className="text-red-500">*</span>
+                    </label>
                     <input 
                       type="number" 
                       placeholder="e.g. 500"
                       value={totalSeats}
-                      onChange={(e) => setTotalSeats(e.target.value)}
-                      className="w-full bg-[#12101F] text-white px-4 py-3.5 rounded-xl border border-zinc-800/80 focus:outline-none focus:border-purple-500 transition-colors text-sm"
+                      onChange={(e) => {
+                        setTotalSeats(e.target.value);
+                        if (errors.totalSeats) clearError('totalSeats');
+                      }}
+                      className={`w-full bg-[#12101F] text-white px-4 py-3.5 rounded-xl border transition-colors text-sm ${
+                        errors.totalSeats ? 'border-red-500/80 focus:border-red-500' : 'border-zinc-800/80 focus:border-purple-500'
+                      }`}
                     />
+                    {errors.totalSeats && (
+                      <p className="text-red-400 text-[11px] font-medium mt-1 flex items-center gap-1">
+                        <span className="w-1 h-1 rounded-full bg-red-400"></span>
+                        {errors.totalSeats}
+                      </p>
+                    )}
                     <p className="text-[10px] text-zinc-500 leading-relaxed">We'll stop sales once this limit is reached.</p>
                   </div>
                 )}
@@ -1322,17 +1664,30 @@ const VendorCreateEvent = () => {
             </div>
 
             {/* Checklist agreement */}
-            <label className="flex items-start gap-3 cursor-pointer group pt-2 select-none">
-              <input 
-                type="checkbox" 
-                checked={agreedTerms}
-                onChange={(e) => setAgreedTerms(e.target.checked)}
-                className="mt-1 accent-purple-600 rounded bg-[#12101F] border-zinc-800 cursor-pointer"
-              />
-              <span className="text-xs text-zinc-400 group-hover:text-zinc-300 transition-colors leading-relaxed">
-                I agree to the Vendor Terms and certify that I have the rights to host this event.
-              </span>
-            </label>
+            <div>
+              <label className="flex items-start gap-3 cursor-pointer group pt-2 select-none">
+                <input 
+                  type="checkbox" 
+                  checked={agreedTerms}
+                  onChange={(e) => {
+                    setAgreedTerms(e.target.checked);
+                    if (errors.agreedTerms) clearError('agreedTerms');
+                  }}
+                  className={`mt-1 accent-purple-600 rounded bg-[#12101F] cursor-pointer ${
+                    errors.agreedTerms ? 'border-red-500 ring-1 ring-red-500' : 'border-zinc-800'
+                  }`}
+                />
+                <span className={`text-xs transition-colors leading-relaxed ${errors.agreedTerms ? 'text-red-400' : 'text-zinc-400 group-hover:text-zinc-300'}`}>
+                  I agree to the Vendor Terms and certify that I have the rights to host this event. <span className="text-red-500">*</span>
+                </span>
+              </label>
+              {errors.agreedTerms && (
+                <p className="text-red-400 text-[11px] font-medium mt-1 flex items-center gap-1">
+                  <span className="w-1 h-1 rounded-full bg-red-400"></span>
+                  {errors.agreedTerms}
+                </p>
+              )}
+            </div>
 
             {/* Poster identification footer card */}
             <div className="bg-[#12101F]/60 border border-zinc-800/50 p-4 rounded-2xl flex items-center gap-3.5">
