@@ -12,7 +12,9 @@ import {
   ChevronDown,
   LayoutGrid,
   Info,
-  ArrowRight
+  ArrowRight,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { toast } from "sonner";
 import VendorSidebar from "../../components/vendor/VendorSidebar";
@@ -32,8 +34,12 @@ const VendorWallet = () => {
   const [destinationAccount, setDestinationAccount] = useState("Direct Bank Transfer");
   const [loading, setLoading] = useState(false);
 
-  // Transaction History State
+  // Transaction History & Pagination State
   const [transactions, setTransactions] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalTransactions, setTotalTransactions] = useState(0);
+  const limit = 5;
   const [dataLoading, setDataLoading] = useState(true);
 
   // Fetch Real Vendor Wallet & Transactions Data
@@ -43,7 +49,7 @@ const VendorWallet = () => {
         setDataLoading(true);
         const [walletRes, txRes] = await Promise.all([
           getVendorWalletApi(),
-          getVendorWalletTransactionsApi()
+          getVendorWalletTransactionsApi(currentPage, limit)
         ]);
 
         if (walletRes.data?.success && walletRes.data.wallet) {
@@ -55,6 +61,13 @@ const VendorWallet = () => {
         }
 
         if (txRes.data?.success && txRes.data.transactions) {
+          if (txRes.data.totalPages !== undefined) {
+            setTotalPages(Math.max(1, txRes.data.totalPages));
+          }
+          if (txRes.data.total !== undefined) {
+            setTotalTransactions(txRes.data.total);
+          }
+
           const uniqueTxMap = new Map();
           txRes.data.transactions.forEach((tx) => {
             // Deduplicate by transaction ID or bookingId + type
@@ -114,7 +127,7 @@ const VendorWallet = () => {
     };
 
     fetchWalletData();
-  }, []);
+  }, [currentPage]);
 
   const handleMaxClick = () => {
     setWithdrawAmount(availableBalance.toString());
@@ -374,6 +387,76 @@ const VendorWallet = () => {
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination Controls */}
+            {totalTransactions > 0 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-white/5">
+                <p className="text-xs text-zinc-400 font-medium">
+                  Showing <span className="text-white font-bold">{Math.min((currentPage - 1) * limit + 1, totalTransactions)}</span> to{" "}
+                  <span className="text-white font-bold">{Math.min(currentPage * limit, totalTransactions)}</span> of{" "}
+                  <span className="text-white font-bold">{totalTransactions}</span> transactions
+                </p>
+
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1 || dataLoading}
+                      className="p-2 rounded-xl bg-[#0E0C1C] border border-white/5 text-zinc-400 hover:text-white hover:border-purple-500/30 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                      title="Previous Page"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+
+                    <div className="flex items-center gap-1.5">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => {
+                        if (
+                          pageNum === 1 ||
+                          pageNum === totalPages ||
+                          (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
+                        ) {
+                          const isActive = pageNum === currentPage;
+                          return (
+                            <button
+                              key={pageNum}
+                              onClick={() => setCurrentPage(pageNum)}
+                              disabled={dataLoading}
+                              className={`min-w-[32px] h-8 px-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                                isActive
+                                  ? "bg-purple-600 text-white shadow-[0_0_12px_rgba(147,51,234,0.4)] border border-purple-400/40"
+                                  : "bg-[#0E0C1C] border border-white/5 text-zinc-400 hover:text-white hover:border-purple-500/20"
+                              }`}
+                            >
+                              {pageNum}
+                            </button>
+                          );
+                        }
+                        if (
+                          (pageNum === 2 && currentPage > 3) ||
+                          (pageNum === totalPages - 1 && currentPage < totalPages - 2)
+                        ) {
+                          return (
+                            <span key={pageNum} className="text-zinc-600 text-xs px-1">
+                              ...
+                            </span>
+                          );
+                        }
+                        return null;
+                      })}
+                    </div>
+
+                    <button
+                      onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages || dataLoading}
+                      className="p-2 rounded-xl bg-[#0E0C1C] border border-white/5 text-zinc-400 hover:text-white hover:border-purple-500/30 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                      title="Next Page"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Right Column (1 Col) - Request Payout Card */}
