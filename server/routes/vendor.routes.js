@@ -39,6 +39,12 @@ import {
   checkInTicket,
   getRecentCheckIns
 } from "../controllers/vendor/checkIn.controller.js"
+import {
+  getMyNotifications,
+  markMyNotificationsRead,
+  deleteMyNotification,
+  clearAllMyNotifications,
+} from "../controllers/common/notification.controller.js";
 import upload from '../middleware/upload.js'
 import { asyncHandler } from '../middleware/error.middleware.js'
 import { requireRole } from '../middleware/role.middleware.js'
@@ -133,5 +139,11 @@ router.get("/status", protect, requireRole("vendor"), (req, res) => {
     isBlocked: req.user.isBlocked
   });
 })
+
+// Notification Routes
+router.get('/notifications', protect, asyncHandler(getMyNotifications))
+router.patch('/notifications/mark-read', protect, asyncHandler(markMyNotificationsRead))
+router.delete('/notifications/clear-all', protect, asyncHandler(clearAllMyNotifications))
+router.delete('/notifications/:id', protect, asyncHandler(deleteMyNotification))
 
 export default router;

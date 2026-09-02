@@ -14,52 +14,102 @@ import {
   Flame,
   UserCheck
 } from "lucide-react";
+import {
+  getUserNotificationsApi,
+  markUserNotificationsReadApi,
+  deleteUserNotificationApi,
+  clearAllUserNotificationsApi
+} from "../../services/user.api";
 
 const NotificationBell = ({ placement = "right", className = "" }) => {
-  const { user } = useSelector((state) => state.user);
-  const { vendor } = useSelector((state) => state.vendor);
+  const { user } = useSelector((state) => state.user || {});
+  const { vendor } = useSelector((state) => state.vendor || {});
+  const activeUserId = user?.id || user?._id || vendor?.id || vendor?._id || null;
+
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const notificationRef = useRef(null);
 
-  const [notifications, setNotifications] = useState(() => {
-    try {
-      const saved = localStorage.getItem("festivo_notifications");
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
-  const [unreadCount, setUnreadCount] = useState(() => {
-    try {
-      const savedUnread = localStorage.getItem("festivo_unread_notifications");
-      return savedUnread ? parseInt(savedUnread, 10) : 0;
-    } catch {
-      return 0;
+  // Load user-owned notifications from DB & user-scoped storage when activeUserId changes
+  useEffect(() => {
+    if (!activeUserId) {
+      setNotifications([]);
+      setUnreadCount(0);
+      return;
     }
-  });
 
-  // Listen to custom window event dispatched globally on new notifications
+    // 1. Initial read from user-scoped storage
+    try {
+      const saved = localStorage.getItem(`festivo_notifications_${activeUserId}`);
+      if (saved) {
+        setNotifications(JSON.parse(saved));
+      }
+      const savedUnread = localStorage.getItem(`festivo_unread_notifications_${activeUserId}`);
+      if (savedUnread) {
+        setUnreadCount(parseInt(savedUnread, 10));
+      }
+    } catch (e) {}
+
+    // 2. Fetch fresh user-owned notifications from backend DB
+    let isMounted = true;
+    getUserNotificationsApi()
+      .then((res) => {
+        if (!isMounted || !res.data?.success) return;
+        const fetchedNotifs = Array.isArray(res.data.notifications) ? res.data.notifications : [];
+        const count = typeof res.data.unreadCount === "number" ? res.data.unreadCount : 0;
+        setNotifications(fetchedNotifs);
+        setUnreadCount(count);
+        try {
+          localStorage.setItem(`festivo_notifications_${activeUserId}`, JSON.stringify(fetchedNotifs));
+          localStorage.setItem(`festivo_unread_notifications_${activeUserId}`, count.toString());
+        } catch (e) {}
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeUserId]);
+
+  // Listen to custom window event dispatched globally on new real-time notifications
   useEffect(() => {
     const handleNotificationEvent = (e) => {
       const notif = e.detail;
-      if (!notif) return;
+      if (!notif || !activeUserId) return;
+
+      // Verify recipient ownership if userId is attached
+      if (notif.userId && notif.userId.toString() !== activeUserId.toString()) {
+        return;
+      }
 
       const newNotif = {
         _id: notif._id || Date.now().toString() + Math.random().toString(36).substring(2, 6),
+        userId: activeUserId,
         title: notif.title || "Notification",
         message: notif.message || "",
         type: notif.type || "INFO",
+        isRead: false,
         createdAt: notif.createdAt || new Date().toISOString(),
       };
 
       setNotifications((prev) => {
         if (prev.some((n) => n._id === newNotif._id)) return prev;
-        const updated = [newNotif, ...prev].slice(0, 30);
+        const updated = [newNotif, ...prev].slice(0, 50);
+        try {
+          localStorage.setItem(`festivo_notifications_${activeUserId}`, JSON.stringify(updated));
+        } catch (e) {}
         return updated;
       });
 
-      setUnreadCount((prev) => prev + 1);
+      setUnreadCount((prev) => {
+        const newCount = prev + 1;
+        try {
+          localStorage.setItem(`festivo_unread_notifications_${activeUserId}`, newCount.toString());
+        } catch (e) {}
+        return newCount;
+      });
     };
 
     window.addEventListener("festivo:notification", handleNotificationEvent);
@@ -67,7 +117,7 @@ const NotificationBell = ({ placement = "right", className = "" }) => {
     return () => {
       window.removeEventListener("festivo:notification", handleNotificationEvent);
     };
-  }, []);
+  }, [activeUserId]);
 
   // Close notification dropdown when clicked outside
   useEffect(() => {
@@ -84,33 +134,43 @@ const NotificationBell = ({ placement = "right", className = "" }) => {
 
   const toggleNotifications = () => {
     setIsNotificationOpen((prev) => {
-      if (!prev) {
+      const willOpen = !prev;
+      if (willOpen && unreadCount > 0) {
         setUnreadCount(0);
-        try {
-          localStorage.setItem("festivo_unread_notifications", "0");
-        } catch (e) {}
+        if (activeUserId) {
+          try {
+            localStorage.setItem(`festivo_unread_notifications_${activeUserId}`, "0");
+          } catch (e) {}
+        }
+        markUserNotificationsReadApi().catch(() => {});
       }
-      return !prev;
+      return willOpen;
     });
   };
 
   const handleClearNotifications = () => {
     setNotifications([]);
     setUnreadCount(0);
-    try {
-      localStorage.removeItem("festivo_notifications");
-      localStorage.setItem("festivo_unread_notifications", "0");
-    } catch (e) {}
+    if (activeUserId) {
+      try {
+        localStorage.removeItem(`festivo_notifications_${activeUserId}`);
+        localStorage.setItem(`festivo_unread_notifications_${activeUserId}`, "0");
+      } catch (e) {}
+    }
+    clearAllUserNotificationsApi().catch(() => {});
   };
 
   const handleRemoveNotification = (id) => {
     setNotifications((prev) => {
       const updated = prev.filter((n) => n._id !== id);
-      try {
-        localStorage.setItem("festivo_notifications", JSON.stringify(updated));
-      } catch (e) {}
+      if (activeUserId) {
+        try {
+          localStorage.setItem(`festivo_notifications_${activeUserId}`, JSON.stringify(updated));
+        } catch (e) {}
+      }
       return updated;
     });
+    deleteUserNotificationApi(id).catch(() => {});
   };
 
   const renderNotificationIcon = (type) => {

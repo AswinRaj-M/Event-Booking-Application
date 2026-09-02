@@ -143,3 +143,20 @@ export const getEventReviewStatusApi = (eventId) => {
 export const getOrganizerReviewsApi = (vendorId, params) => {
   return axiosInstance.get(`/users/reviews/organizer/${vendorId}`, { params });
 };
+
+// User Notifications APIs
+export const getUserNotificationsApi = () => {
+  return axiosInstance.get("/users/notifications");
+};
+
+export const markUserNotificationsReadApi = () => {
+  return axiosInstance.patch("/users/notifications/mark-read");
+};
+
+export const deleteUserNotificationApi = (id) => {
+  return axiosInstance.delete(`/users/notifications/${id}`);
+};
+
+export const clearAllUserNotificationsApi = () => {
+  return axiosInstance.delete("/users/notifications/clear-all");
+};

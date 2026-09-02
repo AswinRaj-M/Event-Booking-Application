@@ -32,8 +32,14 @@ function App() {
     const handleNotification = (data) => {
       if (!data) return;
 
+      // Verify recipient ownership if target userId is attached
+      if (data.userId && data.userId.toString() !== activeId.toString()) {
+        return;
+      }
+
       const newNotif = {
         _id: data._id || Date.now().toString() + Math.random().toString(36).substring(2, 6),
+        userId: activeId,
         title: data.title || "Notification",
         message: data.message || "",
         type: data.type || "INFO",
@@ -41,15 +47,17 @@ function App() {
       };
 
       try {
-        const saved = localStorage.getItem("festivo_notifications");
+        const notifKey = `festivo_notifications_${activeId}`;
+        const unreadKey = `festivo_unread_notifications_${activeId}`;
+        const saved = localStorage.getItem(notifKey);
         const list = saved ? JSON.parse(saved) : [];
         if (!list.some((n) => n._id === newNotif._id)) {
-          const updated = [newNotif, ...list].slice(0, 30);
-          localStorage.setItem("festivo_notifications", JSON.stringify(updated));
+          const updated = [newNotif, ...list].slice(0, 50);
+          localStorage.setItem(notifKey, JSON.stringify(updated));
         }
 
-        const unread = parseInt(localStorage.getItem("festivo_unread_notifications") || "0", 10);
-        localStorage.setItem("festivo_unread_notifications", (unread + 1).toString());
+        const unread = parseInt(localStorage.getItem(unreadKey) || "0", 10);
+        localStorage.setItem(unreadKey, (unread + 1).toString());
       } catch (e) {
         console.error("Failed to persist notification:", e);
       }

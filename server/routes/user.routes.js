@@ -46,6 +46,12 @@ import {
   getEventReviewStatus,
   getOrganizerReviews,
 } from "../controllers/user/review.controller.js"
+import {
+  getMyNotifications,
+  markMyNotificationsRead,
+  deleteMyNotification,
+  clearAllMyNotifications,
+} from "../controllers/common/notification.controller.js"
 import passport from "passport"
 import upload from "../middleware/upload.js"
 import { protect } from "../middleware/auth.middleware.js"
@@ -121,5 +127,11 @@ router.post('/reviews', protect, requireRole("user"), createReviewValidation, va
 router.get('/reviews/my-reviews', protect, requireRole("user"), asyncHandler(getMyReviews))
 router.get('/reviews/event/:eventId', protect, requireRole("user"), asyncHandler(getEventReviewStatus))
 router.get('/reviews/organizer/:vendorId', protect, requireRole("user"), asyncHandler(getOrganizerReviews))
+
+// Notification Routes
+router.get('/notifications', protect, asyncHandler(getMyNotifications))
+router.patch('/notifications/mark-read', protect, asyncHandler(markMyNotificationsRead))
+router.delete('/notifications/clear-all', protect, asyncHandler(clearAllMyNotifications))
+router.delete('/notifications/:id', protect, asyncHandler(deleteMyNotification))
 
 export default router

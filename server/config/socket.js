@@ -1,5 +1,6 @@
 import { Server } from "socket.io";
 import jwt from "jsonwebtoken";
+import Notification from "../models/notification.model.js";
 
 let io = null;
 
@@ -79,24 +80,38 @@ export const initSocket = (httpServer) => {
 
 export const getIO = () => io;
 
-export const sendNotification = (userTarget, data = {}) => {
-  if (!io || !userTarget) {
-    return;
-  }
-
+export const sendNotification = async (userTarget, data = {}) => {
   const targetId = extractTargetId(userTarget);
   if (!targetId) {
     return;
   }
 
-  const payload = {
-    _id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
-    title: data.title || "Notification",
-    message: data.message || "",
-    type: data.type || "INFO",
-    createdAt: data.createdAt || new Date().toISOString(),
-  };
+  try {
+    const savedDoc = await Notification.create({
+      userId: targetId,
+      title: data.title || "Notification",
+      message: data.message || "",
+      type: data.type || "INFO",
+      isRead: false,
+    });
 
-  const room = `user:${targetId}`;
-  io.to(room).emit("notification", payload);
+    const payload = {
+      _id: savedDoc._id.toString(),
+      userId: targetId,
+      title: savedDoc.title,
+      message: savedDoc.message,
+      type: savedDoc.type,
+      isRead: savedDoc.isRead,
+      createdAt: savedDoc.createdAt ? savedDoc.createdAt.toISOString() : new Date().toISOString(),
+    };
+
+    if (io) {
+      const room = `user:${targetId}`;
+      io.to(room).emit("notification", payload);
+    }
+
+    return savedDoc;
+  } catch (err) {
+    console.error("Error creating and sending notification:", err);
+  }
 };
