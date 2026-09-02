@@ -12,6 +12,7 @@ import AdminCouponManagement from '../pages/admin/AdminCouponManagement.jsx'
 import AdminCreateCoupon from '../pages/admin/AdminCreateCoupon.jsx'
 import AdminPaymentPage from '../pages/admin/AdminPaymentPage.jsx'
 import AdminManageBookings from '../pages/admin/AdminManageBookings.jsx'
+import NotFound from '../pages/common/NotFound.jsx'
 import { ADMIN_ROUTES } from '../constants/Routes'
 
 function AdminRoutes() {
@@ -72,6 +73,7 @@ function AdminRoutes() {
           <AdminManageBookings />
         </ProtectedRoute>
       } />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   )
 }

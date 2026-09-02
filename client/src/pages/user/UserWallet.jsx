@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import UserSideBar from "../../components/user/UserSideBar";
-import NotificationBell from "../../components/common/NotificationBell";
+import Navbar from "../../components/layout/Navbar";
 import { 
   getBookingHistory,
   createUserWalletOrderApi,
@@ -402,11 +402,14 @@ const UserWallet = () => {
 
   return (
     <div className="flex min-h-screen bg-[#05050C] text-white font-sans selection:bg-purple-500/30">
+      {/* Top Navigation Bar */}
+      <Navbar />
+
       {/* Sidebar Navigation */}
       <UserSideBar />
 
       {/* Main Container */}
-      <main className="flex-1 ml-64 p-8 min-h-screen relative z-10 flex flex-col">
+      <main className="flex-1 ml-64 pt-28 pb-8 px-8 min-h-screen relative z-10 flex flex-col">
         {/* Background Ambient Glow */}
         <div className="absolute top-[-10%] right-[-5%] w-[600px] h-[600px] bg-purple-900/10 rounded-full blur-[160px] pointer-events-none -z-10" />
         <div className="absolute bottom-[-10%] left-[20%] w-[700px] h-[700px] bg-indigo-900/10 rounded-full blur-[180px] pointer-events-none -z-10" />
@@ -424,9 +427,6 @@ const UserWallet = () => {
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Notification Bell Dropdown */}
-            <NotificationBell />
-
             {/* Profile Pill */}
             <div className="flex items-center gap-3 pl-2 pr-4 py-1.5 bg-[#0E0C1D] border border-white/5 rounded-2xl">
               <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white font-black text-xs shadow-md overflow-hidden shrink-0">

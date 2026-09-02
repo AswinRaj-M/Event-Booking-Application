@@ -88,9 +88,9 @@ function App() {
         }}
       />
     <Routes>
-      <Route path="/*" element={<AppRoutes />}/>
       <Route path="/admin/*" element={<AdminRoutes/>}/>
       <Route path='/vendor/*' element={<VendorRoutes/>}/>
+      <Route path="/*" element={<AppRoutes />}/>
     </Routes>
     </>
   );

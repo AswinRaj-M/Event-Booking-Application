@@ -20,6 +20,7 @@ import PaymentCheckout from '../pages/user/PaymentCheckout.jsx';
 import PaymentStatusPage from '../pages/user/PaymentStatusPage.jsx';
 import UserWallet from '../pages/user/UserWallet.jsx';
 import AboutUs from '../pages/common/AboutUs.jsx';
+import NotFound from '../pages/common/NotFound.jsx';
 import { COMMON_ROUTES, USER_ROUTES } from '../constants/Routes';
 
 const AppRoutes = () => {
@@ -118,6 +119,9 @@ const AppRoutes = () => {
             <Route path={COMMON_ROUTES.AUTH_SUCCESS} element={<GoogleAuthSuccess />} />
 
             <Route path={COMMON_ROUTES.SPINNER} element={<Loader />} />
+
+            {/* Catch-all 404 Route */}
+            <Route path="*" element={<NotFound />} />
         </Routes>
     );
 };

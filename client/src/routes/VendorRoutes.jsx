@@ -9,6 +9,7 @@ import VendorMyEvent from "../pages/vendor/VendorMyEvent.jsx"
 import VendorDraft from "../pages/vendor/VendorDraft.jsx"
 import VendorWallet from "../pages/vendor/VendorWallet.jsx"
 import VendorTicketScanner from "../pages/vendor/VendorTicketScanner.jsx"
+import NotFound from "../pages/common/NotFound.jsx"
 import { ProtectedRoute } from '../auth/ProtectedRoute.jsx'
 import { VENDOR_ROUTES } from '../constants/Routes'
 
@@ -57,6 +58,7 @@ function VendorRoutes() {
           <VendorTicketScanner />
         </ProtectedRoute>
       } />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   )
 }

@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import UserSideBar from "../../components/user/UserSideBar";
-import NotificationBell from "../../components/common/NotificationBell";
+import Navbar from "../../components/layout/Navbar";
 import { USER_ROUTES } from "../../constants/Routes";
 import { 
   getBookingHistory, 
@@ -371,11 +371,14 @@ const MyBookings = () => {
 
   return (
     <div className="flex min-h-screen bg-[#05050C] text-white font-sans selection:bg-purple-500/30 w-full max-w-full overflow-x-hidden relative">
+      {/* Top Navigation Bar */}
+      <Navbar />
+
       {/* Sidebar Navigation */}
       <UserSideBar />
 
       {/* Main Container Area */}
-      <main className="flex-1 ml-64 p-4 sm:p-6 lg:p-8 min-h-screen relative z-10 flex flex-col min-w-0 max-w-[calc(100vw-16rem)] overflow-x-hidden">
+      <main className="flex-1 ml-64 pt-28 pb-8 px-4 sm:px-6 lg:px-8 min-h-screen relative z-10 flex flex-col min-w-0 max-w-[calc(100vw-16rem)] overflow-x-hidden">
         {/* Glow Effects */}
         <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] bg-purple-900/10 rounded-full blur-[140px] pointer-events-none -z-10" />
         <div className="absolute bottom-[-10%] left-[20%] w-[700px] h-[700px] bg-indigo-900/10 rounded-full blur-[160px] pointer-events-none -z-10" />
@@ -388,9 +391,6 @@ const MyBookings = () => {
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
-            {/* Notification Bell Dropdown */}
-            <NotificationBell />
-
             {/* Browse Events Button */}
             <Link to={USER_ROUTES.EXPLORE}>
               <button className="flex items-center gap-2 px-4 sm:px-5 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white text-xs sm:text-sm font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(139,92,246,0.3)] cursor-pointer whitespace-nowrap">
