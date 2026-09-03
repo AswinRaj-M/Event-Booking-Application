@@ -4,6 +4,7 @@ import AdminRoutes from './routes/AdminRoutes';
 import VendorRoutes from './routes/vendorRoutes';
 import { Toaster, toast } from "sonner";
 import { Routes, Route } from 'react-router-dom';
+import GlobalSmoothScroll from './components/common/GlobalSmoothScroll';
 
 import { useSelector } from 'react-redux';
 import { getSocket, disconnectSocket } from './services/socket';
@@ -82,6 +83,7 @@ function App() {
 
   return (
     <>
+      <GlobalSmoothScroll />
       <Toaster 
         position="top-right" 
         theme="dark"

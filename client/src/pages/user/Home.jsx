@@ -8,8 +8,6 @@ import { getExploreEvents, getPublicCouponsApi, getOrganizersApi } from '../../s
 import { getAllCategories } from '../../services/common.api.js';
 import { toast } from 'sonner';
 import gsap from 'gsap';
-import Lenis from 'lenis';
-import 'lenis/dist/lenis.css';
 
 const formatEventDate = (dateString, startTime) => {
   if (!dateString) return "Date TBA";
@@ -288,28 +286,6 @@ const Home = () => {
   const [stats, setStats] = useState({ totalEvents: 0, totalUsers: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  // Initialize Lenis Smooth Scrolling Synced with GSAP Ticker
-  useEffect(() => {
-    const lenis = new Lenis({
-      duration: 1.0,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-      smoothWheel: true,
-      wheelMultiplier: 1.0,
-    });
-
-    const updateLenis = (time) => {
-      lenis.raf(time * 1000);
-    };
-
-    gsap.ticker.add(updateLenis);
-    gsap.ticker.lagSmoothing(0);
-
-    return () => {
-      gsap.ticker.remove(updateLenis);
-      lenis.destroy();
-    };
-  }, []);
 
   const handlePrevCoupon = useCallback(() => {
     if (publicCoupons.length <= 1) return;
