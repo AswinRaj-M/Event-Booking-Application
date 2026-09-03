@@ -23,11 +23,34 @@ import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
 import { USER_ROUTES, VENDOR_ROUTES, COMMON_ROUTES } from "../../constants/Routes";
 import heroBg from "../../assets/landing-page-party.jpg";
+import Lenis from "lenis";
+import "lenis/dist/lenis.css";
 
 const AboutUs = () => {
-  // Smooth scroll to top on mount
+  // Initialize Lenis Smooth Scrolling
   useEffect(() => {
     window.scrollTo(0, 0);
+
+    const lenis = new Lenis({
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      smoothWheel: true,
+      wheelMultiplier: 1.0,
+      touchMultiplier: 1.5,
+    });
+
+    let animationFrameId;
+    function raf(time) {
+      lenis.raf(time);
+      animationFrameId = requestAnimationFrame(raf);
+    }
+
+    animationFrameId = requestAnimationFrame(raf);
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+      lenis.destroy();
+    };
   }, []);
 
   return (

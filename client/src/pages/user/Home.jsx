@@ -8,6 +8,8 @@ import { getExploreEvents, getPublicCouponsApi, getOrganizersApi } from '../../s
 import { getAllCategories } from '../../services/common.api.js';
 import { toast } from 'sonner';
 import gsap from 'gsap';
+import Lenis from 'lenis';
+import 'lenis/dist/lenis.css';
 
 const formatEventDate = (dateString, startTime) => {
   if (!dateString) return "Date TBA";
@@ -122,89 +124,118 @@ const AuthenticPurpleTicket = React.memo(({ className = "", style = {} }) => {
   );
 });
 
-// Zero-Gravity Wandering Background Tickets with Mouse Repulsion & Return Physics
+// Zero-Gravity Wandering Background Tickets with Hardware Accelerated Mouse Repulsion
 const WanderingHeroTickets = React.memo(() => {
   const containerRef = useRef(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
-    const ticketItems = containerRef.current.querySelectorAll('.wandering-ticket-item');
+    const ticketNodes = containerRef.current.querySelectorAll('.wandering-ticket-item');
 
     const ctx = gsap.context(() => {
-      ticketItems.forEach((ticket, idx) => {
-        const startRot = (Math.random() - 0.5) * 70;
-        gsap.set(ticket, { rotation: startRot, transformOrigin: "center center" });
-
-        gsap.to(ticket, {
-          y: "random(-35, 35)",
-          x: "random(-40, 40)",
-          rotation: `+=${(Math.random() - 0.5) * 50}`,
-          rotationX: "random(-20, 20)",
-          rotationY: "random(-20, 20)",
-          duration: 3 + Math.random() * 4,
-          repeat: -1,
-          yoyo: true,
-          ease: "sine.inOut",
-          delay: (idx % 10) * 0.15,
+      ticketNodes.forEach((ticket, idx) => {
+        const startRot = (Math.random() - 0.5) * 60;
+        gsap.set(ticket, {
+          rotation: startRot,
+          transformOrigin: "center center",
+          force3D: true,
         });
 
         gsap.to(ticket, {
-          scale: 1.1,
-          duration: 2 + Math.random() * 2,
+          y: "random(-30, 30)",
+          x: "random(-35, 35)",
+          rotation: `+=${(Math.random() - 0.5) * 45}`,
+          rotationX: "random(-15, 15)",
+          rotationY: "random(-15, 15)",
+          duration: 3.5 + Math.random() * 3.5,
           repeat: -1,
           yoyo: true,
-          ease: "sine.inOut"
+          ease: "sine.inOut",
+          delay: (idx % 8) * 0.2,
+          force3D: true,
+        });
+
+        gsap.to(ticket, {
+          scale: 1.08,
+          duration: 2.2 + Math.random() * 2,
+          repeat: -1,
+          yoyo: true,
+          ease: "sine.inOut",
+          force3D: true,
         });
       });
     }, containerRef);
 
-    const handleMouseMove = (e) => {
-      if (!containerRef.current) return;
+    // Optimized RAF-throttled mouse repulsion logic with cached node references
+    const nodes = Array.from(ticketNodes).map((node) => ({
+      node,
+      inner: node.querySelector('.ticket-repel-inner'),
+      isRepelled: false,
+    }));
+
+    let rafId = null;
+    let latestE = null;
+
+    const updateRepulsion = () => {
+      rafId = null;
+      if (!latestE || !containerRef.current) return;
+
       const rect = containerRef.current.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
+      const mouseX = latestE.clientX - rect.left;
+      const mouseY = latestE.clientY - rect.top;
 
-      ticketItems.forEach((node) => {
-        const inner = node.querySelector('.ticket-repel-inner');
-        if (!inner) return;
+      nodes.forEach((item) => {
+        if (!item.inner) return;
 
-        const nodeRect = node.getBoundingClientRect();
+        const nodeRect = item.node.getBoundingClientRect();
         const nodeX = nodeRect.left + nodeRect.width / 2 - rect.left;
         const nodeY = nodeRect.top + nodeRect.height / 2 - rect.top;
 
         const dx = nodeX - mouseX;
         const dy = nodeY - mouseY;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        const repelRadius = 160;
+        const repelRadius = 150;
 
         if (dist < repelRadius && dist > 0) {
           const force = (repelRadius - dist) / repelRadius;
-          const pushDist = force * 90;
+          const pushDist = force * 85;
           const pushX = (dx / dist) * pushDist;
           const pushY = (dy / dist) * pushDist;
+          item.isRepelled = true;
 
-          gsap.to(inner, {
+          gsap.to(item.inner, {
             x: pushX,
             y: pushY,
-            duration: 0.35,
+            duration: 0.3,
             ease: "power2.out",
             overwrite: "auto",
+            force3D: true,
           });
-        } else {
-          gsap.to(inner, {
+        } else if (item.isRepelled) {
+          item.isRepelled = false;
+          gsap.to(item.inner, {
             x: 0,
             y: 0,
-            duration: 0.75,
+            duration: 0.7,
             ease: "power2.out",
             overwrite: "auto",
+            force3D: true,
           });
         }
       });
     };
 
-    window.addEventListener('mousemove', handleMouseMove);
+    const handleMouseMove = (e) => {
+      latestE = e;
+      if (!rafId) {
+        rafId = requestAnimationFrame(updateRepulsion);
+      }
+    };
+
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
+      if (rafId) cancelAnimationFrame(rafId);
       ctx.revert();
     };
   }, []);
@@ -212,17 +243,16 @@ const WanderingHeroTickets = React.memo(() => {
   const ticketItems = useMemo(() => {
     const items = [];
     const sizes = [
-      "w-3 sm:w-4 md:w-5",
+      "w-3.5 sm:w-4.5 md:w-5.5",
       "w-4 sm:w-5 md:w-6",
       "w-5 sm:w-6 md:w-7",
-      "w-6 sm:w-7 md:w-8",
-      "w-3.5 sm:w-4.5 md:w-5.5"
+      "w-4.5 sm:w-5.5 md:w-6.5"
     ];
-    const opacities = ["opacity-35", "opacity-50", "opacity-65", "opacity-80", "opacity-90"];
+    const opacities = ["opacity-40", "opacity-55", "opacity-70", "opacity-85"];
 
-    for (let i = 0; i < 75; i++) {
-      const top = `${(i * 1.25 + (Math.sin(i * 1.5) * 4)) % 92 + 2}%`;
-      const left = `${(i * 1.33 * 17 + (Math.cos(i * 2.1) * 8)) % 94 + 3}%`;
+    for (let i = 0; i < 48; i++) {
+      const top = `${(i * 1.95 + (Math.sin(i * 1.4) * 5)) % 90 + 3}%`;
+      const left = `${(i * 2.1 * 17 + (Math.cos(i * 2.3) * 9)) % 93 + 3}%`;
       const scale = sizes[i % sizes.length];
       const opacity = opacities[i % opacities.length];
       items.push({ top, left, scale, opacity });
@@ -235,10 +265,10 @@ const WanderingHeroTickets = React.memo(() => {
       {ticketItems.map((pos, idx) => (
         <div
           key={idx}
-          className="wandering-ticket-item absolute"
+          className="wandering-ticket-item absolute will-change-transform transform-gpu"
           style={{ top: pos.top, left: pos.left }}
         >
-          <div className={`ticket-repel-inner ${pos.opacity}`}>
+          <div className={`ticket-repel-inner ${pos.opacity} will-change-transform transform-gpu`}>
             <AuthenticPurpleTicket className={pos.scale} />
           </div>
         </div>
@@ -258,6 +288,28 @@ const Home = () => {
   const [stats, setStats] = useState({ totalEvents: 0, totalUsers: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Initialize Lenis Smooth Scrolling Synced with GSAP Ticker
+  useEffect(() => {
+    const lenis = new Lenis({
+      duration: 1.0,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      smoothWheel: true,
+      wheelMultiplier: 1.0,
+    });
+
+    const updateLenis = (time) => {
+      lenis.raf(time * 1000);
+    };
+
+    gsap.ticker.add(updateLenis);
+    gsap.ticker.lagSmoothing(0);
+
+    return () => {
+      gsap.ticker.remove(updateLenis);
+      lenis.destroy();
+    };
+  }, []);
 
   const handlePrevCoupon = useCallback(() => {
     if (publicCoupons.length <= 1) return;
