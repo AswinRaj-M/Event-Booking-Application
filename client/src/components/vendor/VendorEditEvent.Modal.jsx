@@ -277,12 +277,20 @@ const VendorEditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
       toast.error('Event title is required');
       return;
     }
+    if (eventTitle.trim().length > 100) {
+      toast.error('Event title cannot exceed 100 characters');
+      return;
+    }
     if (!eventCategory) {
       toast.error('Event category is required');
       return;
     }
     if (!shortDescription.trim()) {
       toast.error('Event description is required');
+      return;
+    }
+    if (shortDescription.trim().length > 500) {
+      toast.error('Description cannot exceed 500 characters');
       return;
     }
     if (!date) {
@@ -312,6 +320,10 @@ const VendorEditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
         toast.error('Google Meet / Online Link is required');
         return;
       }
+      if (onlineLink.trim().length > 300) {
+        toast.error('Meeting link cannot exceed 300 characters');
+        return;
+      }
       try {
         new URL(onlineLink.trim());
       } catch (_) {
@@ -323,16 +335,32 @@ const VendorEditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
         toast.error('Venue name is required');
         return;
       }
+      if (venueName.trim().length > 100) {
+        toast.error('Venue name cannot exceed 100 characters');
+        return;
+      }
       if (!address.trim()) {
         toast.error('Address is required');
+        return;
+      }
+      if (address.trim().length > 150) {
+        toast.error('Address cannot exceed 150 characters');
         return;
       }
       if (!city.trim()) {
         toast.error('City is required');
         return;
       }
+      if (city.trim().length > 50) {
+        toast.error('City cannot exceed 50 characters');
+        return;
+      }
       if (!state.trim()) {
         toast.error('State is required');
+        return;
+      }
+      if (state.trim().length > 50) {
+        toast.error('State cannot exceed 50 characters');
         return;
       }
     }
@@ -347,9 +375,17 @@ const VendorEditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
           toast.error(`Tier ${i + 1} name is required`);
           return;
         }
+        if (tier.name.trim().length > 40) {
+          toast.error(`Tier ${i + 1} name cannot exceed 40 characters`);
+          return;
+        }
         const priceNum = parseFloat(tier.price);
         if (isNaN(priceNum) || priceNum <= 0) {
           toast.error(`Tier ${i + 1} price must be greater than 0`);
+          return;
+        }
+        if (priceNum > 1000000) {
+          toast.error(`Tier ${i + 1} price cannot exceed ₹10,00,000`);
           return;
         }
         const capacityNum = parseInt(tier.capacity, 10);
@@ -357,15 +393,40 @@ const VendorEditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
           toast.error(`Tier ${i + 1} capacity must be greater than 0`);
           return;
         }
+        if (capacityNum > 100000) {
+          toast.error(`Tier ${i + 1} capacity cannot exceed 100,000`);
+          return;
+        }
         const validBenefits = tier.benefits ? tier.benefits.filter(b => b.trim() !== '') : [];
         if (validBenefits.length === 0) {
           toast.error(`Tier ${i + 1} must have at least one benefit`);
+          return;
+        }
+        if (tier.benefits.some(b => b.trim().length > 80)) {
+          toast.error(`Benefit description cannot exceed 80 characters`);
           return;
         }
       }
     } else {
       if (!totalSeats) {
         toast.error('Total seats limit is required');
+        return;
+      }
+      const seatsNum = parseInt(totalSeats, 10);
+      if (isNaN(seatsNum) || seatsNum <= 0) {
+        toast.error('Total seats must be greater than 0');
+        return;
+      }
+      if (seatsNum > 100000) {
+        toast.error('Total seats cannot exceed 100,000');
+        return;
+      }
+    }
+
+    if (maxTicketsPerPerson) {
+      const maxTkts = parseInt(maxTicketsPerPerson, 10);
+      if (isNaN(maxTkts) || maxTkts < 1 || maxTkts > 100) {
+        toast.error('Max tickets per person must be between 1 and 100');
         return;
       }
     }
@@ -527,6 +588,7 @@ const VendorEditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
                 <label className="text-xs font-semibold text-zinc-400">Event Title <span className="text-rose-500">*</span></label>
                 <input 
                   type="text"
+                  maxLength={100}
                   value={eventTitle}
                   onChange={(e) => setEventTitle(e.target.value)}
                   placeholder="e.g. Neon Nights Music Festival"

@@ -355,6 +355,8 @@ const VendorCreateEvent = () => {
       newErrors.eventTitle = 'Event title is required';
     } else if (eventTitle.trim().length < 3) {
       newErrors.eventTitle = 'Event title must be at least 3 characters';
+    } else if (eventTitle.trim().length > 100) {
+      newErrors.eventTitle = 'Event title cannot exceed 100 characters';
     }
 
     if (status !== 'draft') {
@@ -365,6 +367,8 @@ const VendorCreateEvent = () => {
         newErrors.shortDescription = 'Event description is required';
       } else if (shortDescription.trim().length < 10) {
         newErrors.shortDescription = 'Description must be at least 10 characters';
+      } else if (shortDescription.trim().length > 500) {
+        newErrors.shortDescription = 'Description cannot exceed 500 characters';
       }
       if (!thumbnail) {
         newErrors.thumbnail = 'Cover image (thumbnail) is required';
@@ -393,6 +397,8 @@ const VendorCreateEvent = () => {
       if (eventType === 'online') {
         if (!onlineLink.trim()) {
           newErrors.onlineLink = 'Google Meet / Online Link is required';
+        } else if (onlineLink.trim().length > 300) {
+          newErrors.onlineLink = 'Meeting link cannot exceed 300 characters';
         } else {
           try {
             new URL(onlineLink.trim());
@@ -403,15 +409,26 @@ const VendorCreateEvent = () => {
       } else {
         if (!venueName.trim()) {
           newErrors.venueName = 'Venue name is required';
+        } else if (venueName.trim().length > 100) {
+          newErrors.venueName = 'Venue name cannot exceed 100 characters';
         }
+
         if (!address.trim()) {
           newErrors.address = 'Street address is required';
+        } else if (address.trim().length > 150) {
+          newErrors.address = 'Address cannot exceed 150 characters';
         }
+
         if (!city.trim()) {
           newErrors.city = 'City is required';
+        } else if (city.trim().length > 50) {
+          newErrors.city = 'City cannot exceed 50 characters';
         }
+
         if (!state.trim()) {
           newErrors.state = 'State is required';
+        } else if (state.trim().length > 50) {
+          newErrors.state = 'State cannot exceed 50 characters';
         }
       }
 
@@ -422,26 +439,51 @@ const VendorCreateEvent = () => {
           ticketTiers.forEach((tier, i) => {
             if (!tier.name || !tier.name.trim()) {
               newErrors[`tier_${i}_name`] = `Tier ${i + 1} name is required`;
+            } else if (tier.name.trim().length > 40) {
+              newErrors[`tier_${i}_name`] = `Tier ${i + 1} name cannot exceed 40 characters`;
             }
+
             const priceNum = parseFloat(tier.price);
             if (isNaN(priceNum) || priceNum <= 0) {
               newErrors[`tier_${i}_price`] = `Tier ${i + 1} price must be greater than 0`;
+            } else if (priceNum > 1000000) {
+              newErrors[`tier_${i}_price`] = `Tier ${i + 1} price cannot exceed ₹10,00,000`;
             }
+
             const capacityNum = parseInt(tier.capacity, 10);
             if (isNaN(capacityNum) || capacityNum <= 0) {
               newErrors[`tier_${i}_capacity`] = `Tier ${i + 1} capacity must be greater than 0`;
+            } else if (capacityNum > 100000) {
+              newErrors[`tier_${i}_capacity`] = `Tier ${i + 1} capacity cannot exceed 100,000`;
             }
+
             const validBenefits = tier.benefits ? tier.benefits.filter(b => b.trim() !== '') : [];
             if (validBenefits.length === 0) {
               newErrors[`tier_${i}_benefits`] = `Tier ${i + 1} must have at least one benefit`;
+            } else if (tier.benefits.some(b => b.trim().length > 80)) {
+              newErrors[`tier_${i}_benefits`] = `Each benefit description cannot exceed 80 characters`;
             }
           });
         }
       } else {
         if (!totalSeats) {
           newErrors.totalSeats = 'Total seats limit is required';
-        } else if (parseInt(totalSeats, 10) <= 0) {
-          newErrors.totalSeats = 'Total seats must be greater than 0';
+        } else {
+          const seatsNum = parseInt(totalSeats, 10);
+          if (isNaN(seatsNum) || seatsNum <= 0) {
+            newErrors.totalSeats = 'Total seats must be greater than 0';
+          } else if (seatsNum > 100000) {
+            newErrors.totalSeats = 'Total seats cannot exceed 100,000';
+          }
+        }
+      }
+
+      if (maxTicketsPerPerson) {
+        const maxTkts = parseInt(maxTicketsPerPerson, 10);
+        if (isNaN(maxTkts) || maxTkts < 1) {
+          newErrors.maxTicketsPerPerson = 'Max tickets per person must be at least 1';
+        } else if (maxTkts > 100) {
+          newErrors.maxTicketsPerPerson = 'Max tickets per person cannot exceed 100';
         }
       }
 
@@ -457,6 +499,8 @@ const VendorCreateEvent = () => {
           } else {
             if (isNaN(val) || val <= 0) {
               newErrors.discountValue = 'Discount amount must be greater than 0';
+            } else if (val > 100000) {
+              newErrors.discountValue = 'Discount amount cannot exceed ₹1,00,000';
             }
           }
         }
@@ -467,6 +511,8 @@ const VendorCreateEvent = () => {
           const minTkts = parseInt(minTickets, 10);
           if (isNaN(minTkts) || minTkts < 1) {
             newErrors.minTickets = 'Minimum tickets must be at least 1';
+          } else if (minTkts > 1000) {
+            newErrors.minTickets = 'Minimum tickets cannot exceed 1,000';
           }
         }
 
@@ -643,11 +689,15 @@ const VendorCreateEvent = () => {
 
               {/* Event Title */}
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-zinc-400">
-                  Event Title <span className="text-red-500">*</span>
-                </label>
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-semibold text-zinc-400">
+                    Event Title <span className="text-red-500">*</span>
+                  </label>
+                  <span className="text-[10px] text-zinc-500 font-semibold">{eventTitle.length}/50</span>
+                </div>
                 <input 
                   type="text" 
+                  maxLength={50}
                   placeholder="e.g. Neon Nights Music Festival 2024"
                   value={eventTitle}
                   onChange={(e) => {
@@ -930,6 +980,7 @@ const VendorCreateEvent = () => {
                       <div className="relative">
                         <input 
                           type="number" 
+                          max={offerType === 'percentage' ? 100 : 100000}
                           placeholder="e.g. 10"
                           value={discountValue}
                           onChange={(e) => {
@@ -958,6 +1009,7 @@ const VendorCreateEvent = () => {
                     </label>
                     <input 
                       type="number" 
+                      max={1000}
                       placeholder="e.g. 2"
                       value={minTickets}
                       onChange={(e) => {
@@ -1260,6 +1312,7 @@ const VendorCreateEvent = () => {
                     </label>
                     <input 
                       type="url" 
+                      maxLength={300}
                       placeholder="e.g. https://meet.google.com/abc-defg-hij"
                       value={onlineLink}
                       onChange={(e) => {
@@ -1302,6 +1355,7 @@ const VendorCreateEvent = () => {
                     </label>
                     <input 
                       type="text" 
+                      maxLength={100}
                       placeholder="e.g. Grand Arena"
                       value={venueName}
                       onChange={(e) => {
@@ -1326,6 +1380,7 @@ const VendorCreateEvent = () => {
                     </label>
                     <input 
                       type="text" 
+                      maxLength={150}
                       placeholder="Street address"
                       value={address}
                       onChange={(e) => {
@@ -1351,6 +1406,7 @@ const VendorCreateEvent = () => {
                       </label>
                       <input 
                         type="text" 
+                        maxLength={50}
                         placeholder="City"
                         value={city}
                         onChange={(e) => {
@@ -1375,6 +1431,7 @@ const VendorCreateEvent = () => {
                       </label>
                       <input 
                         type="text" 
+                        maxLength={50}
                         placeholder="State"
                         value={state}
                         onChange={(e) => {
@@ -1509,6 +1566,7 @@ const VendorCreateEvent = () => {
                               </label>
                               <input
                                 type="text"
+                                maxLength={40}
                                 placeholder="e.g. VIP"
                                 value={tier.name}
                                 onChange={(e) => handleTierChange(idx, 'name', e.target.value)}
@@ -1531,6 +1589,7 @@ const VendorCreateEvent = () => {
                                 </label>
                                 <input
                                   type="number"
+                                  max={1000000}
                                   placeholder="e.g. 99"
                                   value={tier.price}
                                   onChange={(e) => handleTierChange(idx, 'price', e.target.value)}
@@ -1552,6 +1611,7 @@ const VendorCreateEvent = () => {
                                 </label>
                                 <input
                                   type="number"
+                                  max={100000}
                                   placeholder="e.g. 50"
                                   value={tier.capacity}
                                   onChange={(e) => handleTierChange(idx, 'capacity', e.target.value)}
@@ -1579,6 +1639,7 @@ const VendorCreateEvent = () => {
                                 <div key={bIdx} className="flex gap-2 items-center">
                                   <input
                                     type="text"
+                                    maxLength={80}
                                     placeholder="e.g. Backstage pass, Free drinks"
                                     value={benefit}
                                     onChange={(e) => handleBenefitChange(idx, bIdx, e.target.value)}
@@ -1629,6 +1690,7 @@ const VendorCreateEvent = () => {
                     </label>
                     <input 
                       type="number" 
+                      max={100000}
                       placeholder="e.g. 500"
                       value={totalSeats}
                       onChange={(e) => {
@@ -1653,12 +1715,25 @@ const VendorCreateEvent = () => {
                   <label className="text-xs font-semibold text-zinc-400">Maximum Tickets per Person</label>
                   <input 
                     type="number" 
+                    max={100}
                     placeholder="e.g. 10"
                     value={maxTicketsPerPerson}
-                    onChange={(e) => setMaxTicketsPerPerson(e.target.value)}
-                    className="w-full bg-[#12101F] text-white px-4 py-3.5 rounded-xl border border-zinc-800/80 focus:outline-none focus:border-purple-500 transition-colors text-sm"
+                    onChange={(e) => {
+                      setMaxTicketsPerPerson(e.target.value);
+                      if (errors.maxTicketsPerPerson) clearError('maxTicketsPerPerson');
+                    }}
+                    className={`w-full bg-[#12101F] text-white px-4 py-3.5 rounded-xl border transition-colors text-sm ${
+                      errors.maxTicketsPerPerson ? 'border-red-500/80 focus:border-red-500' : 'border-zinc-800/80 focus:border-purple-500'
+                    }`}
                   />
-                  <p className="text-[10px] text-zinc-500 leading-relaxed">Limit the number of tickets a single customer can purchase.</p>
+                  {errors.maxTicketsPerPerson ? (
+                    <p className="text-red-400 text-[11px] font-medium mt-1 flex items-center gap-1">
+                      <span className="w-1 h-1 rounded-full bg-red-400"></span>
+                      {errors.maxTicketsPerPerson}
+                    </p>
+                  ) : (
+                    <p className="text-[10px] text-zinc-500 leading-relaxed">Limit the number of tickets a single customer can purchase (Max: 100).</p>
+                  )}
                 </div>
               </div>
             </div>
