@@ -20,6 +20,7 @@ import PaymentCheckout from '../pages/user/PaymentCheckout.jsx';
 import PaymentStatusPage from '../pages/user/PaymentStatusPage.jsx';
 import UserWallet from '../pages/user/UserWallet.jsx';
 import AboutUs from '../pages/common/AboutUs.jsx';
+import HelpSupport from '../pages/common/HelpSupport.jsx';
 import NotFound from '../pages/common/NotFound.jsx';
 import { COMMON_ROUTES, USER_ROUTES } from '../constants/Routes';
 
@@ -82,6 +83,16 @@ const AppRoutes = () => {
                     <UserWallet />
                 </ProtectedRoute>
             } />
+            <Route path={USER_ROUTES.SUPPORT} element={
+                <ProtectedRoute role="user">
+                    <HelpSupport />
+                </ProtectedRoute>
+            } />
+            <Route path={USER_ROUTES.HELP} element={
+                <ProtectedRoute role="user">
+                    <HelpSupport />
+                </ProtectedRoute>
+            } />
             <Route path={COMMON_ROUTES.LANDING} element={
                 <PublicRoute>
                     <Landing />
@@ -89,6 +100,8 @@ const AppRoutes = () => {
             } />
 
             <Route path={COMMON_ROUTES.ABOUT} element={<AboutUs />} />
+            <Route path={COMMON_ROUTES.HELP} element={<HelpSupport />} />
+            <Route path={COMMON_ROUTES.SUPPORT} element={<HelpSupport />} />
 
             <Route path={COMMON_ROUTES.FORGOT_PASSWORD} element={
                 <PublicRoute>

@@ -36,7 +36,7 @@ const UserSideBar = () => {
 
   const accountLinks = [
     { path: USER_ROUTES.PROFILE, icon: User, label: "Profile" },
-    { path: "#", icon: HelpCircle, label: "Help & Support" }
+    { path: USER_ROUTES.SUPPORT, icon: HelpCircle, label: "Help & Support" }
   ];
 
   return (

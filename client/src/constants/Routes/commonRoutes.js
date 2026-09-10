@@ -1,6 +1,8 @@
 export const COMMON_ROUTES = {
   LANDING: '/',
   ABOUT: '/about',
+  HELP: '/help',
+  SUPPORT: '/support',
   LOGIN: '/login',
   SIGNUP: '/signup',
   VERIFY_OTP: '/verify-otp',
