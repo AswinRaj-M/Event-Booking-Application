@@ -11,6 +11,7 @@ import {
 } from "../../repository/user/userWallet.repo.js";
 import { AppError } from "../../utils/AppError.js";
 import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
+import { sendAdminNotification } from "../../config/socket.js";
 
 const MAX_DEPOSIT_AMOUNT = 100000; // ₹1,00,000 maximum single deposit limit
 const MIN_DEPOSIT_AMOUNT = 1; // ₹1 minimum single deposit
@@ -300,6 +301,13 @@ export const requestUserWithdrawalService = async (userId, { amount, payoutMetho
       accountDetails,
     },
   });
+
+  // Send notification to Admin
+  sendAdminNotification({
+    title: "New User Withdrawal Request 💸",
+    message: `User requested wallet withdrawal of ₹${numAmount.toFixed(2)}.`,
+    type: "REFUND_REQUESTED"
+  }).catch(() => {});
 
   return {
     success: true,

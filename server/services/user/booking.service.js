@@ -26,7 +26,7 @@ import {
   findUserBookingsRepo,
   saveBookingRepo,
 } from "../../repository/user/booking.repo.js";
-import { sendNotification } from "../../config/socket.js";
+import { sendNotification, sendAdminNotification } from "../../config/socket.js";
 
 export const CHECKOUT_EXPIRATION_MINUTES = 10;
 export const CHECKOUT_EXPIRATION_MS = CHECKOUT_EXPIRATION_MINUTES * 60 * 1000;
@@ -392,6 +392,14 @@ export const confirmBookingAfterPaymentService = async (bookingId) => {
         }
       }
     }
+
+    // Send notification to Admin
+    const platformFeeEarned = Number(booking.platformFee) || 0;
+    sendAdminNotification({
+      title: "New Booking Confirmed 🎟️",
+      message: `New booking for "${eventTitle}" (${booking.quantity} ticket(s)). Platform Fee ₹${booking.quantity * platformFeeEarned.toFixed(2)} added to Admin wallet.`,
+      type: "PAYMENT_SUCCESS"
+    });
   } catch (notifErr) {
     console.error("Error sending booking confirmation notifications:", notifErr);
   }
@@ -597,6 +605,13 @@ export const cancelTicketService = async(userId, ticketId, allowedLimitHours = 0
         type: "REFUND_COMPLETED",
       });
     }
+
+    // Send notification to Admin
+    sendAdminNotification({
+      title: "Ticket Cancelled ❌",
+      message: `Ticket #${ticket.ticketId} for "${eventTitle}" was cancelled by user.`,
+      type: "BOOKING_CANCELLED",
+    });
   } catch (notifErr) {
     console.error("Error sending ticket cancellation notifications:", notifErr);
   }
@@ -801,6 +816,13 @@ export const cancelBookingService = async (userId, bookingId, allowedLimitHours 
         type: "REFUND_COMPLETED",
       });
     }
+
+    // Send notification to Admin
+    sendAdminNotification({
+      title: "Booking Cancelled ❌",
+      message: `Booking #${bookingCode} for "${eventTitle}" was cancelled by user.`,
+      type: "BOOKING_CANCELLED",
+    });
   } catch (notifErr) {
     console.error("Error sending booking cancellation notifications:", notifErr);
   }

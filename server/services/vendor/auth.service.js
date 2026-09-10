@@ -4,6 +4,7 @@ import { AppError } from "../../utils/AppError.js";
 import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
 import Otp from "../../models/user.otp.model.js";
 import Vendor from "../../models/vendor.model.js";
+import { sendAdminNotification } from "../../config/socket.js";
 
 import {
   createVendor,
@@ -30,6 +31,13 @@ export const applyVendorService = async (data) => {
     idProof: data.idProof,
     emailVerify: false,
   });
+
+  // Send notification to Admin
+  sendAdminNotification({
+    title: "New Vendor Application 👤",
+    message: `New vendor application submitted by "${data.organizerName || data.businessName}". Pending review.`,
+    type: "NEW_BOOKING"
+  }).catch(() => {});
 
   return vendor;
 };

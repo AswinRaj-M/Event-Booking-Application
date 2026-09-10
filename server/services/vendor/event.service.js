@@ -17,7 +17,7 @@ import {
   updateEventRepo,
   deleteEventRepo,
 } from "../../repository/vendor/event.repo.js";
-import { sendNotification } from "../../config/socket.js";
+import { sendNotification, sendAdminNotification } from "../../config/socket.js";
 
 const validateOfferDates = (offerEnabled, validFrom, validUntil, eventDate) => {
   const isEnabled = offerEnabled === "true" || offerEnabled === true;
@@ -203,6 +203,13 @@ export const createEventService = async(data)=>{
     }
   });
 
+  // Send notification to Admin
+  sendAdminNotification({
+    title: "New Event Created 📅",
+    message: `New event "${event.title}" created. Status: ${event.eventStatus}`,
+    type: "NEW_BOOKING"
+  }).catch(() => {});
+
   return event;
 };
 
@@ -348,6 +355,13 @@ export const cancelEventService = async (eventId, vendorId) => {
   }
 
   const cancelledEvent = await cancelEventRepo(eventId, vendorId);
+
+  // Send notification to Admin
+  sendAdminNotification({
+    title: "Event Cancelled by Vendor ⚠️",
+    message: `Vendor cancelled event "${event.title}". Refunds processed for all attendees.`,
+    type: "EVENT_CANCELLED"
+  }).catch(() => {});
 
   return {
     event: cancelledEvent,

@@ -14,6 +14,7 @@ import {
 import Vendor from "../../models/vendor.model.js";
 import { AppError } from "../../utils/AppError.js";
 import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
+import { sendNotification, sendAdminNotification } from "../../config/socket.js";
 
 /**
  * STEP 82: Vendor Request Withdrawal
@@ -63,6 +64,13 @@ export const requestVendorWithdrawalService = async (vendorId, { amount, destina
     status: "pending",
     requestedAt: new Date(),
   });
+
+  // Send notification to Admin
+  sendAdminNotification({
+    title: "New Vendor Withdrawal Request 💸",
+    message: `Vendor ${vendor.organizerName || vendor.businessName || 'Vendor'} requested payout of ₹${reqAmount.toFixed(2)}.`,
+    type: "REFUND_REQUESTED"
+  }).catch(() => {});
 
   return withdrawalRequest;
 };
@@ -175,6 +183,15 @@ export const approveWithdrawalService = async (adminId, requestId) => {
       createdTime: new Date(),
     });
 
+    // Send notification to Vendor
+    if (vendorId) {
+      sendNotification(vendorId, {
+        title: "Withdrawal Approved! 💰",
+        message: `Your withdrawal request of ₹${request.amount.toFixed(2)} has been approved and processed.`,
+        type: "REFUND_COMPLETED"
+      }).catch(() => {});
+    }
+
     return {
       withdrawal: approvedRequest,
       wallet: updatedWallet,
@@ -216,6 +233,18 @@ export const rejectWithdrawalService = async (adminId, requestId, rejectionReaso
       { "metadata.withdrawalRequestId": request._id, status: "pending" },
       { $set: { status: "failed" } }
     );
+  }
+
+  // Send notification to User/Vendor on rejection
+  const targetId = (request.userType === "user" || request.userId) 
+    ? (request.userId?._id || request.userId) 
+    : (request.vendorId?._id || request.vendorId);
+  if (targetId) {
+    sendNotification(targetId, {
+      title: "Withdrawal Request Rejected ❌",
+      message: `Your withdrawal request of ₹${request.amount.toFixed(2)} was rejected: ${rejectionReason || "Declined by administrator."}`,
+      type: "BOOKING_CANCELLED"
+    }).catch(() => {});
   }
 
   return rejectedRequest;

@@ -1,6 +1,7 @@
 import { Server } from "socket.io";
 import jwt from "jsonwebtoken";
 import Notification from "../models/notification.model.js";
+import User from "../models/user.model.js";
 
 let io = null;
 
@@ -113,5 +114,21 @@ export const sendNotification = async (userTarget, data = {}) => {
     return savedDoc;
   } catch (err) {
     console.error("Error creating and sending notification:", err);
+  }
+};
+
+export const sendAdminNotification = async (data = {}) => {
+  try {
+    const adminUsers = await User.find({
+      $or: [{ role: { $regex: /^admin$/i } }, { email: { $regex: /admin/i } }],
+    }).select("_id");
+
+    if (adminUsers && adminUsers.length > 0) {
+      for (const admin of adminUsers) {
+        await sendNotification(admin._id, data);
+      }
+    }
+  } catch (err) {
+    console.error("Error sending admin notification:", err);
   }
 };
