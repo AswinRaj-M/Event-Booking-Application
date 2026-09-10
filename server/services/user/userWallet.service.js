@@ -262,20 +262,40 @@ export const requestUserWithdrawalService = async (userId, { amount, payoutMetho
     throw new AppError("Insufficient wallet balance for this withdrawal.", HTTP_STATUS.BAD_REQUEST);
   }
 
-  // Deduct from balance
-  const updatedUser = await updateUserWalletBalanceRepo(userId, -numAmount);
+  // Prevent Duplicate Pending Requests
+  const { findPendingWithdrawalByUserIdRepo } = await import("../../repository/vendor/withdrawal.repo.js");
+  const existingPending = await findPendingWithdrawalByUserIdRepo(userId);
+  if (existingPending) {
+    throw new AppError(
+      "You already have a pending withdrawal request under review. Please wait for admin approval.",
+      HTTP_STATUS.BAD_REQUEST
+    );
+  }
 
-  // Record transaction
-  const tx = await createUserWalletTransactionRepo({
+  // Create Pending Withdrawal Request (Money is NOT deducted yet until admin approves)
+  const WithdrawalRequest = (await import("../../models/withdrawalRequest.model.js")).default;
+  const withdrawalRequest = await WithdrawalRequest.create({
+    userId,
+    userType: "user",
+    amount: numAmount,
+    paymentMethod: payoutMethod || "UPI / GPay",
+    destinationAccount: accountDetails || payoutMethod || "UPI / GPay",
+    status: "pending",
+    requestedAt: new Date(),
+  });
+
+  // Create Pending UserWalletTransaction Record (so it immediately shows as 'Processing' in User Ledger)
+  const transaction = await createUserWalletTransactionRepo({
     userId,
     transactionType: "withdrawal",
     amount: -numAmount,
     currency: "INR",
-    balanceAfter: updatedUser?.walletBalance || 0,
+    balanceAfter: user.walletBalance || 0,
     status: "pending",
-    paymentMethod: payoutMethod,
+    paymentMethod: payoutMethod || "UPI / GPay",
     description: `Withdrawal request to ${accountDetails || payoutMethod}`,
     metadata: {
+      withdrawalRequestId: withdrawalRequest._id,
       payoutMethod,
       accountDetails,
     },
@@ -283,8 +303,9 @@ export const requestUserWithdrawalService = async (userId, { amount, payoutMetho
 
   return {
     success: true,
-    message: `Withdrawal request for ₹${numAmount.toFixed(2)} submitted successfully!`,
-    newBalance: updatedUser?.walletBalance || 0,
-    transaction: tx,
+    message: `Withdrawal request for ₹${numAmount.toFixed(2)} submitted successfully and is pending admin approval!`,
+    newBalance: user.walletBalance || 0,
+    withdrawal: withdrawalRequest,
+    transaction,
   };
 };

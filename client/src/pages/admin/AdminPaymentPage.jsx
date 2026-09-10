@@ -38,7 +38,9 @@ import {
   createAdminWalletOrderApi,
   verifyAdminWalletPaymentApi,
   recordAdminWalletPaymentFailureApi,
-  getAdminWalletDetailsApi
+  getAdminWalletDetailsApi,
+  getPlatformFeeApi,
+  updatePlatformFeeApi
 } from "../../services/admin.api.js";
 
 const AdminPaymentPage = () => {
@@ -53,6 +55,12 @@ const AdminPaymentPage = () => {
   const [commissionEarned, setCommissionEarned] = useState(0);
   const [totalCouponCostSponsored, setTotalCouponCostSponsored] = useState(0);
   const [netPlatformRevenue, setNetPlatformRevenue] = useState(0);
+
+  // Platform Fee State
+  const [platformFeePerTicket, setPlatformFeePerTicket] = useState(50);
+  const [showFeeModal, setShowFeeModal] = useState(false);
+  const [newFeeInput, setNewFeeInput] = useState("");
+  const [updatingFee, setUpdatingFee] = useState(false);
 
   // Add Funds Modal State
   const [showAddFundsModal, setShowAddFundsModal] = useState(false);
@@ -98,12 +106,35 @@ const AdminPaymentPage = () => {
     });
   };
 
+  const handleUpdatePlatformFee = async (e) => {
+    e.preventDefault();
+    const feeNum = Number(newFeeInput);
+    if (isNaN(feeNum) || feeNum < 0) {
+      toast.error("Please enter a valid platform fee amount (≥ ₹0)");
+      return;
+    }
+
+    try {
+      setUpdatingFee(true);
+      const res = await updatePlatformFeeApi(feeNum);
+      if (res.data?.success) {
+        setPlatformFeePerTicket(res.data.data.platformFeePerTicket);
+        toast.success(res.data.message || `Platform fee updated to ₹${feeNum.toFixed(2)} per ticket`);
+        setShowFeeModal(false);
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update platform fee");
+    } finally {
+      setUpdatingFee(false);
+    }
+  };
+
   // Fetch Full Financial Data & Unified Transactions Ledger with Backend Pagination
   const fetchFinancialData = async () => {
     try {
       setLoading(true);
 
-      const [walletRes, withdrawalsRes] = await Promise.all([
+      const [walletRes, withdrawalsRes, feeRes] = await Promise.all([
         getAdminWalletDetailsApi({
           page: currentPage,
           limit: pageSize,
@@ -119,7 +150,15 @@ const AdminPaymentPage = () => {
           console.error("Error fetching withdrawals:", err);
           return null;
         }),
+        getPlatformFeeApi().catch((err) => {
+          console.error("Error fetching platform fee:", err);
+          return null;
+        }),
       ]);
+
+      if (feeRes?.data?.success && feeRes.data.data) {
+        setPlatformFeePerTicket(Number(feeRes.data.data.platformFeePerTicket) || 0);
+      }
 
       // 1. Process Wallet Details & Metrics
       if (walletRes?.data?.success && walletRes.data.data) {
@@ -145,8 +184,8 @@ const AdminPaymentPage = () => {
           if (!uniqueRequestsMap.has(r._id)) {
             uniqueRequestsMap.set(r._id, {
               id: r._id,
-              vendorName: r.vendorId?.businessName || r.vendorId?.fullName || "Vendor Account",
-              vendorAvatar: r.vendorId?.profilePicture?.fileUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+              vendorName: r.userId?.fullName || r.vendorId?.businessName || r.vendorId?.fullName || (r.userType === "user" ? "User Account" : "Vendor Account"),
+              vendorAvatar: r.userId?.profilePicture?.fileUrl || r.vendorId?.profilePicture?.fileUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
               amount: r.amount,
               reqDate: new Date(r.requestedAt || r.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
               processedDate: r.processedAt ? new Date(r.processedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : null,
@@ -629,22 +668,33 @@ const AdminPaymentPage = () => {
               </div>
             </div>
 
-            {/* Card 4: Commission & Platform Revenue */}
-            <div className="bg-[#151221] border border-gray-800/80 rounded-2xl md:rounded-3xl p-5 md:p-6 shadow-xl backdrop-blur-md relative overflow-hidden group">
-              <div className="flex justify-between items-start mb-3 sm:mb-4">
-                <span className="text-xs font-bold text-zinc-400">Commission & Net Revenue</span>
-                <div className="w-10 h-10 rounded-2xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 shadow-inner">
+            {/* Card 4: Platform Fee Setting & Net Revenue */}
+            <div className="bg-[#151221] border border-purple-500/30 rounded-2xl md:rounded-3xl p-5 md:p-6 shadow-xl backdrop-blur-md relative overflow-hidden group">
+              <div className="flex justify-between items-start mb-2">
+                <span className="text-xs font-bold text-purple-300">Platform Fee Per Ticket</span>
+                <div className="w-10 h-10 rounded-2xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-400 shadow-inner">
                   <PieChart className="w-5 h-5" />
                 </div>
               </div>
-              <div className="text-2xl sm:text-3xl font-black text-white tracking-tight mb-2 truncate">
-                ₹{commissionEarned.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <div className="flex items-baseline gap-2 mb-2">
+                <span className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                  ₹{platformFeePerTicket.toFixed(2)}
+                </span>
+                <span className="text-[11px] text-zinc-400 font-semibold">per ticket</span>
               </div>
-              <div className="flex items-center justify-between text-[11px] font-bold">
-                <span className="text-emerald-400">Net: ₹{netPlatformRevenue.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
-                {totalCouponCostSponsored > 0 && (
-                  <span className="text-purple-400 font-medium truncate ml-1">Coupons: -₹{totalCouponCostSponsored.toLocaleString("en-IN")}</span>
-                )}
+              <div className="flex items-center justify-between text-xs pt-2 border-t border-purple-500/10">
+                <span className="text-zinc-400 font-medium text-[11px]">
+                  Total Fees: ₹{commissionEarned.toLocaleString("en-IN")}
+                </span>
+                <button
+                  onClick={() => {
+                    setNewFeeInput(platformFeePerTicket.toString());
+                    setShowFeeModal(true);
+                  }}
+                  className="text-xs font-extrabold text-purple-400 hover:text-purple-300 transition-colors cursor-pointer"
+                >
+                  Change Fee →
+                </button>
               </div>
             </div>
           </div>
@@ -1180,6 +1230,71 @@ const AdminPaymentPage = () => {
                     className="flex-1 py-3 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white text-xs font-extrabold rounded-2xl shadow-lg transition-all cursor-pointer"
                   >
                     Reject Request
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+        {/* Update Platform Fee Per Ticket Modal */}
+        {showFeeModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+            <div className="bg-[#151221] border border-purple-500/30 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-purple-600/20 border border-purple-500/30 rounded-2xl text-purple-400">
+                    <PieChart className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black text-white">Platform Fee Configuration</h3>
+                    <p className="text-xs text-zinc-400 font-medium">Set fee charged per ticket on new purchases</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowFeeModal(false)}
+                  className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleUpdatePlatformFee} className="space-y-4">
+                <div className="bg-[#0B0914] border border-white/5 rounded-2xl p-4">
+                  <span className="text-xs font-bold text-zinc-400 block mb-1">Current Platform Fee</span>
+                  <span className="text-xl font-black text-purple-400">₹{platformFeePerTicket.toFixed(2)} / ticket</span>
+                  <p className="text-[11px] text-zinc-500 mt-1">Changes apply only to future ticket purchases. Existing bookings remain unaffected.</p>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-zinc-300 block mb-1.5">New Platform Fee Per Ticket (₹)</label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 font-bold text-sm">₹</span>
+                    <input 
+                      type="number"
+                      step="1"
+                      min="0"
+                      placeholder="e.g. 50"
+                      value={newFeeInput}
+                      onChange={(e) => setNewFeeInput(e.target.value)}
+                      className="w-full bg-[#0B0914] border border-zinc-800 rounded-2xl pl-8 pr-4 py-3 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-purple-500 transition-colors font-bold"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button 
+                    type="button"
+                    onClick={() => setShowFeeModal(false)}
+                    className="flex-1 py-3 bg-[#1C1833] hover:bg-[#2A244D] text-zinc-300 text-xs font-extrabold rounded-2xl transition-all cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    disabled={updatingFee}
+                    className="flex-1 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 disabled:opacity-50 text-white text-xs font-extrabold rounded-2xl shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    {updatingFee ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save New Fee"}
                   </button>
                 </div>
               </form>

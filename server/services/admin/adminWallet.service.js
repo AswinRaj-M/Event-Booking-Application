@@ -14,7 +14,6 @@ import WalletTransaction from "../../models/walletTransaction.model.js";
 import AdminWalletTransaction from "../../models/adminWalletTransaction.model.js";
 import Booking from "../../models/booking.model.js";
 import User from "../../models/user.model.js";
-import { getPlatformCommissionRate } from "../../config/commission.config.js";
 import { AppError } from "../../utils/AppError.js";
 import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
 
@@ -245,7 +244,7 @@ export const getAdminWalletDetailsService = async (adminId, queryParams = {}) =>
   const wallet = await findOrCreateAdminWalletRepo(adminId);
 
   // Fetch real financial aggregations across platform
-  const [withdrawalStats, commissionStats, couponStats, walletTxData] = await Promise.all([
+  const [withdrawalStats, ledgerCommissionStats, bookingCommissionStats, couponStats, walletTxData] = await Promise.all([
     // Approved & Pending Withdrawals
     WithdrawalRequest.aggregate([
       {
@@ -256,19 +255,64 @@ export const getAdminWalletDetailsService = async (adminId, queryParams = {}) =>
         },
       },
     ]),
-    // Platform commission earned from vendor earnings transactions
-    WalletTransaction.aggregate([
-      { $match: { transactionType: "earnings", status: "completed" } },
+    // Commission earned from AdminWalletTransaction ledger
+    AdminWalletTransaction.aggregate([
+      { $match: { transactionType: "commission", status: "completed" } },
       {
         $group: {
           _id: null,
-          totalCommission: { $sum: "$platformCommission" },
+          totalLedgerCommission: { $sum: "$amount" },
+        },
+      },
+    ]),
+    // Platform fee earned across paid bookings
+    Booking.aggregate([
+      {
+        $match: {
+          $or: [
+            { paymentStatus: "paid" },
+            { bookingStatus: { $in: ["confirmed", "completed"] } }
+          ]
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalBookingCommission: {
+            $sum: {
+              $cond: [
+                { $gt: ["$totalPlatformFee", 0] },
+                "$totalPlatformFee",
+                {
+                  $cond: [
+                    { $gt: ["$platformFee", 0] },
+                    { $multiply: ["$platformFee", { $ifNull: ["$quantity", 1] }] },
+                    {
+                      $cond: [
+                        { $gt: ["$ticketPrice", 0] },
+                        { $multiply: [50, { $ifNull: ["$quantity", 1] }] },
+                        0
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
         },
       },
     ]),
     // Coupon discounts absorbed/funded by platform across confirmed bookings
     Booking.aggregate([
-      { $match: { paymentStatus: "paid", couponDiscount: { $gt: 0 } } },
+      {
+        $match: {
+          $or: [
+            { paymentStatus: "paid" },
+            { bookingStatus: { $in: ["confirmed", "completed"] } }
+          ],
+          couponDiscount: { $gt: 0 }
+        }
+      },
       {
         $group: {
           _id: null,
@@ -291,15 +335,18 @@ export const getAdminWalletDetailsService = async (adminId, queryParams = {}) =>
     }
   });
 
-  const commissionEarned = Number((commissionStats[0]?.totalCommission || 0).toFixed(2));
+  const ledgerComm = ledgerCommissionStats[0]?.totalLedgerCommission || 0;
+  const bookingComm = bookingCommissionStats[0]?.totalBookingCommission || 0;
+  const commissionEarned = Number(Math.max(ledgerComm, bookingComm).toFixed(2));
+
   const totalCouponCostSponsored = Number((couponStats[0]?.totalCouponSponsored || 0).toFixed(2));
   const netPlatformRevenue = Number((commissionEarned - totalCouponCostSponsored).toFixed(2));
   const totalDeposited = Number((wallet.totalDeposited || 0).toFixed(2));
 
-  // Admin Wallet Balance = Admin Added Money (Deposits) + Platform Net Commission Revenue - Disbursed Vendor Payouts
+  // Admin Wallet Balance = Admin Added Money (Deposits) + Platform Net Commission Revenue
   const calculatedPlatformBalance = Math.max(
     0,
-    Number((totalDeposited + netPlatformRevenue - vendorPayouts).toFixed(2))
+    Number((totalDeposited + netPlatformRevenue).toFixed(2))
   );
 
   // Sync wallet document with the verified real-time calculated balance
@@ -342,7 +389,7 @@ export const getAdminWalletDetailsService = async (adminId, queryParams = {}) =>
 };
 
 /**
- * Process and credit platform commission (and deduct admin-funded coupon discount) to Admin Wallet
+ * Process and credit platform fee (and deduct admin-funded coupon discount) to Admin Wallet
  * Called automatically upon successful booking confirmation.
  */
 export const processAdminBookingCommission = async (booking) => {
@@ -361,36 +408,42 @@ export const processAdminBookingCommission = async (booking) => {
   }
 
   // 2. Find system administrator
-  const adminUser = await User.findOne({ role: "admin" });
+  const adminUser = await User.findOne({
+    $or: [{ role: { $regex: /^admin$/i } }, { email: { $regex: /admin/i } }],
+  });
   if (!adminUser) {
     console.error("[Admin Wallet] System admin account not found.");
     return null;
   }
 
-  // 3. Calculate Platform Fee and Admin-funded Coupon Discount
-  const grossAmount = Number(booking.originalAmount) > 0
-    ? Number(booking.originalAmount)
-    : (Number(booking.ticketPrice) * (Number(booking.quantity) || 1)) || (Number(booking.totalAmount) + Number(booking.couponDiscount || 0));
+  // 3. Get Platform Fee snapshot stored on the booking (Platform Fee per ticket x Quantity)
+  let totalPlatformFee = Number(booking.totalPlatformFee) || 0;
+  if (totalPlatformFee <= 0) {
+    const feePerTicket = Number(booking.platformFee) || 0;
+    if (feePerTicket > 0) {
+      totalPlatformFee = feePerTicket * (Number(booking.quantity) || 1);
+    } else if (Number(booking.ticketPrice) > 0) {
+      totalPlatformFee = 50 * (Number(booking.quantity) || 1);
+    }
+  }
 
-  const commissionRate = getPlatformCommissionRate();
-  const platformCommission = Number(((grossAmount * commissionRate) / 100).toFixed(2));
   const couponDiscount = Number(booking.couponDiscount) || 0;
 
-  // Net Admin credit = Platform Fee - Coupon Discount (Admin absorbs coupon discount)
-  const adminNetAmount = Number((platformCommission - couponDiscount).toFixed(2));
+  // Net Admin credit = Total Platform Fee - Coupon Discount (Admin absorbs coupon discount)
+  const adminNetAmount = Number((totalPlatformFee - couponDiscount).toFixed(2));
 
   // 4. Update Admin Wallet balance & totalCommissionEarned
   const adminWallet = await findOrCreateAdminWalletRepo(adminUser._id);
   const updatedWallet = await updateAdminWalletBalanceRepo(adminWallet._id, {
     balanceInc: adminNetAmount,
-    totalCommissionInc: platformCommission,
+    totalCommissionInc: totalPlatformFee,
   });
 
   // 5. Create AdminWalletTransaction ledger record
   const bookingCode = booking.bookingId || `BK-${booking._id.toString().slice(-6).toUpperCase()}`;
   const description = couponDiscount > 0
-    ? `Platform commission (₹${platformCommission.toFixed(2)}) - Coupon subsidy (₹${couponDiscount.toFixed(2)}) for #${bookingCode}`
-    : `Platform commission for #${bookingCode}`;
+    ? `Platform fee (₹${totalPlatformFee.toFixed(2)}) - Coupon subsidy (₹${couponDiscount.toFixed(2)}) for #${bookingCode}`
+    : `Platform fee for #${bookingCode}`;
 
   const transaction = await createAdminWalletTransactionRepo({
     walletId: adminWallet._id,
@@ -405,10 +458,9 @@ export const processAdminBookingCommission = async (booking) => {
       bookingId: booking._id,
       bookingCode,
       eventId: booking.eventId?._id || booking.eventId,
-      grossAmount,
-      platformCommission,
+      platformFeePerTicket: booking.platformFee || 0,
+      totalPlatformFee,
       couponDiscount,
-      commissionRate,
       netAdminEarnings: adminNetAmount,
     },
   });
@@ -417,13 +469,13 @@ export const processAdminBookingCommission = async (booking) => {
     adminWallet: updatedWallet,
     transaction,
     adminNetAmount,
-    platformCommission,
+    totalPlatformFee,
     couponDiscount,
   };
 };
 
 /**
- * Reverse platform commission (and recover admin-funded coupon subsidy) on refund
+ * Reverse platform fee (and recover admin-funded coupon subsidy) on refund
  * Handles both full booking cancellations and single/partial ticket cancellations.
  */
 export const processAdminBookingRefund = async (
@@ -444,41 +496,47 @@ export const processAdminBookingRefund = async (
   }
 
   // 2. Find system administrator
-  const adminUser = await User.findOne({ role: "admin" });
+  const adminUser = await User.findOne({
+    $or: [{ role: { $regex: /^admin$/i } }, { email: { $regex: /admin/i } }],
+  });
   if (!adminUser) {
     console.error("[Admin Wallet] System admin account not found for refund reversal.");
     return null;
   }
 
-  // 3. Calculate full booking financials
-  const fullGross = Number(booking.originalAmount) > 0
-    ? Number(booking.originalAmount)
-    : (Number(booking.ticketPrice) * (Number(booking.quantity) || 1)) || (Number(booking.totalAmount) + Number(booking.couponDiscount || 0));
+  // 3. Calculate platform fee snapshot for full booking
+  let fullPlatformFee = Number(booking.totalPlatformFee) || 0;
+  if (fullPlatformFee <= 0) {
+    const feePerTicket = Number(booking.platformFee) || 0;
+    if (feePerTicket > 0) {
+      fullPlatformFee = feePerTicket * (Number(booking.quantity) || 1);
+    } else if (Number(booking.ticketPrice) > 0) {
+      fullPlatformFee = 50 * (Number(booking.quantity) || 1);
+    }
+  }
 
-  const commissionRate = getPlatformCommissionRate();
-  const fullCommission = Number(((fullGross * commissionRate) / 100).toFixed(2));
   const fullCoupon = Number(booking.couponDiscount) || 0;
 
   // Proportional calculations based on cancelled ticket count
   const count = Number(cancelledTicketsCount) || 1;
   const total = Number(totalQuantity) || (Number(booking.quantity) || 1);
 
-  const refundedCommission = Number(((fullCommission * count) / total).toFixed(2));
+  const refundedPlatformFee = Number(((fullPlatformFee * count) / total).toFixed(2));
   const recoveredCoupon = Number(((fullCoupon * count) / total).toFixed(2));
-  const adminRefundDeduction = Number((refundedCommission - recoveredCoupon).toFixed(2));
+  const adminRefundDeduction = Number((refundedPlatformFee - recoveredCoupon).toFixed(2));
 
   // 4. Update Admin Wallet balance & commission totals
   const adminWallet = await findOrCreateAdminWalletRepo(adminUser._id);
   const updatedWallet = await updateAdminWalletBalanceRepo(adminWallet._id, {
     balanceInc: -adminRefundDeduction,
-    totalCommissionInc: -refundedCommission,
+    totalCommissionInc: -refundedPlatformFee,
   });
 
   // 5. Create AdminWalletTransaction refund ledger record
   const bookingCode = booking.bookingId || `BK-${booking._id.toString().slice(-6).toUpperCase()}`;
   const description = isPartial
-    ? `Commission reversal on ticket cancellation (${ticketId})`
-    : `Commission reversal on booking cancellation #${bookingCode}`;
+    ? `Platform fee reversal on ticket cancellation (${ticketId})`
+    : `Platform fee reversal on booking cancellation #${bookingCode}`;
 
   const transaction = await createAdminWalletTransactionRepo({
     walletId: adminWallet._id,
@@ -496,7 +554,7 @@ export const processAdminBookingRefund = async (
       isPartial,
       cancelledTicketsCount: count,
       totalQuantity: total,
-      refundedCommission,
+      refundedPlatformFee,
       recoveredCoupon,
       netAdminRefundDeduction: adminRefundDeduction,
     },

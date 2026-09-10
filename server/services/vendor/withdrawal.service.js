@@ -85,48 +85,102 @@ export const approveWithdrawalService = async (adminId, requestId) => {
     throw new AppError(`Withdrawal request has already been ${request.status}.`, HTTP_STATUS.BAD_REQUEST);
   }
 
-  // 2. Validate & Deduct Wallet Available Balance & Increment Total Withdrawn
-  const wallet = await findOrCreateWalletRepo(request.vendorId._id || request.vendorId);
-  if (wallet.availableBalance < request.amount) {
-    throw new AppError("Vendor available balance is insufficient to fulfill this withdrawal.", HTTP_STATUS.BAD_REQUEST);
+  // Handle User Withdrawal vs Vendor Withdrawal
+  const isUserRequest = request.userType === "user" || Boolean(request.userId);
+
+  if (isUserRequest) {
+    const userId = request.userId?._id || request.userId;
+    const { findUserWalletRepo, updateUserWalletBalanceRepo, createUserWalletTransactionRepo } = await import("../../repository/user/userWallet.repo.js");
+    
+    const user = await findUserWalletRepo(userId);
+    if (!user || (user.walletBalance || 0) < request.amount) {
+      throw new AppError("User wallet balance is insufficient to fulfill this withdrawal.", HTTP_STATUS.BAD_REQUEST);
+    }
+
+    // Deduct user wallet balance upon admin approval
+    const updatedUser = await updateUserWalletBalanceRepo(userId, -request.amount);
+
+    // Update Request Status to Approved
+    const approvedRequest = await updateWithdrawalRequestStatusRepo(requestId, {
+      status: "approved",
+      processedAt: new Date(),
+      processedBy: adminId,
+    });
+
+    // Update existing pending UserWalletTransaction to completed (or create if missing)
+    const UserWalletTransaction = (await import("../../models/userWalletTransaction.model.js")).default;
+    let transaction = await UserWalletTransaction.findOneAndUpdate(
+      { "metadata.withdrawalRequestId": request._id, status: "pending" },
+      { $set: { status: "completed", balanceAfter: updatedUser?.walletBalance || 0 } },
+      { new: true }
+    );
+
+    if (!transaction) {
+      transaction = await createUserWalletTransactionRepo({
+        userId,
+        transactionType: "withdrawal",
+        amount: -request.amount,
+        currency: "INR",
+        balanceAfter: updatedUser?.walletBalance || 0,
+        status: "completed",
+        paymentMethod: request.paymentMethod || "UPI / GPay",
+        description: `Withdrawal payout to ${request.destinationAccount || request.paymentMethod}`,
+        metadata: {
+          requestId: request._id,
+          withdrawalRequestId: request._id,
+          payoutMethod: request.paymentMethod,
+          destinationAccount: request.destinationAccount,
+        },
+      });
+    }
+
+    return {
+      withdrawal: approvedRequest,
+      user: updatedUser,
+      transaction,
+    };
+  } else {
+    // Vendor Withdrawal Request
+    const vendorId = request.vendorId?._id || request.vendorId;
+    const wallet = await findOrCreateWalletRepo(vendorId);
+    if (!wallet || wallet.availableBalance < request.amount) {
+      throw new AppError("Vendor available balance is insufficient to fulfill this withdrawal.", HTTP_STATUS.BAD_REQUEST);
+    }
+
+    const updatedWallet = await updateWalletBalanceRepo(wallet._id, {
+      availableBalanceInc: -request.amount,
+      totalEarningsInc: 0,
+      pendingBalanceInc: 0,
+    });
+
+    updatedWallet.totalWithdrawn = (updatedWallet.totalWithdrawn || 0) + request.amount;
+    await updatedWallet.save();
+
+    const approvedRequest = await updateWithdrawalRequestStatusRepo(requestId, {
+      status: "approved",
+      processedAt: new Date(),
+      processedBy: adminId,
+    });
+
+    const transaction = await createWalletTransactionRepo({
+      walletId: wallet._id,
+      vendorId: vendorId,
+      withdrawalId: request._id,
+      transactionType: "withdrawal",
+      amount: -request.amount,
+      platformCommission: 0,
+      netAmount: -request.amount,
+      status: "completed",
+      description: `Payout withdrawal to ${request.destinationAccount || "Bank Account"}`,
+      createdTime: new Date(),
+    });
+
+    return {
+      withdrawal: approvedRequest,
+      wallet: updatedWallet,
+      transaction,
+    };
   }
-
-  const updatedWallet = await updateWalletBalanceRepo(wallet._id, {
-    availableBalanceInc: -request.amount,
-    totalEarningsInc: 0,
-    pendingBalanceInc: 0,
-  });
-
-  // Increment totalWithdrawn field on wallet
-  updatedWallet.totalWithdrawn = (updatedWallet.totalWithdrawn || 0) + request.amount;
-  await updatedWallet.save();
-
-  // 3. Update Request Status to Approved
-  const approvedRequest = await updateWithdrawalRequestStatusRepo(requestId, {
-    status: "approved",
-    processedAt: new Date(),
-    processedBy: adminId,
-  });
-
-  // 4. Create WalletTransaction Record (type = "withdrawal")
-  const transaction = await createWalletTransactionRepo({
-    walletId: wallet._id,
-    vendorId: request.vendorId._id || request.vendorId,
-    withdrawalId: request._id,
-    transactionType: "withdrawal",
-    amount: -request.amount,
-    platformCommission: 0,
-    netAmount: -request.amount,
-    status: "completed",
-    description: `Payout withdrawal to ${request.destinationAccount || "Bank Account"}`,
-    createdTime: new Date(),
-  });
-
-  return {
-    withdrawal: approvedRequest,
-    wallet: updatedWallet,
-    transaction,
-  };
 };
 
 /**
@@ -147,13 +201,22 @@ export const rejectWithdrawalService = async (adminId, requestId, rejectionReaso
     throw new AppError(`Withdrawal request has already been ${request.status}.`, HTTP_STATUS.BAD_REQUEST);
   }
 
-  // 2. Update Status to Rejected (Wallet balance remains unchanged, NO transaction created)
+  // 2. Update Status to Rejected
   const rejectedRequest = await updateWithdrawalRequestStatusRepo(requestId, {
     status: "rejected",
     processedAt: new Date(),
     processedBy: adminId,
     rejectionReason: rejectionReason || "Withdrawal request rejected by administrator.",
   });
+
+  // 3. Update pending UserWalletTransaction status to 'failed' if present
+  if (request.userType === "user" || request.userId) {
+    const UserWalletTransaction = (await import("../../models/userWalletTransaction.model.js")).default;
+    await UserWalletTransaction.findOneAndUpdate(
+      { "metadata.withdrawalRequestId": request._id, status: "pending" },
+      { $set: { status: "failed" } }
+    );
+  }
 
   return rejectedRequest;
 };

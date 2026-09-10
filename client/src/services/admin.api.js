@@ -145,4 +145,13 @@ export const deleteAdminNotificationApi = (id) => {
 
 export const clearAllAdminNotificationsApi = () => {
   return axiosInstance.delete("/admin/notifications/clear-all");
+};
+
+// Admin Platform Fee Setting APIs
+export const getPlatformFeeApi = () => {
+  return axiosInstance.get("/admin/platform-fee");
+};
+
+export const updatePlatformFeeApi = (platformFeePerTicket) => {
+  return axiosInstance.put("/admin/platform-fee", { platformFeePerTicket });
 };

@@ -28,7 +28,7 @@ import {
 import { toast } from "sonner";
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
-import { getEventById, getExploreEvents, createBooking } from "../../services/user.api.js";
+import { getEventById, getExploreEvents, createBooking, getPlatformFeePublicApi } from "../../services/user.api.js";
 
 // Style config matching categories to color codes
 const categoryBadgeStyles = {
@@ -231,8 +231,26 @@ const UserEventDetails = () => {
     }
   }, [selectedTierIndex, availableSeats]);
 
-  // Standard Service Fee (₹14.90 for standard booking, or ₹0 if free)
-  const serviceFee = isFree ? 0 : 14.90;
+  // Platform Fee per ticket from server
+  const [platformFeePerTicket, setPlatformFeePerTicket] = useState(50);
+
+  useEffect(() => {
+    let isMounted = true;
+    getPlatformFeePublicApi()
+      .then((res) => {
+        if (!isMounted || !res.data?.success || !res.data.data) return;
+        setPlatformFeePerTicket(Number(res.data.data.platformFeePerTicket) || 0);
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const platformFee = isFree ? 0 : platformFeePerTicket;
+  const totalPlatformFee = platformFee * quantity;
+  const serviceFee = totalPlatformFee;
 
   const discountPercent = useMemo(() => {
     if (event?.offer?.enabled && quantity >= (event.offer.minTicketsRequired || 0)) {
@@ -258,7 +276,7 @@ const UserEventDetails = () => {
 
   const subtotal = isFree ? 0 : ticketPrice * quantity;
   const discountAmount = (subtotal * discountPercent) / 100;
-  const totalAmount = isFree ? 0 : subtotal - discountAmount + serviceFee;
+  const totalAmount = isFree ? 0 : subtotal - discountAmount + totalPlatformFee;
 
   const handleBookTickets = () => {
     if (!event) return;
@@ -282,7 +300,9 @@ const UserEventDetails = () => {
       quantity,
       ticketPrice: isFree ? 0 : ticketPrice,
       subtotal,
-      serviceFee,
+      platformFee,
+      totalPlatformFee,
+      serviceFee: totalPlatformFee,
       discountAmount,
       totalAmount
     };
@@ -878,8 +898,8 @@ const UserEventDetails = () => {
                     )}
                     
                     <div className="flex justify-between">
-                      <span>Service Fee</span>
-                      <span className="text-white font-medium">₹{serviceFee.toFixed(2)}</span>
+                      <span>Platform Fee (₹{platformFee.toFixed(2)} × {quantity})</span>
+                      <span className="text-white font-medium">₹{totalPlatformFee.toFixed(2)}</span>
                     </div>
 
                     <div className="border-t border-purple-950/40 my-1" />

@@ -134,4 +134,8 @@ router.patch('/notifications/mark-read', protect, asyncHandler(markMyNotificatio
 router.delete('/notifications/clear-all', protect, asyncHandler(clearAllMyNotifications))
 router.delete('/notifications/:id', protect, asyncHandler(deleteMyNotification))
 
+// Platform Fee Public Route
+import { getPlatformSetting } from "../controllers/admin/platformSetting.controller.js"
+router.get('/platform-fee', asyncHandler(getPlatformSetting))
+
 export default router

@@ -12,7 +12,9 @@ export const createWithdrawalRequestRepo = async (data) => {
  * Find withdrawal request by ID
  */
 export const findWithdrawalRequestByIdRepo = async (id) => {
-  return await WithdrawalRequest.findById(id).populate("vendorId", "fullName email businessName profilePicture");
+  return await WithdrawalRequest.findById(id)
+    .populate("vendorId", "fullName email businessName profilePicture")
+    .populate("userId", "fullName email profilePicture");
 };
 
 /**
@@ -20,6 +22,13 @@ export const findWithdrawalRequestByIdRepo = async (id) => {
  */
 export const findPendingWithdrawalByVendorIdRepo = async (vendorId) => {
   return await WithdrawalRequest.findOne({ vendorId, status: "pending" });
+};
+
+/**
+ * Find active pending withdrawal request for a user
+ */
+export const findPendingWithdrawalByUserIdRepo = async (userId) => {
+  return await WithdrawalRequest.findOne({ userId, status: "pending" });
 };
 
 /**
@@ -36,6 +45,7 @@ export const getAdminWithdrawalRequestsRepo = async (statusFilter) => {
   const query = statusFilter ? { status: statusFilter } : {};
   return await WithdrawalRequest.find(query)
     .populate("vendorId", "fullName email businessName profilePicture")
+    .populate("userId", "fullName email profilePicture")
     .sort({ createdAt: -1 });
 };
 

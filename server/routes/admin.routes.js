@@ -121,4 +121,13 @@ router.patch('/notifications/mark-read', protect, requireRole("admin"), asyncHan
 router.delete('/notifications/clear-all', protect, requireRole("admin"), asyncHandler(clearAllMyNotifications))
 router.delete('/notifications/:id', protect, requireRole("admin"), asyncHandler(deleteMyNotification))
 
+// Admin Platform Setting Routes
+import {
+  getPlatformSetting,
+  updatePlatformSetting,
+} from "../controllers/admin/platformSetting.controller.js"
+
+router.get('/platform-fee', protect, requireRole("admin"), asyncHandler(getPlatformSetting))
+router.put('/platform-fee', protect, requireRole("admin"), asyncHandler(updatePlatformSetting))
+
 export default router

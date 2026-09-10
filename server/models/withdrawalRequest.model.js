@@ -5,13 +5,24 @@ const withdrawalRequestSchema = new mongoose.Schema(
     vendorId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Vendor",
-      required: true,
+      required: false,
       index: true,
+    },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: false,
+      index: true,
+    },
+    userType: {
+      type: String,
+      enum: ["vendor", "user"],
+      default: "vendor",
     },
     walletId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Wallet",
-      required: true,
+      required: false,
       index: true,
     },
     amount: {

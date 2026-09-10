@@ -160,3 +160,8 @@ export const deleteUserNotificationApi = (id) => {
 export const clearAllUserNotificationsApi = () => {
   return axiosInstance.delete("/users/notifications/clear-all");
 };
+
+// Platform Fee Public API
+export const getPlatformFeePublicApi = () => {
+  return axiosInstance.get("/users/platform-fee");
+};

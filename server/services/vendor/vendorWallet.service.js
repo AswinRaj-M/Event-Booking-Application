@@ -1,6 +1,7 @@
+import mongoose from "mongoose";
 import Event from "../../models/event.model.js";
 import WalletTransaction from "../../models/walletTransaction.model.js";
-import { getPlatformCommissionRate } from "../../config/commission.config.js";
+import WithdrawalRequest from "../../models/withdrawalRequest.model.js";
 import {
   findOrCreateWalletRepo,
   updateWalletBalanceRepo,
@@ -13,39 +14,28 @@ import { AppError } from "../../utils/AppError.js";
 import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
 
 /**
- * STEP 78: Vendor Gross Earnings Calculation (Reusable)
+ * Vendor Ticket Earnings Calculation
+ * Vendor receives 100% of the vendor ticket price (Ticket Price x Quantity).
+ * Platform fee is credited separately to the Admin wallet.
  */
-export const calculateVendorGrossEarnings = (bookingAmount) => {
-  const gross = Number(bookingAmount);
-  if (isNaN(gross) || gross < 0) {
-    return 0;
-  }
-  return Number(gross.toFixed(2));
+export const calculateVendorGrossEarnings = (ticketPrice, quantity = 1) => {
+  const price = Number(ticketPrice) || 0;
+  const qty = Number(quantity) || 1;
+  return Number((price * qty).toFixed(2));
 };
 
-/**
- * STEP 79: Platform Commission & Vendor Net Earnings Deduction (Reusable)
- */
-export const calculatePlatformCommission = (grossAmount, customCommissionRate) => {
-  const gross = calculateVendorGrossEarnings(grossAmount);
-  const commissionRate =
-    customCommissionRate !== undefined && customCommissionRate !== null
-      ? Number(customCommissionRate)
-      : getPlatformCommissionRate();
-
-  const platformCommission = Number(((gross * commissionRate) / 100).toFixed(2));
-  const netEarnings = Number((gross - platformCommission).toFixed(2));
-
+export const calculatePlatformCommission = (grossAmount) => {
+  const gross = Number(grossAmount) || 0;
   return {
     grossAmount: gross,
-    commissionPercentage: commissionRate,
-    platformCommission,
-    netEarnings,
+    commissionPercentage: 0,
+    platformCommission: 0,
+    netEarnings: gross,
   };
 };
 
 /**
- * STEPS 78 - 81: Process & Credit Vendor Earnings for a Successful Booking
+ * Process & Credit Vendor Earnings for a Successful Booking
  * Called automatically after booking payment confirmation.
  */
 export const processVendorBookingEarnings = async (booking) => {
@@ -78,15 +68,19 @@ export const processVendorBookingEarnings = async (booking) => {
     return null;
   }
 
-  // STEP 78 & 79: Calculate Vendor Gross Earnings from the ORIGINAL booking amount (before admin coupon discount)
-  // The coupon discount is funded by the Admin/Platform and must NEVER reduce the Vendor's earnings.
-  const grossAmount = Number(booking.originalAmount) > 0 
+  // Calculate exact Vendor Ticket Amount (Vendor Ticket Price x Quantity)
+  const vendorTicketAmount = Number(booking.originalAmount) > 0 
     ? Number(booking.originalAmount) 
-    : (booking.ticketPrice * (booking.quantity || 1)) || (Number(booking.totalAmount) + Number(booking.couponDiscount || 0));
+    : (Number(booking.ticketPrice) * (Number(booking.quantity) || 1));
 
-  const earningsData = calculatePlatformCommission(grossAmount);
+  const earningsData = {
+    grossAmount: vendorTicketAmount,
+    commissionPercentage: 0,
+    platformCommission: 0,
+    netEarnings: vendorTicketAmount,
+  };
 
-  // STEP 80: Find or Create Vendor Wallet & Update Available Balance & Total Earnings
+  // Find or Create Vendor Wallet & Update Available Balance & Total Earnings
   const wallet = await findOrCreateWalletRepo(vendorId);
 
   const updatedWallet = await updateWalletBalanceRepo(wallet._id, {
@@ -95,7 +89,7 @@ export const processVendorBookingEarnings = async (booking) => {
     pendingBalanceInc: 0,
   });
 
-  // STEP 81: Store Wallet Transaction History
+  // Store Wallet Transaction History
   const transaction = await createWalletTransactionRepo({
     walletId: wallet._id,
     vendorId: vendorId,
@@ -103,8 +97,8 @@ export const processVendorBookingEarnings = async (booking) => {
     eventId: event._id,
     transactionType: "earnings",
     amount: earningsData.grossAmount,
-    platformCommission: earningsData.platformCommission,
-    adminCouponDiscount: Number(booking.couponDiscount) || 0,
+    platformCommission: 0,
+    adminCouponDiscount: 0,
     netAmount: earningsData.netEarnings,
     status: "completed",
     description: `Ticket sales earnings for event: ${event.title}`,
@@ -152,29 +146,26 @@ export const processVendorBookingRefund = async (
 
   const vendorId = event.vendorId?._id || event.vendorId;
 
-  // 2. Calculate Proportional Booking Refund Amount & Commission based on the original booking amount
-  const fullGross = Number(booking.originalAmount) > 0 
+  // Calculate Proportional Vendor Ticket Refund Amount based on cancelled tickets
+  const fullVendorAmount = Number(booking.originalAmount) > 0 
     ? Number(booking.originalAmount) 
-    : (booking.ticketPrice * (booking.quantity || 1)) || (Number(booking.totalAmount) + Number(booking.couponDiscount || 0));
+    : (Number(booking.ticketPrice) * (Number(booking.quantity) || 1));
 
   const count = Number(cancelledTicketsCount) || 1;
   const total = Number(totalQuantity) || (Number(booking.quantity) || 1);
 
-  const proportionalGross = Number(((fullGross * count) / total).toFixed(2));
-  const proportionalCoupon = Number((((Number(booking.couponDiscount) || 0) * count) / total).toFixed(2));
-
-  const earningsData = calculatePlatformCommission(proportionalGross);
+  const proportionalVendorRefund = Number(((fullVendorAmount * count) / total).toFixed(2));
 
   const wallet = await findOrCreateWalletRepo(vendorId);
 
-  // 3. Deduct proportional net vendor earnings from Available Balance & Total Earnings safely
+  // Deduct proportional vendor ticket earnings from Available Balance & Total Earnings
   const updatedWallet = await updateWalletBalanceRepo(wallet._id, {
-    availableBalanceInc: -earningsData.netEarnings,
-    totalEarningsInc: -earningsData.netEarnings,
+    availableBalanceInc: -proportionalVendorRefund,
+    totalEarningsInc: -proportionalVendorRefund,
     pendingBalanceInc: 0,
   });
 
-  // 4. Create WalletTransaction record for the refund
+  // Create WalletTransaction record for the refund
   const description = isPartial && ticketId
     ? `Ticket cancellation refund for "${event.title}" (${ticketId})`
     : `Booking cancellation refund for "${event.title}"`;
@@ -185,10 +176,10 @@ export const processVendorBookingRefund = async (
     bookingId: booking._id,
     eventId: event._id,
     transactionType: "refund",
-    amount: -earningsData.grossAmount,
-    platformCommission: -earningsData.platformCommission,
-    adminCouponDiscount: -proportionalCoupon,
-    netAmount: -earningsData.netEarnings,
+    amount: -proportionalVendorRefund,
+    platformCommission: 0,
+    adminCouponDiscount: 0,
+    netAmount: -proportionalVendorRefund,
     status: "completed",
     description,
     createdTime: new Date(),
@@ -197,18 +188,89 @@ export const processVendorBookingRefund = async (
   return {
     wallet: updatedWallet,
     transaction,
-    earningsData,
+    proportionalVendorRefund,
   };
 };
 
 /**
- * Get Vendor Wallet Details
+ * Get Vendor Wallet Details with Real-time Ledger Balance Synchronization
  */
 export const getVendorWalletService = async (vendorId) => {
   if (!vendorId) {
     throw new AppError("Vendor ID is required", HTTP_STATUS.BAD_REQUEST);
   }
   const wallet = await findOrCreateWalletRepo(vendorId);
+
+  try {
+    const vendorObjId = new mongoose.Types.ObjectId(vendorId.toString());
+
+    const [txStats, withdrawalStats] = await Promise.all([
+      WalletTransaction.aggregate([
+        { $match: { vendorId: vendorObjId, status: "completed" } },
+        {
+          $group: {
+            _id: "$transactionType",
+            totalAmount: { $sum: { $ifNull: ["$netAmount", "$amount"] } },
+          },
+        },
+      ]),
+      WithdrawalRequest.aggregate([
+        { $match: { vendorId: vendorObjId } },
+        {
+          $group: {
+            _id: "$status",
+            totalAmount: { $sum: "$amount" },
+          },
+        },
+      ]),
+    ]);
+
+    let ledgerEarnings = 0;
+    let ledgerRefunds = 0;
+
+    txStats.forEach((stat) => {
+      if (stat._id === "earnings" || stat._id === "credit") {
+        ledgerEarnings += Math.abs(stat.totalAmount || 0);
+      } else if (stat._id === "refund") {
+        ledgerRefunds += Math.abs(stat.totalAmount || 0);
+      }
+    });
+
+    let approvedWithdrawals = 0;
+    let pendingWithdrawals = 0;
+
+    withdrawalStats.forEach((w) => {
+      if (w._id === "approved") {
+        approvedWithdrawals += w.totalAmount || 0;
+      } else if (w._id === "pending") {
+        pendingWithdrawals += w.totalAmount || 0;
+      }
+    });
+
+    const totalEarnings = Math.max(0, Number((ledgerEarnings - ledgerRefunds).toFixed(2)));
+    const pendingBalance = Number(pendingWithdrawals.toFixed(2));
+    const totalWithdrawn = Number(approvedWithdrawals.toFixed(2));
+    const availableBalance = Math.max(
+      0,
+      Number((ledgerEarnings - ledgerRefunds - approvedWithdrawals - pendingWithdrawals).toFixed(2))
+    );
+
+    if (
+      wallet.availableBalance !== availableBalance ||
+      wallet.totalEarnings !== totalEarnings ||
+      wallet.pendingBalance !== pendingBalance ||
+      wallet.totalWithdrawn !== totalWithdrawn
+    ) {
+      wallet.availableBalance = availableBalance;
+      wallet.totalEarnings = totalEarnings;
+      wallet.pendingBalance = pendingBalance;
+      wallet.totalWithdrawn = totalWithdrawn;
+      await wallet.save();
+    }
+  } catch (err) {
+    console.error("[Vendor Wallet Sync Error]:", err);
+  }
+
   return wallet;
 };
 

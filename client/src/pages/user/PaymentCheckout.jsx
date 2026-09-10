@@ -59,10 +59,17 @@ const PaymentCheckout = () => {
     quantity = 1, 
     ticketPrice = 0, 
     subtotal = 0, 
+    platformFee = 50,
+    totalPlatformFee: passedTotalPlatformFee,
     serviceFee = 0, 
     discountAmount: initialDiscount = 0,
     totalAmount: initialTotal = 0 
   } = checkoutData;
+
+  const effectivePlatformFeePerTicket = Number(platformFee) || 0;
+  const effectiveTotalPlatformFee = Number(passedTotalPlatformFee) >= 0 
+    ? Number(passedTotalPlatformFee) 
+    : (effectivePlatformFeePerTicket * quantity) || Number(serviceFee) || 0;
 
   // Verify event status (blocked / deleted) whenever user enters checkout page
   React.useEffect(() => {
@@ -595,15 +602,15 @@ const PaymentCheckout = () => {
                   <div className="pt-4 border-t border-gray-800/80 space-y-2.5">
                     <div className="flex justify-between items-center text-gray-300">
                       <span>
-                        {selectedTier?.name || 'Access Ticket'} <span className="text-purple-400 font-bold">x{quantity}</span>
+                        Ticket Price ({selectedTier?.name || 'Standard'} ₹{ticketPrice.toFixed(2)} <span className="text-purple-400 font-bold">x{quantity}</span>)
                       </span>
                       <span className="font-semibold text-white">₹{subtotal.toFixed(2)}</span>
                     </div>
 
-                    {serviceFee > 0 && (
+                    {effectiveTotalPlatformFee > 0 && (
                       <div className="flex justify-between items-center text-gray-400">
-                        <span>Booking Fee</span>
-                        <span>₹{serviceFee.toFixed(2)}</span>
+                        <span>Platform Fee (₹{effectivePlatformFeePerTicket.toFixed(2)} × {quantity})</span>
+                        <span className="text-gray-200 font-semibold">₹{effectiveTotalPlatformFee.toFixed(2)}</span>
                       </div>
                     )}
 

@@ -157,8 +157,15 @@ export const createPendingBookingService = async (userId, eventId, tierId, quant
      couponDiscount = result.discountAmount;
    }
 
-   const serviceFee = event.ticketType === "Free" ? 0 : 14.90;
-   const totalAmount = Math.max(0, originalAmount - couponDiscount + serviceFee);
+   // Fetch current Platform Fee Per Ticket from DB
+   const { getPlatformSettingRepo } = await import("../../repository/admin/platformSetting.repo.js");
+   const platformSetting = await getPlatformSettingRepo();
+   const isFreeEvent = event.ticketType?.toLowerCase() === "free" || ticketPrice === 0;
+   const platformFeePerTicket = isFreeEvent ? 0 : (platformSetting?.platformFeePerTicket ?? 50);
+   const totalPlatformFee = platformFeePerTicket * quantity;
+
+   // Total Amount = Vendor Ticket Subtotal (after event discount) - Coupon Discount + Total Platform Fee
+   const totalAmount = Math.max(0, originalAmount - couponDiscount + totalPlatformFee);
 
    // Generate unique bookingId
    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
@@ -178,7 +185,9 @@ export const createPendingBookingService = async (userId, eventId, tierId, quant
      originalAmount,
      eventDiscount: discountAmount,
      couponDiscount,
-     serviceFee,
+     platformFee: platformFeePerTicket,
+     totalPlatformFee,
+     serviceFee: totalPlatformFee,
      totalAmount,
      couponCode: validatedCoupon ? validatedCoupon.code : undefined,
      paymentStatus: "pending",
@@ -284,8 +293,9 @@ export const confirmBookingAfterPaymentService = async (bookingId) => {
   }
 
   // Credit Vendor Wallet with Net Earnings & Store Wallet Transaction
+  let vendorEarningsResult = null;
   try {
-    await processVendorBookingEarnings(booking);
+    vendorEarningsResult = await processVendorBookingEarnings(booking);
   } catch (err) {
     console.error("Error processing vendor wallet earnings on booking confirmation:", err);
   }
@@ -347,9 +357,15 @@ export const confirmBookingAfterPaymentService = async (bookingId) => {
 
     // 8. NEW_BOOKING to Vendor
     if (vendorId) {
+      const vendorTicketAmount = vendorEarningsResult?.earningsData?.netEarnings ?? (
+        Number(booking.originalAmount) > 0 
+          ? Number(booking.originalAmount) 
+          : (Number(booking.ticketPrice || 0) * (Number(booking.quantity) || 1))
+      );
+
       sendNotification(vendorId, {
         title: "New Booking Received! 🎟️",
-        message: `${customerName} booked ${booking.quantity} ticket(s) for "${eventTitle}". Total: ₹${booking.totalAmount.toFixed(2)}`,
+        message: `${customerName} booked ${booking.quantity} ticket(s) for "${eventTitle}". Ticket Sales Amount: ₹${vendorTicketAmount.toFixed(2)}`,
         type: "NEW_BOOKING"
       });
 
