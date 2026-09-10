@@ -4,7 +4,6 @@ import AdminSidebar from "../../components/admin/AdminSidebar";
 import { ADMIN_ROUTES } from "../../constants/Routes";
 import {
   Search,
-  Bell,
   Sidebar,
   FileText,
   Plus,
@@ -83,12 +82,6 @@ function AdminVendorManagement() {
             <Sidebar className="w-5 h-5 mr-4 text-gray-500 cursor-pointer hover:text-white" />
             <span className="mx-2">&gt;</span>
             <span className="text-gray-200 font-medium">Vendors</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <button className="relative p-2 text-gray-400 hover:text-white transition-colors">
-              <Bell size={18} />
-              <span className="absolute top-2 right-2 block h-1.5 w-1.5 rounded-full bg-purple-500 ring-2 ring-[#0B0914]" />
-            </button>
           </div>
         </header>
 

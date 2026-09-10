@@ -14,7 +14,6 @@ import {
   User,
   Calendar,
   Building,
-  Bell,
   Sidebar,
 } from "lucide-react";
 import AdminSidebar from "../../components/admin/AdminSidebar";
@@ -174,12 +173,6 @@ const AdminVendorApplicationView = () => {
             <span className="text-purple-400 font-medium">
               Review Application
             </span>
-          </div>
-          <div className="flex items-center gap-4">
-            <button className="relative p-2 text-gray-400 hover:text-white transition-colors">
-              <Bell size={18} />
-              <span className="absolute top-2 right-2 block h-1.5 w-1.5 rounded-full bg-purple-500 ring-2 ring-[#0B0914]" />
-            </button>
           </div>
         </header>
 

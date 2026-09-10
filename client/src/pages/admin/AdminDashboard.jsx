@@ -6,7 +6,6 @@ import {
   Calendar,
   Ticket,
   Settings,
-  Bell,
   Sidebar,
   IndianRupee,
   ArrowUpRight,
@@ -177,12 +176,6 @@ function AdminDashboard() {
           <div className="flex items-center text-gray-300">
             <Sidebar className="w-5 h-5 mr-4 text-gray-500 cursor-pointer hover:text-white" />
             <h1 className="text-[17px] font-medium text-gray-200">Admin Dashboard</h1>
-          </div>
-          <div className="flex items-center gap-4">
-            <button className="relative p-2 text-gray-400 hover:text-white transition-colors">
-              <Bell size={18} />
-              <span className="absolute top-2 right-2 block h-1.5 w-1.5 rounded-full bg-purple-500 ring-2 ring-[#0B0914]" />
-            </button>
           </div>
         </header>
 

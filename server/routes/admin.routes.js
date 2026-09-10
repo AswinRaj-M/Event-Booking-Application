@@ -108,4 +108,17 @@ router.get('/analytics', protect, requireRole("admin"), asyncHandler(getAdminAna
 import { getAllBookingsAdmin } from "../controllers/admin/booking.controller.js"
 router.get('/bookings', protect, requireRole("admin"), asyncHandler(getAllBookingsAdmin))
 
+// Admin Notification Routes
+import {
+  getMyNotifications,
+  markMyNotificationsRead,
+  deleteMyNotification,
+  clearAllMyNotifications
+} from "../controllers/common/notification.controller.js"
+
+router.get('/notifications', protect, requireRole("admin"), asyncHandler(getMyNotifications))
+router.patch('/notifications/mark-read', protect, requireRole("admin"), asyncHandler(markMyNotificationsRead))
+router.delete('/notifications/clear-all', protect, requireRole("admin"), asyncHandler(clearAllMyNotifications))
+router.delete('/notifications/:id', protect, requireRole("admin"), asyncHandler(deleteMyNotification))
+
 export default router

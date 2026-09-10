@@ -10,8 +10,9 @@ import { useSelector } from 'react-redux';
 import { getSocket, disconnectSocket } from './services/socket';
 
 function App() {
-  const { user } = useSelector((state) => state.user);
-  const { vendor } = useSelector((state) => state.vendor);
+  const { user } = useSelector((state) => state.user || {});
+  const { vendor } = useSelector((state) => state.vendor || {});
+  const { admin } = useSelector((state) => state.admin || {});
 
   useEffect(() => {
     const suspendedMessage = localStorage.getItem("userSuspendedToast");
@@ -22,7 +23,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const activeId = user?.id || user?._id || vendor?.id || vendor?._id;
+    const activeId = user?.id || user?._id || vendor?.id || vendor?._id || admin?.id || admin?._id;
     if (!activeId) {
       disconnectSocket();
       return;
@@ -79,7 +80,7 @@ function App() {
     return () => {
       socket.off("notification", handleNotification);
     };
-  }, [user, vendor]);
+  }, [user, vendor, admin]);
 
   return (
     <>

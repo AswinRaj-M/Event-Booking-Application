@@ -128,4 +128,21 @@ export const getAdminAnalyticsApi = (params = {}) => {
 // Admin Bookings Management API
 export const getAllBookingsAdminApi = (params = {}) => {
   return axiosInstance.get("/admin/bookings", { params });
+};
+
+// Admin Notifications APIs
+export const getAdminNotificationsApi = () => {
+  return axiosInstance.get("/admin/notifications");
+};
+
+export const markAdminNotificationsReadApi = () => {
+  return axiosInstance.patch("/admin/notifications/mark-read");
+};
+
+export const deleteAdminNotificationApi = (id) => {
+  return axiosInstance.delete(`/admin/notifications/${id}`);
+};
+
+export const clearAllAdminNotificationsApi = () => {
+  return axiosInstance.delete("/admin/notifications/clear-all");
 };

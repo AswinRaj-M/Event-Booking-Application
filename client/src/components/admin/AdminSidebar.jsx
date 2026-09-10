@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { logoutAdminThunk } from '../../features/admin.slice'
 import { ADMIN_ROUTES } from '../../constants/Routes'
+import NotificationBell from '../common/NotificationBell'
 import {
     LayoutDashboard,
     Users,
@@ -32,12 +33,15 @@ function AdminSidebar() {
 
     return (
         <aside className="w-64 bg-[#131022] flex flex-col border-r border-gray-800 hidden md:flex h-full">
-            {/* Logo Area */}
-            <div className="p-6 flex items-center space-x-3">
-                <div className="w-8 h-8 rounded-lg bg-purple-600 flex items-center justify-center">
-                    <LayoutDashboard size={18} className="text-white" />
+            {/* Logo Area & Notification Bell */}
+            <div className="p-5 pb-4 border-b border-gray-800 flex items-center justify-between relative z-40">
+                <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 rounded-lg bg-purple-600 flex items-center justify-center shrink-0">
+                        <LayoutDashboard size={18} className="text-white" />
+                    </div>
+                    <span className="text-lg font-bold tracking-wide text-gray-100 truncate">FestivoAdmin</span>
                 </div>
-                <span className="text-xl font-bold tracking-wide text-gray-100">FestivoAdmin</span>
+                <NotificationBell placement="sidebar" />
             </div>
 
             {/* Navigation */}
