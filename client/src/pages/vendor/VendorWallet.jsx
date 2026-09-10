@@ -184,12 +184,12 @@ const VendorWallet = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#05050C] text-white font-sans selection:bg-purple-500/30">
+    <div className="flex h-screen bg-[#05050C] text-white font-sans selection:bg-purple-500/30 overflow-hidden">
       {/* Sidebar Navigation */}
       <VendorSidebar />
 
       {/* Main Container */}
-      <main className="flex-1 ml-64 p-8 min-h-screen relative z-10 flex flex-col">
+      <main data-lenis-prevent className="flex-1 ml-64 p-8 h-full relative z-10 flex flex-col overflow-y-auto">
         {/* Background Ambient Glow */}
         <div className="absolute top-[-10%] right-[-5%] w-[600px] h-[600px] bg-purple-900/10 rounded-full blur-[160px] pointer-events-none -z-10" />
         <div className="absolute bottom-[-10%] left-[20%] w-[700px] h-[700px] bg-indigo-900/10 rounded-full blur-[180px] pointer-events-none -z-10" />

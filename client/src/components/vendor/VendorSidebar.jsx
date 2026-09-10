@@ -59,7 +59,7 @@ const VendorSidebar = () => {
             </div>
 
             {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto overflow-x-hidden pt-4 px-4 pb-20 scrollbar-thin scrollbar-thumb-purple-900/50 scrollbar-track-transparent">
+            <div data-lenis-prevent className="flex-1 overflow-y-auto overflow-x-hidden pt-4 px-4 pb-20 scrollbar-thin scrollbar-thumb-purple-900/50 scrollbar-track-transparent">
 
                 {/* Main Links */}
                 <div className="space-y-1">

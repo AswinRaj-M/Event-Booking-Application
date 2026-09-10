@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import VendorSidebar from "../../components/vendor/VendorSidebar";
 import { 
@@ -34,6 +35,8 @@ const VendorTicketScanner = () => {
 
   const html5QrCodeRef = useRef(null);
   const scannerContainerId = "reader-camera-stream";
+  const isProcessingRef = useRef(false);
+  const lastScannedTokenRef = useRef({ token: null, timestamp: 0 });
 
   // Fetch recent check-ins for the vendor
   const fetchRecentCheckIns = async () => {
@@ -95,12 +98,15 @@ const VendorTicketScanner = () => {
   };
 
   const handleValidateToken = async (tokenString) => {
-    if (!tokenString || !tokenString.trim() || validating) return;
+    if (!tokenString || !tokenString.trim() || validating || isProcessingRef.current) return;
+
+    const cleanToken = tokenString.trim();
 
     try {
+      isProcessingRef.current = true;
       setValidating(true);
       const res = await axiosInstance.post("/vendor/check-in", {
-        qrToken: tokenString.trim()
+        qrToken: cleanToken
       });
 
       if (res.data?.success) {
@@ -120,12 +126,15 @@ const VendorTicketScanner = () => {
       setLastScanResult({
         status: "error",
         message: errMsg,
-        token: tokenString
+        token: cleanToken
       });
       toast.error(errMsg);
     } finally {
       setValidating(false);
       setManualCode("");
+      setTimeout(() => {
+        isProcessingRef.current = false;
+      }, 1500);
     }
   };
 
@@ -145,8 +154,15 @@ const VendorTicketScanner = () => {
         { facingMode: "environment" },
         config,
         (decodedText) => {
-          // Pause camera scanning temporarily on detection
-          handleValidateToken(decodedText);
+          if (!decodedText) return;
+          const cleanToken = decodedText.trim();
+          const now = Date.now();
+          if (isProcessingRef.current) return;
+          if (lastScannedTokenRef.current.token === cleanToken && now - lastScannedTokenRef.current.timestamp < 3000) {
+            return;
+          }
+          lastScannedTokenRef.current = { token: cleanToken, timestamp: now };
+          handleValidateToken(cleanToken);
         },
         (error) => {
           // Scan errors / frame misses can be ignored
@@ -183,10 +199,10 @@ const VendorTicketScanner = () => {
   };
 
   return (
-    <div className="flex bg-[#05050C] min-h-screen text-white font-sans selection:bg-purple-500/30">
+    <div className="flex bg-[#05050C] h-screen text-white font-sans selection:bg-purple-500/30 overflow-hidden">
       <VendorSidebar />
 
-      <main className="flex-1 ml-64 p-6 md:p-10 pb-24 overflow-y-auto">
+      <main data-lenis-prevent className="flex-1 ml-64 p-6 md:p-10 pb-24 h-full overflow-y-auto">
         {/* Top Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-gray-800/80 mb-8">
           <div>
@@ -381,7 +397,9 @@ const VendorTicketScanner = () => {
                         <div className="flex items-center justify-between">
                           <span className="text-zinc-500 font-bold uppercase tracking-wider text-[10px]">Checked In At</span>
                           <span className="text-zinc-400 font-medium">
-                            {new Date().toLocaleTimeString()}
+                            {lastScanResult.booking?.checkedInAt 
+                              ? new Date(lastScanResult.booking.checkedInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) 
+                              : new Date().toLocaleTimeString()}
                           </span>
                         </div>
                       </div>

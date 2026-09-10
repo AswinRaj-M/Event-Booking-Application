@@ -551,8 +551,8 @@ const AdminPaymentPage = () => {
           </div>
         </header>
 
-        {/* Scrollable Content Area */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 flex flex-col min-h-0 space-y-8 scrollbar-thin scrollbar-thumb-purple-900/50 min-w-0">
+        {/* Scrollable Main Area Workspace */}
+        <div data-lenis-prevent className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 flex flex-col min-h-0 space-y-8 scrollbar-thin scrollbar-thumb-purple-900/50 min-w-0">
           
           {/* Header Title Section */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0">

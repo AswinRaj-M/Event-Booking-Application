@@ -498,7 +498,7 @@ const VendorEditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-[#0B0A11] border border-white/10 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto flex flex-col relative text-white font-sans">
+      <div data-lenis-prevent className="bg-[#0B0A11] border border-white/10 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto flex flex-col relative text-white font-sans">
         
         {/* Header */}
         <div className="flex justify-between items-center px-6 py-4 border-b border-white/5 bg-[#12101F]/50 sticky top-0 z-10 backdrop-blur-md">

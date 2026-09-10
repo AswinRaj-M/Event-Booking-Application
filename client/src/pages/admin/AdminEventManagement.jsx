@@ -210,8 +210,8 @@ const AdminEventManagement = () => {
           </div>
         </header>
 
-        {/* Scrollable Main Layout Area */}
-        <div className="flex-1 overflow-y-auto p-8 flex flex-col min-h-0 scrollbar-hide">
+        {/* Scrollable Content Area */}
+        <div data-lenis-prevent className="flex-1 overflow-y-auto p-8 flex flex-col min-h-0 scrollbar-hide">
           {/* Page Heading Title Row */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 shrink-0">
             <div>

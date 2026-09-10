@@ -235,8 +235,8 @@ function AdminCreateCoupon() {
           </div>
         </header>
 
-        {/* Scrollable Content Workspace */}
-        <div className="flex-1 overflow-y-auto p-6 md:p-8 flex flex-col gap-6 scrollbar-hide">
+        {/* Main Scrollable Canvas */}
+        <div data-lenis-prevent className="flex-1 overflow-y-auto p-6 md:p-8 flex flex-col gap-6 scrollbar-hide">
           
           {/* Main Title Section */}
           <div className="mb-2">

@@ -435,8 +435,8 @@ function AdminCouponManagement() {
           </div>
         </header>
 
-        {/* Scrollable Content Container */}
-        <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 scrollbar-hide">
+        {/* Main Scrollable Dashboard Canvas Area */}
+        <div data-lenis-prevent className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 scrollbar-hide">
           
           {/* Top Metric Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 shrink-0">

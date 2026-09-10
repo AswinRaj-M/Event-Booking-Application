@@ -37,7 +37,7 @@ const VendorPortfolioPicturesModal = ({ isOpen, onClose, portfolios, onRemove })
           </div>
 
           {/* Scrollable grid */}
-          <div className="overflow-y-auto pr-2 flex-1 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
+          <div data-lenis-prevent className="overflow-y-auto pr-2 flex-1 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 pb-2">
               {portfolios && portfolios.map((portfolio, index) => (
                 <div

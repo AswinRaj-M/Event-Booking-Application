@@ -14,6 +14,12 @@ const GlobalSmoothScroll = () => {
       smoothWheel: true,
       wheelMultiplier: 1.0,
       touchMultiplier: 1.5,
+      prevent: (node) => {
+        if (!node) return false;
+        if (node.hasAttribute && node.hasAttribute('data-lenis-prevent')) return true;
+        if (node.classList && (node.classList.contains('overflow-y-auto') || node.classList.contains('overflow-auto'))) return true;
+        return false;
+      }
     });
 
     const updateLenis = (time) => {
@@ -32,10 +38,16 @@ const GlobalSmoothScroll = () => {
     };
   }, []);
 
-  // Scroll to top immediately on route navigation
+  // Pause Lenis smooth scrolling on dashboard routes (admin & vendor) to allow native inner scrolling
   useEffect(() => {
+    const isDashboardRoute = location.pathname.startsWith('/admin') || location.pathname.startsWith('/vendor');
     if (window.lenis) {
-      window.lenis.scrollTo(0, { immediate: true });
+      if (isDashboardRoute) {
+        window.lenis.stop();
+      } else {
+        window.lenis.start();
+        window.lenis.scrollTo(0, { immediate: true });
+      }
     } else {
       window.scrollTo(0, 0);
     }

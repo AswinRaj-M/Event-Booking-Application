@@ -601,12 +601,12 @@ const VendorCreateEvent = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#070514] text-white font-sans selection:bg-purple-500/30">
+    <div className="flex h-screen bg-[#070514] text-white font-sans selection:bg-purple-500/30 overflow-hidden">
       {/* Sidebar */}
       <VendorSidebar />
 
       {/* Main Content Area */}
-      <main className="flex-1 ml-64 p-8 overflow-y-auto">
+      <main data-lenis-prevent className="flex-1 ml-64 p-8 h-full overflow-y-auto">
         {/* Header Section */}
         <div className="flex justify-between items-center mb-8">
           <div>

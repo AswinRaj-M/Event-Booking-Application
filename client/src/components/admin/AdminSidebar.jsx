@@ -41,7 +41,7 @@ function AdminSidebar() {
             </div>
 
             {/* Navigation */}
-            <div className="flex-1 overflow-y-auto py-2 scrollbar-hide">
+            <div data-lenis-prevent className="flex-1 overflow-y-auto py-2 scrollbar-hide">
                 <div className="px-4 mb-6">
                     <p className="px-4 text-[11px] font-semibold text-gray-500 mb-2 uppercase">Platform</p>
                     <nav className="space-y-1">

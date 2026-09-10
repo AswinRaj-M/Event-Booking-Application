@@ -184,7 +184,7 @@ const AdminVendorApplicationView = () => {
         </header>
 
         {/* Scrollable Content Area */}
-        <div className="flex-1 overflow-y-auto p-8 scrollbar-hide flex flex-col min-h-0">
+        <div data-lenis-prevent className="flex-1 overflow-y-auto p-8 scrollbar-hide flex flex-col min-h-0">
           {/* Page Header Area */}
           <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4 mb-8 shrink-0">
             <div>
