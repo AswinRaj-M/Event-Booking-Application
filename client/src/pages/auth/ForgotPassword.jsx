@@ -12,19 +12,22 @@ export default function ForgotPassword() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    try {
-    if (!email) return;
-    setLoading(true);
-    await forgotPassword(email)
-    setLoading(false);
-    toast.success("Reset Link Send Successfully")
-    setSent(true);
-    } catch (error) {
-      console.error("Error From forgot password: ",error)
-      toast.error(error.response?.data?.message || "Something Went Wrong Try Again Latter")
+    if (!email) {
+      toast.error("Please enter your email address");
+      return;
     }
 
+    try {
+      setLoading(true);
+      await forgotPassword(email);
+      toast.success("Reset link sent successfully");
+      setSent(true);
+    } catch (error) {
+      console.error("Error from forgot password: ", error);
+      toast.error(error.response?.data?.message || "Something went wrong. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

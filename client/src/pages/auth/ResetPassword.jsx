@@ -46,19 +46,19 @@ export default function ResetPassword() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!canSubmit) return;
 
     try {
-    if (!canSubmit) return;
-    setLoading(true);
-    await resetPassword(resetToken,password)
-    setLoading(false);
-    setDone(true);
-    toast.success("Password reset Successfully")
+      setLoading(true);
+      await resetPassword(resetToken, password);
+      setDone(true);
+      toast.success("Password reset successfully");
     } catch (error) {
-      console.error("Error from reset password : ",error)
-      toast.error(error.response?.data?.message || "Something went Wrong Try again latter")
+      console.error("Error from reset password: ", error);
+      toast.error(error.response?.data?.message || "Something went wrong. Please try again later.");
+    } finally {
+      setLoading(false);
     }
-    
   };
 
   return (
