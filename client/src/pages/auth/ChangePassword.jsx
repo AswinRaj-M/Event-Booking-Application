@@ -1,10 +1,18 @@
 import React, { useState } from "react";
+import { useSelector } from "react-redux";
 import { changePassword } from "../../services/user.api";
+import { changeVendorPasswordApi } from "../../services/vendor.api";
 import { toast } from "sonner";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
+import { VENDOR_ROUTES, USER_ROUTES } from "../../constants/Routes";
+import VendorSidebar from "../../components/vendor/VendorSidebar";
 
 export default function ChangePassword() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { vendor } = useSelector((state) => state.vendor || {});
+  const isVendorRoute = location.pathname.startsWith("/vendor");
+  const isVendor = isVendorRoute || Boolean(vendor?.id || vendor?._id);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -37,6 +45,8 @@ export default function ChangePassword() {
     return "#10b981"; // green
   };
 
+
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!currentPassword.trim()) {
@@ -60,14 +70,25 @@ export default function ChangePassword() {
     setIsSubmitting(true);
     const toastId = toast.loading("Updating password...");
     try {
-      const response = await changePassword({
-        currentPassword,
-        newPassword,
-        confirmNewPassword: confirmPassword,
-      });
-      if (response.data?.success) {
-        toast.success("Password changed successfully", { id: toastId });
-        navigate("/user/profile");
+      if (isVendor) {
+        const response = await changeVendorPasswordApi({
+          currentPassword,
+          newPassword,
+        });
+        if (response.data?.success) {
+          toast.success("Password changed successfully", { id: toastId });
+          navigate(VENDOR_ROUTES.PROFILE);
+        }
+      } else {
+        const response = await changePassword({
+          currentPassword,
+          newPassword,
+          confirmNewPassword: confirmPassword,
+        });
+        if (response.data?.success) {
+          toast.success("Password changed successfully", { id: toastId });
+          navigate(USER_ROUTES.PROFILE);
+        }
       }
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to change password", { id: toastId });
@@ -83,6 +104,7 @@ export default function ChangePassword() {
 
         .cp-root {
           min-height: 100vh;
+          width: 100%;
           background: #0d0d14;
           display: flex;
           flex-direction: column;
@@ -90,7 +112,10 @@ export default function ChangePassword() {
           justify-content: center;
           font-family: 'Inter', sans-serif;
           position: relative;
-          overflow: hidden;
+          overflow-x: hidden;
+          overflow-y: auto;
+          padding: 40px 16px;
+          box-sizing: border-box;
         }
 
         /* ambient glow blobs */
@@ -129,6 +154,25 @@ export default function ChangePassword() {
           padding: 36px 32px;
           backdrop-filter: blur(20px);
           box-shadow: 0 10px 40px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.02) inset;
+          margin: auto 0;
+        }
+
+        .cp-back-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          background: none;
+          border: none;
+          color: #8b8ba7;
+          font-size: 0.8rem;
+          cursor: pointer;
+          margin-bottom: 20px;
+          transition: color 0.2s;
+          padding: 0;
+          font-weight: 500;
+        }
+        .cp-back-btn:hover {
+          color: #a78bfa;
         }
 
         /* icon */
@@ -413,138 +457,177 @@ export default function ChangePassword() {
           color: #6b6b86;
           cursor: pointer;
           transition: color 0.2s;
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          color: #8b8ba7;
+          font-size: 0.8rem;
+          cursor: pointer;
+          margin-bottom: 20px;
+          transition: color 0.2s;
+          padding: 0;
+          font-weight: 500;
         }
-        .cp-toast-close:hover {
-          color: #e5e7eb;
+        .cp-back-btn:hover {
+          color: #a78bfa;
         }
       `}</style>
 
-      <div className="cp-root">
-        <div className="cp-card">
-          <div className="cp-icon-wrap">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-            </svg>
-          </div>
-
-          <h1 className="cp-title">Change Password</h1>
-          <p className="cp-subtitle">Update your password to keep your account secure</p>
-
-          <form onSubmit={handleSubmit}>
-            <div className="cp-form-group">
-              <label className="cp-label">Current Password</label>
-              <div className="cp-input-wrap">
-                <input
-                  type="password"
-                  className="cp-input"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  placeholder="Enter current password"
-                  autoComplete="new-password"
-                />
-              </div>
-            </div>
-
-            <div className="cp-form-group" style={{ marginBottom: "0" }}>
-              <label className="cp-label">New Password</label>
-              <div className="cp-input-wrap">
-                <input
-                  type={showNewPassword ? "text" : "password"}
-                  className="cp-input"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Enter new password"
-                  style={{ paddingRight: "40px" }}
-                />
-                <button 
-                  type="button" 
-                  className="cp-toggle-btn"
-                  onClick={() => setShowNewPassword(!showNewPassword)}
-                >
-                  <div className="cp-toggle-dot" style={{ opacity: showNewPassword ? 1 : 0.4 }}></div>
-                </button>
-              </div>
-            </div>
-
-            <div className="cp-strength-header">
-              <span>Password strength</span>
-              <span className="cp-strength-text" style={{ color: getStrengthColor() }}>
-                {getStrengthText()}
-              </span>
-            </div>
-            <div className="cp-strength-bars">
-              <div className={`cp-strength-bar ${score >= 1 ? "active" : ""}`} style={{ backgroundColor: score >= 1 ? getStrengthColor() : undefined }}></div>
-              <div className={`cp-strength-bar ${score >= 2 ? "active" : ""}`} style={{ backgroundColor: score >= 2 ? getStrengthColor() : undefined }}></div>
-              <div className={`cp-strength-bar ${score >= 3 ? "active" : ""}`} style={{ backgroundColor: score >= 3 ? getStrengthColor() : undefined }}></div>
-              <div className={`cp-strength-bar ${score >= 4 ? "active" : ""}`} style={{ backgroundColor: score >= 4 ? getStrengthColor() : undefined }}></div>
-            </div>
-
-            <div className="cp-req-box">
-              <div className="cp-req-title">Password Requirements</div>
-              <div className="cp-req-list">
-                <div className={`cp-req-item ${isLengthValid ? "valid" : ""}`}>
-                  <div className={`cp-req-dot ${isLengthValid ? "valid" : ""}`}></div> At least 8 characters long
-                </div>
-                <div className={`cp-req-item ${hasNumber ? "valid" : ""}`}>
-                  <div className={`cp-req-dot ${hasNumber ? "valid" : ""}`}></div> Contains at least one number
-                </div>
-                <div className={`cp-req-item ${hasUppercase ? "valid" : ""}`}>
-                  <div className={`cp-req-dot ${hasUppercase ? "valid" : ""}`}></div> Contains at least one uppercase letter
-                </div>
-                <div className={`cp-req-item ${hasSpecial ? "valid" : ""}`}>
-                  <div className={`cp-req-dot ${hasSpecial ? "valid" : ""}`}></div> Contains special character (!@#$%)
-                </div>
-              </div>
-            </div>
-
-            <div className="cp-form-group">
-              <label className="cp-label">Confirm New Password</label>
-              <div className="cp-input-wrap">
-                <input
-                  type={showConfirmPassword ? "text" : "password"}
-                  className="cp-input"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirm new password"
-                  style={{ paddingRight: "40px" }}
-                />
-                <button 
-                  type="button" 
-                  className="cp-toggle-btn"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                >
-                  <div className="cp-toggle-dot" style={{ opacity: showConfirmPassword ? 1 : 0.4 }}></div>
-                </button>
-              </div>
-            </div>
-
-            <button type="submit" className="cp-btn" disabled={isSubmitting}>
-              {isSubmitting ? "Updating..." : "Update Password"}
-              {!isSubmitting && (
-                <svg className="cp-btn-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M5 12h14M12 5l7 7-7 7" />
+      {(() => {
+        const cardContent = (
+          <>
+            <div className="cp-card">
+              <button 
+                type="button" 
+                onClick={() => navigate(isVendor ? VENDOR_ROUTES.PROFILE : USER_ROUTES.PROFILE)}
+                className="cp-back-btn"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 12H5M12 19l-7-7 7-7" />
                 </svg>
-              )}
-            </button>
+                <span>Back to Profile</span>
+              </button>
 
-            <div className="cp-forgot-link">
-              <Link to="/forgot-password">Forgot current password?</Link>
+              <div className="cp-icon-wrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+              </div>
+
+              <h1 className="cp-title">Change Password</h1>
+              <p className="cp-subtitle">Update your password to keep your account secure</p>
+
+              <form onSubmit={handleSubmit}>
+                <div className="cp-form-group">
+                  <label className="cp-label">Current Password</label>
+                  <div className="cp-input-wrap">
+                    <input
+                      type="password"
+                      className="cp-input"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      placeholder="Enter current password"
+                      autoComplete="new-password"
+                    />
+                  </div>
+                </div>
+
+                <div className="cp-form-group" style={{ marginBottom: "0" }}>
+                  <label className="cp-label">New Password</label>
+                  <div className="cp-input-wrap">
+                    <input
+                      type={showNewPassword ? "text" : "password"}
+                      className="cp-input"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Enter new password"
+                      style={{ paddingRight: "40px" }}
+                    />
+                    <button 
+                      type="button" 
+                      className="cp-toggle-btn"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                    >
+                      <div className="cp-toggle-dot" style={{ opacity: showNewPassword ? 1 : 0.4 }}></div>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="cp-strength-header">
+                  <span>Password strength</span>
+                  <span className="cp-strength-text" style={{ color: getStrengthColor() }}>
+                    {getStrengthText()}
+                  </span>
+                </div>
+                <div className="cp-strength-bars">
+                  <div className={`cp-strength-bar ${score >= 1 ? "active" : ""}`} style={{ backgroundColor: score >= 1 ? getStrengthColor() : undefined }}></div>
+                  <div className={`cp-strength-bar ${score >= 2 ? "active" : ""}`} style={{ backgroundColor: score >= 2 ? getStrengthColor() : undefined }}></div>
+                  <div className={`cp-strength-bar ${score >= 3 ? "active" : ""}`} style={{ backgroundColor: score >= 3 ? getStrengthColor() : undefined }}></div>
+                  <div className={`cp-strength-bar ${score >= 4 ? "active" : ""}`} style={{ backgroundColor: score >= 4 ? getStrengthColor() : undefined }}></div>
+                </div>
+
+                <div className="cp-req-box">
+                  <div className="cp-req-title">Password Requirements</div>
+                  <div className="cp-req-list">
+                    <div className={`cp-req-item ${isLengthValid ? "valid" : ""}`}>
+                      <div className={`cp-req-dot ${isLengthValid ? "valid" : ""}`}></div> At least 8 characters long
+                    </div>
+                    <div className={`cp-req-item ${hasNumber ? "valid" : ""}`}>
+                      <div className={`cp-req-dot ${hasNumber ? "valid" : ""}`}></div> Contains at least one number
+                    </div>
+                    <div className={`cp-req-item ${hasUppercase ? "valid" : ""}`}>
+                      <div className={`cp-req-dot ${hasUppercase ? "valid" : ""}`}></div> Contains at least one uppercase letter
+                    </div>
+                    <div className={`cp-req-item ${hasSpecial ? "valid" : ""}`}>
+                      <div className={`cp-req-dot ${hasSpecial ? "valid" : ""}`}></div> Contains special character (!@#$%)
+                    </div>
+                  </div>
+                </div>
+
+                <div className="cp-form-group">
+                  <label className="cp-label">Confirm New Password</label>
+                  <div className="cp-input-wrap">
+                    <input
+                      type={showConfirmPassword ? "text" : "password"}
+                      className="cp-input"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Confirm new password"
+                      style={{ paddingRight: "40px" }}
+                    />
+                    <button 
+                      type="button" 
+                      className="cp-toggle-btn"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    >
+                      <div className="cp-toggle-dot" style={{ opacity: showConfirmPassword ? 1 : 0.4 }}></div>
+                    </button>
+                  </div>
+                </div>
+
+                <button type="submit" className="cp-btn" disabled={isSubmitting}>
+                  {isSubmitting ? "Updating..." : "Update Password"}
+                  {!isSubmitting && (
+                    <svg className="cp-btn-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M5 12h14M12 5l7 7-7 7" />
+                    </svg>
+                  )}
+                </button>
+
+                <div className="cp-forgot-link">
+                  <Link to="/forgot-password">Forgot current password?</Link>
+                </div>
+              </form>
             </div>
-          </form>
-        </div>
 
-        <div className="cp-bottom-text">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-          </svg>
-          Your security is our top priority.
-        </div>
+            <div className="cp-bottom-text">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+              Your security is our top priority.
+            </div>
+          </>
+        );
 
-      </div>
+        if (isVendorRoute) {
+          return (
+            <div className="flex h-screen bg-[#070514] text-white font-sans selection:bg-purple-500/30 overflow-hidden">
+              <VendorSidebar />
+              <main data-lenis-prevent className="flex-1 ml-64 h-screen overflow-y-auto p-6 md:p-10 flex flex-col items-center justify-start">
+                <div className="w-full max-w-md my-auto py-6">
+                  {cardContent}
+                </div>
+              </main>
+            </div>
+          );
+        }
+
+        return (
+          <div className="cp-root" data-lenis-prevent>
+            <div className="w-full max-w-md my-auto py-6">
+              {cardContent}
+            </div>
+          </div>
+        );
+      })()}
     </>
   );
 }

@@ -10,6 +10,7 @@ import {
   sendVendorEmailUpdateOtpService,
   verifyVendorEmailUpdateOtpService,
   resendVendorEmailUpdateOtpService,
+  changeVendorPasswordService,
 } from "../../services/vendor/profile.service.js";
 
 export const updateVendorImages = async(req,res) =>{
@@ -164,5 +165,21 @@ export const resendVendorEmailUpdateOtp = async (req, res) => {
   return res.status(HTTP_STATUS.OK).json({
     success: true,
     message: "OTP resent to new email address",
+  });
+};
+
+export const changeVendorPassword = async (req, res) => {
+  const vendorId = req.user._id;
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword) {
+    throw new AppError("Current password and new password are required", HTTP_STATUS.BAD_REQUEST);
+  }
+
+  await changeVendorPasswordService(vendorId, currentPassword, newPassword);
+
+  return res.status(HTTP_STATUS.OK).json({
+    success: true,
+    message: "Password changed successfully",
   });
 };

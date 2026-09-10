@@ -14,6 +14,7 @@ import {
   sendVendorEmailUpdateOtp,
   verifyVendorEmailUpdateOtp,
   resendVendorEmailUpdateOtp,
+  changeVendorPassword,
 } from "../controllers/vendor/profile.controller.js"
 import {
   addVendorPortfolio,
@@ -55,7 +56,8 @@ import {
   vendorLoginValidation,
   vendorProfileUpdateValidation,
   eventCreateValidation,
-  eventUpdateValidation
+  eventUpdateValidation,
+  vendorChangePasswordValidation
 } from '../validations/vendor.validation.js'
 
 const router = express.Router()
@@ -86,6 +88,7 @@ router.patch('/profile/images',
   asyncHandler(updateVendorImages)
 )
 router.put('/update-profile', protect, requireRole("vendor"), vendorProfileUpdateValidation, validate, asyncHandler(updateVendorProfile))
+router.put('/change-password', protect, requireRole("vendor"), vendorChangePasswordValidation, validate, asyncHandler(changeVendorPassword))
 router.post('/send-email-update-otp', protect, requireRole("vendor"), asyncHandler(sendVendorEmailUpdateOtp))
 router.post('/verify-email-update-otp', protect, requireRole("vendor"), vendorProfileUpdateValidation, validate, asyncHandler(verifyVendorEmailUpdateOtp))
 router.post('/resend-email-update-otp', protect, requireRole("vendor"), asyncHandler(resendVendorEmailUpdateOtp))

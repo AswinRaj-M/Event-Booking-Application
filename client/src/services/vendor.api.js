@@ -116,3 +116,7 @@ export const requestWithdrawalApi = (data) => {
 export const getVendorWithdrawalsApi = () => {
   return axiosInstance.get("/vendor/wallet/withdrawals");
 };
+
+export const changeVendorPasswordApi = (data) => {
+  return axiosInstance.put("/vendor/change-password", data);
+};

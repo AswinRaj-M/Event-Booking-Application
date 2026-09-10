@@ -94,3 +94,22 @@ export const resendVendorEmailUpdateOtpService = async (vendorId, otp) => {
 
   return otpDoc.tempEmail;
 };
+
+export const changeVendorPasswordService = async (vendorId, currentPassword, newPassword) => {
+  const vendor = await Vendor.findById(vendorId);
+  if (!vendor) throw new AppError("Vendor account not found", HTTP_STATUS.NOT_FOUND);
+
+  if (!currentPassword || !newPassword) {
+    throw new AppError("Current password and new password are required", HTTP_STATUS.BAD_REQUEST);
+  }
+
+  const isMatch = await bcrypt.compare(currentPassword, vendor.password);
+  if (!isMatch) {
+    throw new AppError("Incorrect current password", HTTP_STATUS.BAD_REQUEST);
+  }
+
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+  vendor.password = hashedPassword;
+  await vendor.save();
+  return true;
+};

@@ -42,6 +42,7 @@ import { vendorProfile,
     } from "../../services/vendor.api";
 import { useAsyncError, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { VENDOR_ROUTES } from "../../constants/Routes";
 
 const VendorProfilePage = () => {
   const navigate = useNavigate();
@@ -72,8 +73,6 @@ const VendorProfilePage = () => {
 
   // Email Update & OTP Verification States
   const [originalEmail, setOriginalEmail] = useState("");
-
-  // Password verification states for email change
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -849,6 +848,36 @@ const VendorProfilePage = () => {
                   </span>
                 </button>
               </div>
+            </div>
+
+            {/* Security & Password Card */}
+            <div className="bg-[#131022]/90 backdrop-blur-xl border border-purple-500/20 p-6 rounded-3xl relative overflow-hidden shadow-xl shadow-purple-950/20">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2.5 bg-purple-500/10 border border-purple-500/20 rounded-xl text-purple-400">
+                  <Shield className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-base font-bold text-white tracking-wide">
+                    Account Security
+                  </h4>
+                  <p className="text-xs text-zinc-400">
+                    Password & authentication
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-xs text-zinc-300 mb-5 leading-relaxed">
+                Keep your account protected by periodically updating your vendor portal password.
+              </p>
+
+              <button
+                type="button"
+                onClick={() => navigate(VENDOR_ROUTES.CHANGE_PASSWORD)}
+                className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-3 px-4 rounded-xl text-sm transition-all duration-300 flex items-center justify-center gap-2 shadow-[0_4px_20px_rgba(109,40,217,0.3)] cursor-pointer"
+              >
+                <KeyRound className="w-4 h-4" />
+                <span>Change Password</span>
+              </button>
             </div>
           </div>
         </div>
