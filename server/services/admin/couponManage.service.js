@@ -55,9 +55,9 @@ const validateCouponPayload = (data) => {
       throw new AppError("Minimum order value is required and must be greater than 0 for fixed amount coupons", HTTP_STATUS.BAD_REQUEST);
     }
 
-    if (discountVal >= minPurchase) {
+    if (discountVal > minPurchase) {
       throw new AppError(
-        `Discount value (₹${discountVal}) must be strictly less than Minimum Order Value (₹${minPurchase})`,
+        `Discount value (₹${discountVal}) cannot be greater than Minimum Order Value (₹${minPurchase})`,
         HTTP_STATUS.BAD_REQUEST
       );
     }

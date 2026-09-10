@@ -152,7 +152,7 @@ export const createPendingBookingService = async (userId, eventId, tierId, quant
    let validatedCoupon = null;
 
    if (couponCode && couponCode.trim() !== "") {
-     const result = await validateAndApplyCoupon(couponCode, userId, eventId, originalAmount, quantity);
+     const result = await validateAndApplyCoupon(couponCode, userId, eventId, Math.max(subtotal, originalAmount), quantity);
      validatedCoupon = result.coupon;
      couponDiscount = result.discountAmount;
    }
@@ -395,9 +395,10 @@ export const confirmBookingAfterPaymentService = async (bookingId) => {
 
     // Send notification to Admin
     const platformFeeEarned = Number(booking.platformFee) || 0;
+    const totalFeeEarned = (booking.quantity || 1) * platformFeeEarned;
     sendAdminNotification({
       title: "New Booking Confirmed 🎟️",
-      message: `New booking for "${eventTitle}" (${booking.quantity} ticket(s)). Platform Fee ₹${booking.quantity * platformFeeEarned.toFixed(2)} added to Admin wallet.`,
+      message: `New booking for "${eventTitle}" (${booking.quantity} ticket(s)). Platform Fee ₹${totalFeeEarned.toFixed(2)} added to Admin wallet.`,
       type: "PAYMENT_SUCCESS"
     });
   } catch (notifErr) {

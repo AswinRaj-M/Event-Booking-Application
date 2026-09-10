@@ -68,7 +68,9 @@ export const validateAndApplyCoupon = async (couponCode, userId, eventId, subtot
   }
 
   // 2. Minimum Order Value Validation
-  if (coupon.minPurchaseAmount && Number(coupon.minPurchaseAmount) > 0 && subtotal < Number(coupon.minPurchaseAmount)) {
+  const subtotalCents = Math.round(Number(subtotal) * 100);
+  const minPurchaseCents = Math.round(Number(coupon.minPurchaseAmount || 0) * 100);
+  if (minPurchaseCents > 0 && subtotalCents < minPurchaseCents) {
     throw new AppError(
       `Minimum order value of ₹${Number(coupon.minPurchaseAmount).toLocaleString()} is required to use this coupon.`,
       HTTP_STATUS.BAD_REQUEST
