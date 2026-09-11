@@ -48,6 +48,10 @@ const userSchema = new mongoose.Schema({
     refreshToken : {
       type : String,  
     },
+    followingOrganizers: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Vendor"
+    }],
     
     passwordChangedAt : Date,
 

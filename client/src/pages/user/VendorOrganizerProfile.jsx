@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { 
   ChevronLeft, 
+  ChevronRight,
   MapPin, 
   Calendar, 
   Star, 
@@ -16,13 +17,17 @@ import {
   ExternalLink,
   Award,
   Clock,
-  Maximize2
+  Maximize2,
+  UserPlus,
+  UserCheck,
+  Users,
+  Loader2
 } from "lucide-react";
 import { toast } from "sonner";
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
 import { USER_ROUTES } from "../../constants/Routes";
-import { getOrganizerProfileApi } from "../../services/user.api.js";
+import { getOrganizerProfileApi, toggleFollowOrganizerApi } from "../../services/user.api.js";
 
 const StarRating = ({ rating = 5, size = "w-4 h-4" }) => (
   <div className="flex items-center gap-1 text-amber-400 shrink-0">
@@ -45,34 +50,106 @@ const VendorOrganizerProfile = () => {
   const [lightboxImage, setLightboxImage] = useState(null);
   const [activeTab, setActiveTab] = useState("all"); // 'all', 'gallery', 'events', 'reviews'
 
+  // Follow State
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followingLoading, setFollowingLoading] = useState(false);
+
+  // Completed Events Pagination State
+  const [completedEvents, setCompletedEvents] = useState([]);
+  const [eventsPage, setEventsPage] = useState(1);
+  const [eventsTotalPages, setEventsTotalPages] = useState(1);
+  const [eventsLimit] = useState(6);
+  const [eventsLoading, setEventsLoading] = useState(false);
+
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [id]);
 
-  useEffect(() => {
-    const fetchOrganizerProfile = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const res = await getOrganizerProfileApi(id);
-        if (res.data?.success && res.data.data) {
-          setProfileData(res.data.data);
-        } else {
-          setError("Organizer profile not found.");
-        }
-      } catch (err) {
-        console.error("Organizer profile error:", err);
-        setError(err.response?.data?.message || "Failed to load organizer profile.");
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Initial Fetch Organizer Profile
+  const fetchOrganizerProfile = useCallback(async (page = 1) => {
+    try {
+      if (page === 1) setLoading(true);
+      else setEventsLoading(true);
+      setError(null);
 
-    fetchOrganizerProfile();
+      const res = await getOrganizerProfileApi(id, { eventsPage: page, eventsLimit: 6 });
+      if (res.data?.success && res.data.data) {
+        const data = res.data.data;
+        setProfileData(data);
+        setCompletedEvents(data.completedEvents || []);
+        setEventsPage(data.eventsCurrentPage || page);
+        setEventsTotalPages(data.eventsTotalPages || 1);
+        setIsFollowing(!!data.isFollowing);
+        setFollowersCount(data.followersCount || 0);
+      } else {
+        setError("Organizer profile not found.");
+      }
+    } catch (err) {
+      console.error("Organizer profile error:", err);
+      setError(err.response?.data?.message || "Failed to load organizer profile.");
+    } fontFinally: {
+      setLoading(false);
+      setEventsLoading(false);
+    }
   }, [id]);
 
+  useEffect(() => {
+    fetchOrganizerProfile(1);
+  }, [fetchOrganizerProfile]);
+
+  // Handle Event Page Navigation
+  const handleEventsPageChange = async (newPage) => {
+    if (newPage < 1 || newPage > eventsTotalPages || newPage === eventsPage || eventsLoading) return;
+    try {
+      setEventsLoading(true);
+      const res = await getOrganizerProfileApi(id, { eventsPage: newPage, eventsLimit: eventsLimit });
+      if (res.data?.success && res.data.data) {
+        setCompletedEvents(res.data.data.completedEvents || []);
+        setEventsPage(res.data.data.eventsCurrentPage || newPage);
+        setEventsTotalPages(res.data.data.eventsTotalPages || 1);
+        
+        // Smooth scroll to past events section
+        const eventsEl = document.getElementById("past-events-section");
+        if (eventsEl) {
+          eventsEl.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch events page:", err);
+      toast.error("Failed to load events page");
+    } finally {
+      setEventsLoading(false);
+    }
+  };
+
+  // Handle Follow / Unfollow Toggle
+  const handleFollowToggle = async () => {
+    if (followingLoading) return;
+    try {
+      setFollowingLoading(true);
+      const res = await toggleFollowOrganizerApi(id);
+      if (res.data?.success) {
+        const nextState = !!res.data.isFollowing;
+        const nextCount = res.data.followersCount !== undefined ? res.data.followersCount : followersCount;
+        setIsFollowing(nextState);
+        setFollowersCount(nextCount);
+        if (nextState) {
+          toast.success(`You are now following ${profileData?.vendor?.organizerName || "the organizer"}`);
+        } else {
+          toast.info(`Unfollowed ${profileData?.vendor?.organizerName || "the organizer"}`);
+        }
+      }
+    } catch (err) {
+      console.error("Follow error:", err);
+      const msg = err.response?.data?.message || "Failed to update follow status. Please log in first.";
+      toast.error(msg);
+    } finally {
+      setFollowingLoading(false);
+    }
+  };
+
   const vendor = profileData?.vendor;
-  const completedEvents = profileData?.completedEvents || [];
   const reviews = profileData?.reviews || [];
   const avgRating = profileData?.avgRating || 0;
   const totalReviews = profileData?.totalReviews || 0;
@@ -232,8 +309,8 @@ const VendorOrganizerProfile = () => {
                 </div>
               </div>
 
-              {/* Title & Metadata */}
-              <div className="space-y-2 min-w-0 flex-1">
+              {/* Title, Metadata & Follow Button */}
+              <div className="space-y-3 min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="px-3 py-1 rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-300 text-[10px] font-extrabold uppercase tracking-wider backdrop-blur-md">
                     {categoryName}
@@ -244,9 +321,36 @@ const VendorOrganizerProfile = () => {
                   </span>
                 </div>
 
-                <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-white tracking-tight leading-tight">
-                  {name}
-                </h1>
+                <div className="flex flex-wrap items-center gap-3">
+                  <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-white tracking-tight leading-tight">
+                    {name}
+                  </h1>
+
+                  {/* Follow / Unfollow Button */}
+                  <button
+                    onClick={handleFollowToggle}
+                    disabled={followingLoading}
+                    className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer shadow-md border ${
+                      isFollowing
+                        ? "bg-purple-950/60 border-purple-500/40 text-purple-300 hover:bg-purple-900/80 shadow-[0_0_15px_rgba(168,85,247,0.25)]"
+                        : "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 border-purple-500/30 text-white shadow-[0_0_20px_rgba(147,51,234,0.35)]"
+                    } disabled:opacity-50`}
+                  >
+                    {followingLoading ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : isFollowing ? (
+                      <>
+                        <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Following</span>
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="w-3.5 h-3.5" />
+                        <span>Follow Organizer</span>
+                      </>
+                    )}
+                  </button>
+                </div>
 
                 {vendor.businessName && vendor.businessName !== vendor.organizerName && (
                   <p className="text-xs sm:text-sm text-purple-300 font-semibold">
@@ -262,13 +366,21 @@ const VendorOrganizerProfile = () => {
             </div>
 
             {/* Overall Rating & Stats Bar */}
-            <div className="grid grid-cols-3 gap-3 w-full md:w-auto shrink-0 pt-2 md:pt-0 border-t border-white/5 md:border-t-0">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full md:w-auto shrink-0 pt-2 md:pt-0 border-t border-white/5 md:border-t-0">
               <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-3 sm:p-4 text-center flex flex-col items-center justify-center">
                 <div className="flex items-center gap-1 text-amber-400 font-black text-lg sm:text-xl">
                   <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
                   <span>{avgRating > 0 ? avgRating.toFixed(1) : "N/A"}</span>
                 </div>
                 <span className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold mt-0.5">Rating</span>
+              </div>
+
+              <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-3 sm:p-4 text-center flex flex-col items-center justify-center">
+                <div className="flex items-center gap-1 text-purple-300 font-black text-lg sm:text-xl">
+                  <Users className="w-4 h-4 text-purple-400" />
+                  <span>{followersCount}</span>
+                </div>
+                <span className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold mt-0.5">Followers</span>
               </div>
 
               <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-3 sm:p-4 text-center flex flex-col items-center justify-center">
@@ -394,9 +506,9 @@ const VendorOrganizerProfile = () => {
           </section>
         )}
 
-        {/* Past Completed Events Section */}
+        {/* Past Completed Events Section (with Backend Pagination) */}
         {(activeTab === "all" || activeTab === "events") && (
-          <section className="mb-14 space-y-6">
+          <section id="past-events-section" className="mb-14 space-y-6">
             <div className="flex items-center justify-between border-b border-white/5 pb-4">
               <div className="flex items-center gap-3">
                 <div className="w-1.5 h-8 bg-purple-600 rounded-full" />
@@ -406,67 +518,115 @@ const VendorOrganizerProfile = () => {
                 </div>
               </div>
               <span className="px-3 py-1 rounded-full bg-purple-500/15 border border-purple-500/25 text-purple-300 text-xs font-bold">
-                {completedEvents.length} Event{completedEvents.length !== 1 ? "s" : ""}
+                {totalCompletedEvents} Total Event{totalCompletedEvents !== 1 ? "s" : ""}
               </span>
             </div>
 
-            {completedEvents.length > 0 ? (
+            {eventsLoading ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {completedEvents.map((event) => {
-                  const categoryName = event.category?.name || "Event";
-                  const imageUrl = event.thumbnail?.fileUrl || "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=600&auto=format&fit=crop";
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="bg-[#0b0914]/60 border border-white/5 rounded-3xl overflow-hidden h-64 animate-pulse" />
+                ))}
+              </div>
+            ) : completedEvents.length > 0 ? (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {completedEvents.map((event) => {
+                    const categoryName = event.category?.name || "Event";
+                    const imageUrl = event.thumbnail?.fileUrl || "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=600&auto=format&fit=crop";
 
-                  return (
-                    <Link
-                      key={event._id}
-                      to={USER_ROUTES.EVENT_DETAILS.replace(":id", event._id)}
-                      className="bg-[#0b0914]/80 border border-white/10 rounded-3xl overflow-hidden hover:border-purple-500/40 transition-all duration-300 group flex flex-col shadow-2xl hover:-translate-y-1.5 backdrop-blur-md text-left"
-                    >
-                      <div className="relative h-48 bg-[#120f26] overflow-hidden">
-                        <img
-                          src={imageUrl}
-                          alt={event.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                          loading="lazy"
-                        />
-                        <div className="absolute top-3 left-3 z-20">
-                          <span className="bg-purple-950/80 border border-purple-500/20 backdrop-blur-md text-purple-300 text-[10px] font-extrabold px-2.5 py-1 rounded-xl uppercase tracking-wider">
-                            {categoryName}
-                          </span>
-                        </div>
-                        <div className="absolute top-3 right-3 z-20">
-                          <span className="bg-zinc-950/80 border border-zinc-800 backdrop-blur-md text-zinc-400 text-[10px] font-extrabold px-2.5 py-1 rounded-xl uppercase tracking-wider">
-                            Completed
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
-                        <div>
-                          <h3 className="font-bold text-base text-white group-hover:text-purple-300 transition-colors line-clamp-1 mb-2">
-                            {event.title}
-                          </h3>
-                          <div className="space-y-1.5 text-xs text-zinc-400 font-medium">
-                            <div className="flex items-center gap-2">
-                              <Calendar className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-                              <span>{formatEventDate(event.schedule?.date, event.schedule?.startTime)}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <MapPin className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-                              <span className="truncate">{event.eventType === "Online" ? "Online Event" : `${event.venue || "Venue"}, ${event.city || ""}`}</span>
-                            </div>
+                    return (
+                      <Link
+                        key={event._id}
+                        to={USER_ROUTES.EVENT_DETAILS.replace(":id", event._id)}
+                        className="bg-[#0b0914]/80 border border-white/10 rounded-3xl overflow-hidden hover:border-purple-500/40 transition-all duration-300 group flex flex-col shadow-2xl hover:-translate-y-1.5 backdrop-blur-md text-left"
+                      >
+                        <div className="relative h-48 bg-[#120f26] overflow-hidden">
+                          <img
+                            src={imageUrl}
+                            alt={event.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            loading="lazy"
+                          />
+                          <div className="absolute top-3 left-3 z-20">
+                            <span className="bg-purple-950/80 border border-purple-500/20 backdrop-blur-md text-purple-300 text-[10px] font-extrabold px-2.5 py-1 rounded-xl uppercase tracking-wider">
+                              {categoryName}
+                            </span>
+                          </div>
+                          <div className="absolute top-3 right-3 z-20">
+                            <span className="bg-zinc-950/80 border border-zinc-800 backdrop-blur-md text-zinc-400 text-[10px] font-extrabold px-2.5 py-1 rounded-xl uppercase tracking-wider">
+                              Completed
+                            </span>
                           </div>
                         </div>
 
-                        <div className="pt-2 border-t border-white/5 flex items-center justify-between text-xs text-purple-400 font-bold group-hover:text-purple-300">
-                          <span>View Event Details</span>
-                          <ExternalLink className="w-3.5 h-3.5" />
+                        <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
+                          <div>
+                            <h3 className="font-bold text-base text-white group-hover:text-purple-300 transition-colors line-clamp-1 mb-2">
+                              {event.title}
+                            </h3>
+                            <div className="space-y-1.5 text-xs text-zinc-400 font-medium">
+                              <div className="flex items-center gap-2">
+                                <Calendar className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                                <span>{formatEventDate(event.schedule?.date, event.schedule?.startTime)}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <MapPin className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                                <span className="truncate">{event.eventType === "Online" ? "Online Event" : `${event.venue || "Venue"}, ${event.city || ""}`}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="pt-2 border-t border-white/5 flex items-center justify-between text-xs text-purple-400 font-bold group-hover:text-purple-300">
+                            <span>View Event Details</span>
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </div>
                         </div>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+
+                {/* Backend Pagination Bar */}
+                {eventsTotalPages > 1 && (
+                  <div className="flex items-center justify-center gap-2 pt-6">
+                    <button
+                      onClick={() => handleEventsPageChange(eventsPage - 1)}
+                      disabled={eventsPage <= 1 || eventsLoading}
+                      className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                      <span>Prev</span>
+                    </button>
+
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: eventsTotalPages }, (_, i) => i + 1).map((pageNum) => (
+                        <button
+                          key={pageNum}
+                          onClick={() => handleEventsPageChange(pageNum)}
+                          disabled={eventsLoading}
+                          className={`w-9 h-9 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                            eventsPage === pageNum
+                              ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white border border-purple-400/40 shadow-[0_0_15px_rgba(147,51,234,0.3)]"
+                              : "bg-white/5 hover:bg-white/10 border border-white/5 text-zinc-400 hover:text-white"
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      ))}
+                    </div>
+
+                    <button
+                      onClick={() => handleEventsPageChange(eventsPage + 1)}
+                      disabled={eventsPage >= eventsTotalPages || eventsLoading}
+                      className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>Next</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="bg-[#0b0914]/50 border border-white/5 rounded-3xl p-10 text-center flex flex-col items-center justify-center">
                 <div className="w-12 h-12 rounded-2xl bg-purple-950/40 border border-purple-500/20 flex items-center justify-center text-purple-400 mb-3">

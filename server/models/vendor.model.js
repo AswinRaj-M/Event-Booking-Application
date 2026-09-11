@@ -74,6 +74,10 @@ const vendorSchema = new mongoose.Schema({
     default: "pending"
   },
   rejectionReason: String,
+  followersCount: {
+    type: Number,
+    default: 0
+  },
   refreshToken: String,
 }, { timestamps: true })
 

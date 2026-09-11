@@ -24,6 +24,7 @@ import {
   getEventById,
   getOrganizers,
   getOrganizerProfile,
+  toggleFollowOrganizer,
 } from "../controllers/user/event.controller.js"
 import {
   createBooking,
@@ -97,6 +98,7 @@ router.get('/explore-events', protect, requireRole("user"), asyncHandler(getExpl
 router.get('/events/:id', protect, requireRole("user"), asyncHandler(getEventById))
 router.get('/organizers', protect, requireRole("user"), asyncHandler(getOrganizers))
 router.get('/organizers/profile/:id', protect, requireRole("user"), asyncHandler(getOrganizerProfile))
+router.post('/organizers/profile/:id/follow', protect, requireRole("user"), asyncHandler(toggleFollowOrganizer))
 
 router.get('/profile', protect, requireRole("user"), asyncHandler(getUserProfile))
 router.put('/update-profile', protect, requireRole("user"), userProfileUpdateValidation, validate, asyncHandler(updateUserProfile))

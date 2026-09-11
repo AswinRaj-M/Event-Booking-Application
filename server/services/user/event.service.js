@@ -5,6 +5,7 @@ import {
   findEventById,
   getOrganizersRepo,
   getOrganizerProfileRepo,
+  toggleFollowOrganizerRepo,
 } from "../../repository/user/event.repo.js";
 
 export const getExploreEventsService = async (filters) => {
@@ -26,11 +27,19 @@ export const getOrganizersService = async (limit) => {
   return await getOrganizersRepo(limit);
 };
 
-export const getOrganizerProfileService = async (vendorId) => {
-  const profile = await getOrganizerProfileRepo(vendorId);
+export const getOrganizerProfileService = async (vendorId, userId = null, options = {}) => {
+  const profile = await getOrganizerProfileRepo(vendorId, userId, options);
   if (!profile) {
     throw new AppError("Organizer profile not found or unavailable", HTTP_STATUS.NOT_FOUND);
   }
   return profile;
+};
+
+export const toggleFollowOrganizerService = async (userId, vendorId) => {
+  try {
+    return await toggleFollowOrganizerRepo(userId, vendorId);
+  } catch (err) {
+    throw new AppError(err.message || "Failed to update follow status", HTTP_STATUS.BAD_REQUEST);
+  }
 };
 

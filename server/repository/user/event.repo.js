@@ -213,7 +213,7 @@ export const getOrganizersRepo = async (limit = 8) => {
   return organizers;
 };
 
-export const getOrganizerProfileRepo = async (vendorId) => {
+export const getOrganizerProfileRepo = async (vendorId, userId = null, options = {}) => {
   await updateCompletedEvents();
 
   if (!mongoose.Types.ObjectId.isValid(vendorId)) {
@@ -233,15 +233,26 @@ export const getOrganizerProfileRepo = async (vendorId) => {
     return null;
   }
 
-  // 2. Fetch completed events for this vendor
-  const completedEvents = await Event.find({
+  // 2. Pagination for completed events
+  const page = Math.max(1, parseInt(options.eventsPage, 10) || 1);
+  const limit = Math.max(1, parseInt(options.eventsLimit, 10) || 6);
+  const skip = (page - 1) * limit;
+
+  const eventQuery = {
     vendorId: vId,
     isDeleted: { $ne: true },
     eventStatus: "completed"
-  })
-    .populate("category")
-    .sort({ "schedule.date": -1, createdAt: -1 })
-    .lean();
+  };
+
+  const [completedEvents, totalCompletedEvents] = await Promise.all([
+    Event.find(eventQuery)
+      .populate("category")
+      .sort({ "schedule.date": -1, createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    Event.countDocuments(eventQuery)
+  ]);
 
   // 3. Fetch reviews & calculate rating summary
   const [reviews, summary] = await Promise.all([
@@ -262,8 +273,19 @@ export const getOrganizerProfileRepo = async (vendorId) => {
     ])
   ]);
 
+  // 4. Check if current user is following this vendor
+  let isFollowing = false;
+  if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+    const userDoc = await User.findOne({
+      _id: userId,
+      followingOrganizers: vId
+    }).select("_id").lean();
+    isFollowing = !!userDoc;
+  }
+
   const avgRating = summary.length > 0 ? Math.round(summary[0].avgRating * 100) / 100 : 0;
   const totalReviews = summary.length > 0 ? summary[0].totalReviews : 0;
+  const eventsTotalPages = Math.ceil(totalCompletedEvents / limit) || 1;
 
   return {
     vendor: vendorDoc,
@@ -271,7 +293,55 @@ export const getOrganizerProfileRepo = async (vendorId) => {
     reviews,
     avgRating,
     totalReviews,
-    totalCompletedEvents: completedEvents.length
+    totalCompletedEvents,
+    eventsCurrentPage: page,
+    eventsTotalPages,
+    isFollowing,
+    followersCount: vendorDoc.followersCount || 0
   };
 };
+
+export const toggleFollowOrganizerRepo = async (userId, vendorId) => {
+  if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(vendorId)) {
+    throw new Error("Invalid User or Vendor ID");
+  }
+
+  const uId = new mongoose.Types.ObjectId(userId);
+  const vId = new mongoose.Types.ObjectId(vendorId);
+
+  const vendor = await Vendor.findOne({ _id: vId, applicationStatus: "approved", isBlocked: { $ne: true } });
+  if (!vendor) {
+    throw new Error("Organizer not found or blocked");
+  }
+
+  const user = await User.findById(uId);
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  const isAlreadyFollowing = (user.followingOrganizers || []).some(id => id.toString() === vId.toString());
+
+  if (isAlreadyFollowing) {
+    await User.findByIdAndUpdate(uId, { $pull: { followingOrganizers: vId } });
+    const updatedVendor = await Vendor.findByIdAndUpdate(
+      vId,
+      { $inc: { followersCount: -1 } },
+      { new: true }
+    );
+    const count = Math.max(0, updatedVendor?.followersCount || 0);
+    if (updatedVendor && updatedVendor.followersCount < 0) {
+      await Vendor.findByIdAndUpdate(vId, { $set: { followersCount: 0 } });
+    }
+    return { isFollowing: false, followersCount: count };
+  } else {
+    await User.findByIdAndUpdate(uId, { $addToSet: { followingOrganizers: vId } });
+    const updatedVendor = await Vendor.findByIdAndUpdate(
+      vId,
+      { $inc: { followersCount: 1 } },
+      { new: true }
+    );
+    return { isFollowing: true, followersCount: updatedVendor?.followersCount || 1 };
+  }
+};
+
 

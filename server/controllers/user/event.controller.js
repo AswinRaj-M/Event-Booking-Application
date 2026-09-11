@@ -6,6 +6,7 @@ import {
   getEventByIdService,
   getOrganizersService,
   getOrganizerProfileService,
+  toggleFollowOrganizerService,
 } from "../../services/user/event.service.js";
 
 export const getExploreEvents = async (req, res) => {
@@ -40,10 +41,27 @@ export const getOrganizers = async (req, res) => {
 
 export const getOrganizerProfile = async (req, res) => {
   const { id } = req.params;
-  const profile = await getOrganizerProfileService(id);
+  const userId = req.user?._id || req.user?.id || null;
+  const { eventsPage, eventsLimit } = req.query;
+  const profile = await getOrganizerProfileService(id, userId, { eventsPage, eventsLimit });
   return res.status(HTTP_STATUS.OK).json({
     success: true,
     data: profile
   });
 };
+
+export const toggleFollowOrganizer = async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user?._id || req.user?.id;
+  if (!userId) {
+    throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+  }
+  const result = await toggleFollowOrganizerService(userId, id);
+  return res.status(HTTP_STATUS.OK).json({
+    success: true,
+    message: result.isFollowing ? "Successfully followed organizer" : "Unfollowed organizer",
+    ...result
+  });
+};
+
 
