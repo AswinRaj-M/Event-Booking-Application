@@ -565,6 +565,13 @@ export const updateEventService = async (eventId, vendorId, data) => {
   const updatedDoc = await updateEventRepo(eventId, vendorId, updateData);
   if (!updatedDoc) return null;
 
+  if (updatedDoc.eventStatus === "completed") {
+    await Booking.updateMany(
+      { eventId: eventId, bookingStatus: { $in: ["confirmed", "checked-in"] } },
+      { $set: { bookingStatus: "completed" } }
+    );
+  }
+
   const totalCapacity = (updatedDoc.ticketTiers || []).reduce((sum, t) => sum + (Number(t.capacity) || 0), 0);
   const totalSold = (updatedDoc.ticketTiers || []).reduce((sum, t) => sum + (Number(t.sold) || 0), 0);
 

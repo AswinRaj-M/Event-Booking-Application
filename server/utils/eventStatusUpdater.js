@@ -1,4 +1,5 @@
 import Event from "../models/event.model.js";
+import Booking from "../models/booking.model.js";
 
 const parseTime = (timeStr) => {
   if (!timeStr) return { hours: 23, minutes: 59 };
@@ -44,9 +45,36 @@ export const updateCompletedEvents = async () => {
         { _id: { $in: completedEventIds } },
         { $set: { eventStatus: "completed" } }
       );
-      console.log(`Updated ${completedEventIds.length} events to completed status.`);
+
+      await Booking.updateMany(
+        {
+          eventId: { $in: completedEventIds },
+          bookingStatus: { $in: ["confirmed", "checked-in"] }
+        },
+        { $set: { bookingStatus: "completed" } }
+      );
+
+      console.log(`Updated ${completedEventIds.length} events and their bookings to completed status.`);
+    }
+
+    // Sync bookings for any events that are already marked as completed
+    const completedEvents = await Event.find({
+      isDeleted: { $ne: true },
+      eventStatus: "completed"
+    }).select("_id");
+
+    if (completedEvents.length > 0) {
+      const completedIds = completedEvents.map((e) => e._id);
+      await Booking.updateMany(
+        {
+          eventId: { $in: completedIds },
+          bookingStatus: { $in: ["confirmed", "checked-in"] }
+        },
+        { $set: { bookingStatus: "completed" } }
+      );
     }
   } catch (error) {
     console.error("Error updating completed events:", error);
   }
 };
+

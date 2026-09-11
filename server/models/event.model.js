@@ -206,7 +206,7 @@ const eventSchema = new mongoose.Schema({
   },
   eventStatus : {
     type : String,
-    enum : ["draft","pending","cancelled","completed","pending"],
+    enum : ["draft","pending","cancelled","completed",],
     default : "pending"
   } ,
   isBlocked : {
