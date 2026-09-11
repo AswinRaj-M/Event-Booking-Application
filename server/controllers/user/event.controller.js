@@ -10,8 +10,9 @@ import {
 } from "../../services/user/event.service.js";
 
 export const getExploreEvents = async (req, res) => {
-  const { search, category, date, page, limit, sortBy } = req.query;
-  const result = await getExploreEventsService({ search, category, date, page, limit, sortBy });
+  const { search, category, date, page, limit, sortBy, followedOnly } = req.query;
+  const userId = req.user?._id || req.user?.id || null;
+  const result = await getExploreEventsService({ search, category, date, page, limit, sortBy, followedOnly }, userId);
   return res.status(HTTP_STATUS.OK).json({
     success: true,
     ...result

@@ -8,8 +8,8 @@ import {
   toggleFollowOrganizerRepo,
 } from "../../repository/user/event.repo.js";
 
-export const getExploreEventsService = async (filters) => {
-  return await getExploreEventsRepo(filters);
+export const getExploreEventsService = async (filters, userId = null) => {
+  return await getExploreEventsRepo(filters, userId);
 };
 
 export const getEventByIdService = async (id) => {

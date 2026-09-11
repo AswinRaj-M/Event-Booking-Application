@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
-import { Search, MapPin, Calendar, Music, RotateCcw, ArrowRight, Users, ArrowUpDown } from 'lucide-react';
+import { Search, MapPin, Calendar, Music, RotateCcw, ArrowRight, Users, ArrowUpDown, UserCheck } from 'lucide-react';
 import { getExploreEvents } from '../../services/user.api.js';
 import { getAllCategories } from '../../services/common.api.js';
 import { USER_ROUTES } from '../../constants/Routes';
@@ -34,6 +34,7 @@ const UserExploreEvent = () => {
   const [totalResults, setTotalResults] = useState(0);
   const [categoriesList, setCategoriesList] = useState([]);
   const [sortBy, setSortBy] = useState("newest");
+  const [followedOnly, setFollowedOnly] = useState(false);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -69,7 +70,8 @@ const UserExploreEvent = () => {
           date: selectedDate,
           page: currentPage,
           limit: 9,
-          sortBy
+          sortBy,
+          followedOnly
         });
         if (response.data?.success) {
           setEvents(response.data.events || []);
@@ -86,7 +88,7 @@ const UserExploreEvent = () => {
       }
     };
     fetchEvents();
-  }, [debouncedSearch, selectedCategory, selectedDate, currentPage, sortBy]);
+  }, [debouncedSearch, selectedCategory, selectedDate, currentPage, sortBy, followedOnly]);
 
   const categories = useMemo(() => {
     return categoriesList.map(c => c.name);
@@ -99,6 +101,7 @@ const UserExploreEvent = () => {
     setSelectedCategory("");
     setSelectedDate("");
     setSortBy("newest");
+    setFollowedOnly(false);
     setCurrentPage(1);
   };
 
@@ -198,13 +201,31 @@ const UserExploreEvent = () => {
             </div>
 
             {/* Filter Meta Info */}
-            <div className="flex justify-between items-center mt-4 pt-4 border-t border-purple-950/40 text-xs md:text-sm text-zinc-400">
-              <div>
-                Showing <span className="text-purple-400 font-semibold">{totalResults}</span> results
+            <div className="flex flex-wrap justify-between items-center gap-3 mt-4 pt-4 border-t border-purple-950/40 text-xs md:text-sm text-zinc-400">
+              <div className="flex items-center gap-3">
+                <div>
+                  Showing <span className="text-purple-400 font-semibold">{totalResults}</span> result{totalResults !== 1 ? "s" : ""}
+                </div>
+
+                <button
+                  onClick={() => {
+                    setFollowedOnly((prev) => !prev);
+                    setCurrentPage(1);
+                  }}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border ${
+                    followedOnly
+                      ? "bg-purple-950/90 border-purple-500/60 text-purple-200 shadow-[0_0_15px_rgba(147,51,234,0.35)]"
+                      : "bg-white/5 hover:bg-white/10 border-white/10 text-zinc-400 hover:text-white"
+                  }`}
+                >
+                  <UserCheck className={`w-3.5 h-3.5 ${followedOnly ? "text-purple-400" : "text-zinc-500"}`} />
+                  <span>{followedOnly ? "Followed Organizers Only" : "Filter Followed Organizers"}</span>
+                </button>
               </div>
+
               <button
                 onClick={handleResetFilters}
-                className="flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer text-xs"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 Reset Filters

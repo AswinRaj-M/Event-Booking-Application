@@ -6,10 +6,10 @@ import Vendor from "../../models/vendor.model.js";
 import Review from "../../models/review.model.js";
 import { updateCompletedEvents } from "../../utils/eventStatusUpdater.js";
 
-export const getExploreEventsRepo = async (filters = {}) => {
+export const getExploreEventsRepo = async (filters = {}, userId = null) => {
   await updateCompletedEvents();
 
-  const { search, category, date, sortBy } = filters;
+  const { search, category, date, sortBy, followedOnly } = filters;
   const page = parseInt(filters.page, 10) || 1;
   const limit = parseInt(filters.limit, 10) || 9;
   const skip = (page - 1) * limit;
@@ -19,6 +19,12 @@ export const getExploreEventsRepo = async (filters = {}) => {
     isBlocked: { $ne: true },
     eventStatus: { $nin: ["draft", "completed", "cancelled"] }
   };
+
+  if ((followedOnly === "true" || followedOnly === true) && userId) {
+    const userDoc = await User.findById(userId).select("followingOrganizers").lean();
+    const following = userDoc?.followingOrganizers || [];
+    query.vendorId = { $in: following };
+  }
 
   if (search) {
     query.$or = [
