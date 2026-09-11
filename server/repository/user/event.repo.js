@@ -78,7 +78,7 @@ export const getExploreEventsRepo = async (filters = {}) => {
 
 export const findEventById = async (id) => {
   await updateCompletedEvents();
-  return await Event.findById(id).populate("category").populate("vendorId");
+  return await Event.findOne({ _id: id, isDeleted: { $ne: true }, isBlocked: { $ne: true } }).populate("category").populate("vendorId");
 };
 
 export const getOrganizersRepo = async (limit = 8) => {
@@ -241,6 +241,7 @@ export const getOrganizerProfileRepo = async (vendorId, userId = null, options =
   const eventQuery = {
     vendorId: vId,
     isDeleted: { $ne: true },
+    isBlocked: { $ne: true },
     eventStatus: "completed"
   };
 

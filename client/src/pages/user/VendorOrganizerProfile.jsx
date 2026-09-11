@@ -21,7 +21,8 @@ import {
   UserPlus,
   UserCheck,
   Users,
-  Loader2
+  Loader2,
+  CheckCircle
 } from "lucide-react";
 import { toast } from "sonner";
 import Navbar from "../../components/layout/Navbar";
@@ -66,7 +67,7 @@ const VendorOrganizerProfile = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [id]);
 
-  // Initial Fetch Organizer Profile
+  // Fetch Organizer Profile
   const fetchOrganizerProfile = useCallback(async (page = 1) => {
     try {
       if (page === 1) setLoading(true);
@@ -77,7 +78,7 @@ const VendorOrganizerProfile = () => {
       if (res.data?.success && res.data.data) {
         const data = res.data.data;
         setProfileData(data);
-        setCompletedEvents(data.completedEvents || []);
+        setCompletedEvents((data.completedEvents || []).filter((ev) => !ev.isBlocked));
         setEventsPage(data.eventsCurrentPage || page);
         setEventsTotalPages(data.eventsTotalPages || 1);
         setIsFollowing(!!data.isFollowing);
@@ -88,7 +89,7 @@ const VendorOrganizerProfile = () => {
     } catch (err) {
       console.error("Organizer profile error:", err);
       setError(err.response?.data?.message || "Failed to load organizer profile.");
-    } fontFinally: {
+    } finally {
       setLoading(false);
       setEventsLoading(false);
     }
@@ -109,7 +110,6 @@ const VendorOrganizerProfile = () => {
         setEventsPage(res.data.data.eventsCurrentPage || newPage);
         setEventsTotalPages(res.data.data.eventsTotalPages || 1);
         
-        // Smooth scroll to past events section
         const eventsEl = document.getElementById("past-events-section");
         if (eventsEl) {
           eventsEl.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -190,7 +190,6 @@ const VendorOrganizerProfile = () => {
       <div className="min-h-screen bg-[#05050C] text-white font-sans w-full overflow-hidden flex flex-col">
         <Navbar />
         <main className="flex-grow pt-28 pb-20 max-w-7xl mx-auto w-full px-4 md:px-8 space-y-12">
-          {/* Header Skeleton */}
           <div className="w-full h-80 bg-zinc-900/40 rounded-3xl animate-pulse border border-white/5 p-8 flex flex-col justify-end">
             <div className="flex items-center gap-6">
               <div className="w-24 h-24 rounded-full bg-zinc-800" />
@@ -200,7 +199,6 @@ const VendorOrganizerProfile = () => {
               </div>
             </div>
           </div>
-          {/* Grid Skeleton */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="h-64 bg-zinc-900/40 rounded-3xl animate-pulse" />
             <div className="h-64 bg-zinc-900/40 rounded-3xl animate-pulse" />
@@ -506,7 +504,7 @@ const VendorOrganizerProfile = () => {
           </section>
         )}
 
-        {/* Past Completed Events Section (with Backend Pagination) */}
+        {/* Past Completed Events Section (Clicking opens Past Event Details Modal with Booking Disabled) */}
         {(activeTab === "all" || activeTab === "events") && (
           <section id="past-events-section" className="mb-14 space-y-6">
             <div className="flex items-center justify-between border-b border-white/5 pb-4">
@@ -538,8 +536,8 @@ const VendorOrganizerProfile = () => {
                     return (
                       <Link
                         key={event._id}
-                        to={USER_ROUTES.EVENT_DETAILS.replace(":id", event._id)}
-                        className="bg-[#0b0914]/80 border border-white/10 rounded-3xl overflow-hidden hover:border-purple-500/40 transition-all duration-300 group flex flex-col shadow-2xl hover:-translate-y-1.5 backdrop-blur-md text-left"
+                        to={USER_ROUTES.PAST_EVENT_DETAILS.replace(":id", event._id)}
+                        className="bg-[#0b0914]/80 border border-white/10 rounded-3xl overflow-hidden hover:border-purple-500/40 transition-all duration-300 group flex flex-col shadow-2xl hover:-translate-y-1.5 backdrop-blur-md text-left cursor-pointer"
                       >
                         <div className="relative h-48 bg-[#120f26] overflow-hidden">
                           <img
@@ -578,7 +576,7 @@ const VendorOrganizerProfile = () => {
                           </div>
 
                           <div className="pt-2 border-t border-white/5 flex items-center justify-between text-xs text-purple-400 font-bold group-hover:text-purple-300">
-                            <span>View Event Details</span>
+                            <span>View Showcase</span>
                             <ExternalLink className="w-3.5 h-3.5" />
                           </div>
                         </div>

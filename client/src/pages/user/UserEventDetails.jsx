@@ -278,8 +278,39 @@ const UserEventDetails = () => {
   const discountAmount = (subtotal * discountPercent) / 100;
   const totalAmount = isFree ? 0 : subtotal - discountAmount + totalPlatformFee;
 
+  const isEventCompleted = useMemo(() => {
+    if (!event) return false;
+    if (event.eventStatus === "completed") return true;
+    const rawDate = event.schedule?.date || event.date;
+    if (!rawDate) return false;
+    const d = new Date(rawDate);
+    if (isNaN(d.getTime())) return false;
+
+    const year = d.getFullYear();
+    const month = d.getMonth();
+    const date = d.getDate();
+
+    const endTimeStr = event.schedule?.endTime || event.endTime;
+    if (endTimeStr) {
+      const match = String(endTimeStr).trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+      if (match) {
+        let hours = parseInt(match[1], 10);
+        const minutes = parseInt(match[2], 10);
+        const period = match[3]?.toUpperCase();
+        if (period === 'PM' && hours < 12) hours += 12;
+        if (period === 'AM' && hours === 12) hours = 0;
+        return new Date() > new Date(year, month, date, hours, minutes, 59, 999);
+      }
+    }
+    return new Date() > new Date(year, month, date, 23, 59, 59, 999);
+  }, [event]);
+
   const handleBookTickets = () => {
     if (!event) return;
+    if (isEventCompleted) {
+      toast.error("This event has completed and bookings are closed.");
+      return;
+    }
     if (event.isBlocked) {
       toast.error("This event is blocked by admin");
       navigate(USER_ROUTES.EXPLORE, { replace: true });
@@ -860,80 +891,102 @@ const UserEventDetails = () => {
                   return null;
                 })()}
 
-                {/* Quantity Control Stepper */}
-                <div className="mb-6 bg-[#120f26]/60 border border-purple-900/10 rounded-2xl p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-white text-sm font-bold tracking-tight">Quantity</span>
-                      <span className={`${availableSeats > 0 ? "text-purple-400" : "text-rose-500"} text-[10px] font-semibold block mt-0.5`}>
-                        {availableSeats > 0 ? `${availableSeats} tickets left` : "Sold Out"}
-                      </span>
+                {isEventCompleted ? (
+                  <div className="bg-[#120f26]/80 border border-purple-500/20 rounded-2xl p-6 text-center space-y-4 shadow-xl">
+                    <div className="w-12 h-12 rounded-full bg-purple-950/60 border border-purple-500/30 flex items-center justify-center text-purple-400 mx-auto shadow-md">
+                      <CheckCircle className="w-6 h-6 text-purple-400" />
                     </div>
-
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                        disabled={quantity <= 1}
-                        className="w-8 h-8 rounded-lg bg-[#1a1437]/80 hover:bg-[#251b4c] border border-purple-500/20 text-purple-300 hover:text-white flex items-center justify-center transition-all cursor-pointer disabled:opacity-40 disabled:pointer-events-none"
-                      >
-                        <Minus className="w-3.5 h-3.5" />
-                      </button>
-                      
-                      <span className="text-white font-extrabold text-base w-6 text-center">
-                        {quantity}
-                      </span>
-                      
-                      <button
-                        onClick={() => setQuantity(q => Math.min(maxQuantity, q + 1))}
-                        disabled={quantity >= maxQuantity || availableSeats <= 0}
-                        className="w-8 h-8 rounded-lg bg-[#1a1437]/80 hover:bg-[#251b4c] border border-purple-500/20 text-purple-300 hover:text-white flex items-center justify-center transition-all cursor-pointer disabled:opacity-40 disabled:pointer-events-none"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                      </button>
+                    <div className="space-y-1">
+                      <h4 className="font-extrabold text-white text-base tracking-tight">Event Concluded</h4>
+                      <p className="text-xs text-zinc-400 leading-relaxed font-light">
+                        This event has ended and is no longer accepting new bookings or ticket purchases.
+                      </p>
                     </div>
+                    <button
+                      disabled
+                      className="w-full py-3.5 bg-[#080514] border border-zinc-800 text-zinc-500 text-xs font-extrabold rounded-xl cursor-not-allowed uppercase tracking-wider shadow-inner"
+                    >
+                      Bookings Closed — Event Ended
+                    </button>
                   </div>
-                </div>
+                ) : (
+                  <>
+                    {/* Quantity Control Stepper */}
+                    <div className="mb-6 bg-[#120f26]/60 border border-purple-900/10 rounded-2xl p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="text-white text-sm font-bold tracking-tight">Quantity</span>
+                          <span className={`${availableSeats > 0 ? "text-purple-400" : "text-rose-500"} text-[10px] font-semibold block mt-0.5`}>
+                            {availableSeats > 0 ? `${availableSeats} tickets left` : "Sold Out"}
+                          </span>
+                        </div>
 
-                {/* Financial breakdown */}
-                {!isFree && (
-                  <div className="space-y-2.5 text-xs text-zinc-400 border-t border-purple-950/40 pt-4 mb-6">
-                    <div className="flex justify-between">
-                      <span>Subtotal</span>
-                      <span className="text-white font-medium">₹{subtotal.toFixed(2)}</span>
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                            disabled={quantity <= 1}
+                            className="w-8 h-8 rounded-lg bg-[#1a1437]/80 hover:bg-[#251b4c] border border-purple-500/20 text-purple-300 hover:text-white flex items-center justify-center transition-all cursor-pointer disabled:opacity-40 disabled:pointer-events-none"
+                          >
+                            <Minus className="w-3.5 h-3.5" />
+                          </button>
+                          
+                          <span className="text-white font-extrabold text-base w-6 text-center">
+                            {quantity}
+                          </span>
+                          
+                          <button
+                            onClick={() => setQuantity(q => Math.min(maxQuantity, q + 1))}
+                            disabled={quantity >= maxQuantity || availableSeats <= 0}
+                            className="w-8 h-8 rounded-lg bg-[#1a1437]/80 hover:bg-[#251b4c] border border-purple-500/20 text-purple-300 hover:text-white flex items-center justify-center transition-all cursor-pointer disabled:opacity-40 disabled:pointer-events-none"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                    
-                    {discountPercent > 0 && (
-                      <div className="flex justify-between text-green-400">
-                        <span>Discount ({discountPercent}%)</span>
-                        <span>-₹{discountAmount.toFixed(2)}</span>
+
+                    {/* Financial breakdown */}
+                    {!isFree && (
+                      <div className="space-y-2.5 text-xs text-zinc-400 border-t border-purple-950/40 pt-4 mb-6">
+                        <div className="flex justify-between">
+                          <span>Subtotal</span>
+                          <span className="text-white font-medium">₹{subtotal.toFixed(2)}</span>
+                        </div>
+                        
+                        {discountPercent > 0 && (
+                          <div className="flex justify-between text-green-400">
+                            <span>Discount ({discountPercent}%)</span>
+                            <span>-₹{discountAmount.toFixed(2)}</span>
+                          </div>
+                        )}
+                        
+                        <div className="flex justify-between">
+                          <span>Platform Fee (₹{platformFee.toFixed(2)} × {quantity})</span>
+                          <span className="text-white font-medium">₹{totalPlatformFee.toFixed(2)}</span>
+                        </div>
+
+                        <div className="border-t border-purple-950/40 my-1" />
+
+                        <div className="flex justify-between items-baseline text-sm font-bold text-white pt-1">
+                          <span>Total Amount</span>
+                          <span className="text-lg font-extrabold text-purple-400">
+                            ₹{totalAmount.toFixed(2)}
+                          </span>
+                        </div>
                       </div>
                     )}
-                    
-                    <div className="flex justify-between">
-                      <span>Platform Fee (₹{platformFee.toFixed(2)} × {quantity})</span>
-                      <span className="text-white font-medium">₹{totalPlatformFee.toFixed(2)}</span>
-                    </div>
 
-                    <div className="border-t border-purple-950/40 my-1" />
-
-                    <div className="flex justify-between items-baseline text-sm font-bold text-white pt-1">
-                      <span>Total Amount</span>
-                      <span className="text-lg font-extrabold text-purple-400">
-                        ₹{totalAmount.toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
+                    {/* Book Button */}
+                    <button
+                      onClick={handleBookTickets}
+                      disabled={isBooking || availableSeats <= 0}
+                      className="w-full py-4 bg-gradient-to-r from-purple-600 via-indigo-600 to-fuchsia-600 hover:from-purple-500 hover:via-indigo-500 hover:to-fuchsia-500 text-white font-extrabold rounded-xl shadow-[0_0_20px_rgba(139,92,246,0.35)] hover:shadow-[0_0_25px_rgba(139,92,246,0.55)] transition-all cursor-pointer flex items-center justify-center gap-2 transform active:scale-98 disabled:opacity-60 disabled:pointer-events-none"
+                    >
+                      <Ticket className="w-5 h-5 shrink-0" />
+                      {isBooking ? "Confirming Spot..." : (availableSeats <= 0 ? "Sold Out" : "Book Tickets")}
+                    </button>
+                  </>
                 )}
-
-                {/* Book Button */}
-                <button
-                  onClick={handleBookTickets}
-                  disabled={isBooking || availableSeats <= 0}
-                  className="w-full py-4 bg-gradient-to-r from-purple-600 via-indigo-600 to-fuchsia-600 hover:from-purple-500 hover:via-indigo-500 hover:to-fuchsia-500 text-white font-extrabold rounded-xl shadow-[0_0_20px_rgba(139,92,246,0.35)] hover:shadow-[0_0_25px_rgba(139,92,246,0.55)] transition-all cursor-pointer flex items-center justify-center gap-2 transform active:scale-98 disabled:opacity-60 disabled:pointer-events-none"
-                >
-                  <Ticket className="w-5 h-5 shrink-0" />
-                  {isBooking ? "Confirming Spot..." : (availableSeats <= 0 ? "Sold Out" : "Book Tickets")}
-                </button>
 
                 {/* Secure checkout assurances */}
                 <div className="bg-green-950/20 border border-green-500/10 px-3 py-2 rounded-xl flex items-center justify-center gap-2 text-green-400 text-[10px] mt-4 font-bold tracking-wide uppercase select-none">

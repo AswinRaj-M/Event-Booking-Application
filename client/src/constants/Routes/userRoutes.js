@@ -11,6 +11,7 @@ export const USER_ROUTES = {
   TICKET_VIEW: '/user/booking/:id',
   WALLET: '/user/wallet',
   ORGANIZER_PROFILE: '/user/organizer/:id',
+  PAST_EVENT_DETAILS: '/user/organizer/past-event/:id',
   SETTINGS: '/user/settings',
   SUPPORT: '/user/support',
   HELP: '/user/help',

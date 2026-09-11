@@ -65,7 +65,7 @@ export const createPendingBookingService = async (userId, eventId, tierId, quant
      throw new AppError("This event is blocked by admin", HTTP_STATUS.FORBIDDEN);
    }
 
-   if (event.eventStatus === "cancelled" || event.eventStatus === "draft") {
+   if (event.eventStatus === "cancelled" || event.eventStatus === "draft" || event.eventStatus === "completed") {
      throw new AppError(`This event is currently ${event.eventStatus} and unavailable for booking`, HTTP_STATUS.BAD_REQUEST);
    }
 
