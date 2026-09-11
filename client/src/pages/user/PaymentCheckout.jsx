@@ -544,7 +544,7 @@ const PaymentCheckout = () => {
                 {/* Event Image Banner */}
                 <div className="relative h-48 w-full overflow-hidden bg-purple-950/40">
                   <img
-                    src={event.images?.[0]?.fileUrl || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&q=80&w=800'}
+                    src={event.thumbnail?.fileUrl || event.images?.[0]?.fileUrl || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&q=80&w=800'}
                     alt={event.title}
                     className="w-full h-full object-cover"
                   />
@@ -677,7 +677,7 @@ const PaymentCheckout = () => {
                 {/* Method Options List */}
                 <div className="space-y-3">
                   
-                  {/* Option 1: Razorpay Secure (Default) */}
+                  {/* Option 1: Razorpay Secure (Default & Only Payment Method) */}
                   <label 
                     onClick={() => setPaymentMethod('razorpay')}
                     className={`block rounded-xl border p-4 cursor-pointer transition-all ${
@@ -741,67 +741,6 @@ const PaymentCheckout = () => {
                       </span>
                     </div>
                   </label>
-
-                  {/* Option 2: Card / Netbanking Direct */}
-                  <label 
-                    onClick={() => setPaymentMethod('card')}
-                    className={`block rounded-xl border p-4 cursor-pointer transition-all ${
-                      paymentMethod === 'card'
-                        ? 'border-purple-500 bg-purple-950/20 shadow-[0_0_20px_rgba(168,85,247,0.15)]'
-                        : 'border-gray-800/80 bg-black/40 hover:border-gray-700'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <input 
-                          type="radio" 
-                          name="paymentMethod" 
-                          value="card"
-                          checked={paymentMethod === 'card'} 
-                          onChange={() => setPaymentMethod('card')}
-                          className="accent-purple-500 w-4 h-4 cursor-pointer"
-                        />
-                        <div>
-                          <div className="font-bold text-sm text-white">Credit / Debit Card</div>
-                          <div className="text-xs text-gray-400">Visa, Mastercard, RuPay, Maestro</div>
-                        </div>
-                      </div>
-                      <span className="text-xs font-mono font-bold text-gray-400 bg-gray-900 px-2 py-1 rounded border border-gray-800">
-                        VISA / MC
-                      </span>
-                    </div>
-                  </label>
-
-                  {/* Option 3: Pay at Venue */}
-                  <label 
-                    onClick={() => setPaymentMethod('venue')}
-                    className={`block rounded-xl border p-4 cursor-pointer transition-all ${
-                      paymentMethod === 'venue'
-                        ? 'border-purple-500 bg-purple-950/20 shadow-[0_0_20px_rgba(168,85,247,0.15)]'
-                        : 'border-gray-800/80 bg-black/40 hover:border-gray-700'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <input 
-                          type="radio" 
-                          name="paymentMethod" 
-                          value="venue"
-                          checked={paymentMethod === 'venue'} 
-                          onChange={() => setPaymentMethod('venue')}
-                          className="accent-purple-500 w-4 h-4 cursor-pointer"
-                        />
-                        <div>
-                          <div className="font-bold text-sm text-white">Pay at Venue / Offline</div>
-                          <div className="text-xs text-gray-400">Reserve now and pay upon entry</div>
-                        </div>
-                      </div>
-                      <span className="text-xs font-semibold text-emerald-400 bg-emerald-950/40 px-2 py-1 rounded border border-emerald-800/50">
-                        Reserve Mode
-                      </span>
-                    </div>
-                  </label>
-
                 </div>
 
               </div>

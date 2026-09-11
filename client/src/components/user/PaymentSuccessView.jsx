@@ -40,7 +40,7 @@ const PaymentSuccessView = ({ payment, event }) => {
         {event && (
           <div className="bg-purple-950/20 border border-purple-900/40 rounded-xl p-4 flex items-center gap-4">
             <img
-              src={event.images?.[0]?.fileUrl || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&q=80&w=300'}
+              src={event.thumbnail?.fileUrl || event.images?.[0]?.fileUrl || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&q=80&w=300'}
               alt={event.title}
               className="w-14 h-14 rounded-lg object-cover border border-purple-500/30 shrink-0"
             />
