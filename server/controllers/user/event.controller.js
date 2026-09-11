@@ -5,6 +5,7 @@ import {
   getExploreEventsService,
   getEventByIdService,
   getOrganizersService,
+  getOrganizerProfileService,
 } from "../../services/user/event.service.js";
 
 export const getExploreEvents = async (req, res) => {
@@ -36,3 +37,13 @@ export const getOrganizers = async (req, res) => {
     organizers
   });
 };
+
+export const getOrganizerProfile = async (req, res) => {
+  const { id } = req.params;
+  const profile = await getOrganizerProfileService(id);
+  return res.status(HTTP_STATUS.OK).json({
+    success: true,
+    data: profile
+  });
+};
+

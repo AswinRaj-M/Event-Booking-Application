@@ -19,6 +19,7 @@ import TicketViewPage from '../pages/user/TicketViewPage.jsx';
 import PaymentCheckout from '../pages/user/PaymentCheckout.jsx';
 import PaymentStatusPage from '../pages/user/PaymentStatusPage.jsx';
 import UserWallet from '../pages/user/UserWallet.jsx';
+import VendorOrganizerProfile from '../pages/user/VendorOrganizerProfile.jsx';
 import AboutUs from '../pages/common/AboutUs.jsx';
 import HelpSupport from '../pages/common/HelpSupport.jsx';
 import NotFound from '../pages/common/NotFound.jsx';
@@ -81,6 +82,11 @@ const AppRoutes = () => {
             <Route path={USER_ROUTES.WALLET} element={
                 <ProtectedRoute role="user">
                     <UserWallet />
+                </ProtectedRoute>
+            } />
+            <Route path={USER_ROUTES.ORGANIZER_PROFILE} element={
+                <ProtectedRoute role="user">
+                    <VendorOrganizerProfile />
                 </ProtectedRoute>
             } />
             <Route path={USER_ROUTES.SUPPORT} element={

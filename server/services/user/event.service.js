@@ -4,6 +4,7 @@ import {
   getExploreEventsRepo,
   findEventById,
   getOrganizersRepo,
+  getOrganizerProfileRepo,
 } from "../../repository/user/event.repo.js";
 
 export const getExploreEventsService = async (filters) => {
@@ -24,3 +25,12 @@ export const getEventByIdService = async (id) => {
 export const getOrganizersService = async (limit) => {
   return await getOrganizersRepo(limit);
 };
+
+export const getOrganizerProfileService = async (vendorId) => {
+  const profile = await getOrganizerProfileRepo(vendorId);
+  if (!profile) {
+    throw new AppError("Organizer profile not found or unavailable", HTTP_STATUS.NOT_FOUND);
+  }
+  return profile;
+};
+

@@ -23,6 +23,7 @@ import {
   getExploreEvents,
   getEventById,
   getOrganizers,
+  getOrganizerProfile,
 } from "../controllers/user/event.controller.js"
 import {
   createBooking,
@@ -95,6 +96,7 @@ router.post('/logout', protect, requireRole("user"), asyncHandler(logoutUser))
 router.get('/explore-events', protect, requireRole("user"), asyncHandler(getExploreEvents))
 router.get('/events/:id', protect, requireRole("user"), asyncHandler(getEventById))
 router.get('/organizers', protect, requireRole("user"), asyncHandler(getOrganizers))
+router.get('/organizers/profile/:id', protect, requireRole("user"), asyncHandler(getOrganizerProfile))
 
 router.get('/profile', protect, requireRole("user"), asyncHandler(getUserProfile))
 router.put('/update-profile', protect, requireRole("user"), userProfileUpdateValidation, validate, asyncHandler(updateUserProfile))

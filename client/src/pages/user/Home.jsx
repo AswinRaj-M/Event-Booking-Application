@@ -731,29 +731,31 @@ const Home = () => {
                   >
                     <div className="absolute inset-0 rounded-3xl bg-gradient-to-b from-purple-950/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
-                    <div className="relative mb-4">
-                      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-900/40 via-indigo-950/40 to-black border-2 border-purple-500/30 overflow-hidden flex items-center justify-center shadow-lg group-hover:border-purple-400/60 transition-colors select-none">
-                        {avatar ? (
-                          <img
-                            src={avatar}
-                            alt={name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <span className="text-2xl font-black text-purple-300">
-                            {initial}
-                          </span>
-                        )}
+                    <Link to={USER_ROUTES.ORGANIZER_PROFILE.replace(':id', org._id)} className="flex flex-col items-center cursor-pointer group/org">
+                      <div className="relative mb-4">
+                        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-900/40 via-indigo-950/40 to-black border-2 border-purple-500/30 overflow-hidden flex items-center justify-center shadow-lg group-hover/org:border-purple-400/60 transition-colors select-none">
+                          {avatar ? (
+                            <img
+                              src={avatar}
+                              alt={name}
+                              className="w-full h-full object-cover group-hover/org:scale-105 transition-transform duration-300"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <span className="text-2xl font-black text-purple-300">
+                              {initial}
+                            </span>
+                          )}
+                        </div>
+                        <div className="absolute -bottom-1 -right-1 bg-emerald-500 text-white p-1 rounded-full border-2 border-[#03010a] shadow" title="Verified Organizer">
+                          <Check className="w-3 h-3 stroke-[3]" />
+                        </div>
                       </div>
-                      <div className="absolute -bottom-1 -right-1 bg-emerald-500 text-white p-1 rounded-full border-2 border-[#03010a] shadow" title="Verified Organizer">
-                        <Check className="w-3 h-3 stroke-[3]" />
-                      </div>
-                    </div>
 
-                    <h3 className="font-bold text-base text-white group-hover:text-purple-300 transition-colors line-clamp-1 mb-1">
-                      {name}
-                    </h3>
+                      <h3 className="font-bold text-base text-white group-hover/org:text-purple-300 transition-colors line-clamp-1 mb-1">
+                        {name}
+                      </h3>
+                    </Link>
                     <p className="text-xs text-zinc-400 mb-4 line-clamp-1 font-medium">
                       {categoryOrLocation}
                     </p>
@@ -888,10 +890,10 @@ const Home = () => {
                     )}
 
                     <Link
-                      to={USER_ROUTES.EXPLORE}
-                      className="w-full py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-extrabold rounded-2xl transition-all shadow-md flex items-center justify-center gap-1 group/btn mt-auto"
+                      to={USER_ROUTES.ORGANIZER_PROFILE.replace(':id', org._id)}
+                      className="w-full py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-extrabold rounded-2xl transition-all shadow-md flex items-center justify-center gap-1 group/btn mt-auto cursor-pointer"
                     >
-                      <span>Explore Events</span>
+                      <span>View Profile</span>
                       <ArrowRight className="w-3 h-3 group-hover/btn:translate-x-0.5 transition-transform" />
                     </Link>
                   </div>

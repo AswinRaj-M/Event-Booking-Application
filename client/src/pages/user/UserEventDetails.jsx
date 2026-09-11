@@ -658,32 +658,36 @@ const UserEventDetails = () => {
 
               <div className="bg-[#0b0914]/65 border border-purple-500/10 rounded-3xl p-6 sm:p-7 flex flex-col sm:flex-row items-start gap-5 shadow-xl">
                 {/* Avatar */}
-                <div className="w-16 h-16 rounded-full bg-purple-950/50 border-2 border-purple-500/30 overflow-hidden flex items-center justify-center shrink-0 shadow-lg select-none">
+                <Link
+                  to={event.vendorId?._id ? USER_ROUTES.ORGANIZER_PROFILE.replace(':id', event.vendorId._id) : USER_ROUTES.ORGANIZER_PROFILE.replace(':id', event.vendorId)}
+                  className="w-16 h-16 rounded-full bg-purple-950/50 border-2 border-purple-500/30 overflow-hidden flex items-center justify-center shrink-0 shadow-lg select-none hover:border-purple-400 transition-colors group cursor-pointer"
+                >
                   {event.vendorId?.profilePicture?.fileUrl ? (
                     <img 
                       src={event.vendorId.profilePicture.fileUrl} 
                       alt={event.vendorId.organizerName} 
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                     />
                   ) : (
                     <span className="text-purple-300 font-extrabold text-xl">
                       {event.vendorId?.organizerName?.charAt(0).toUpperCase() || "O"}
                     </span>
                   )}
-                </div>
+                </Link>
 
                 {/* Organizer details */}
                 <div className="flex-grow space-y-3">
                   <div>
-                    <h3 className="font-extrabold text-white text-lg tracking-tight">
+                    <Link
+                      to={event.vendorId?._id ? USER_ROUTES.ORGANIZER_PROFILE.replace(':id', event.vendorId._id) : USER_ROUTES.ORGANIZER_PROFILE.replace(':id', event.vendorId)}
+                      className="font-extrabold text-white text-lg tracking-tight hover:text-purple-400 transition-colors inline-block cursor-pointer"
+                    >
                       {event.vendorId?.organizerName || "Organizer"}
-                    </h3>
+                    </Link>
                     
-                    {/* Fake Metadata */}
+                    {/* Metadata */}
                     <div className="flex items-center gap-3 flex-wrap text-zinc-500 text-xs mt-1.5 font-medium">
-                      <span>Since 2015</span>
-                      <span className="w-1 h-1 rounded-full bg-zinc-700" />
-                      <span>50+ Events Hosted</span>
+                      <span>Verified Festivo Curator</span>
                       <span className="w-1 h-1 rounded-full bg-zinc-700" />
                       <span className="flex items-center gap-1 text-yellow-500">
                         <Star className="w-3.5 h-3.5 fill-current" />
@@ -698,12 +702,20 @@ const UserEventDetails = () => {
 
                   {/* Organizer Buttons */}
                   <div className="flex flex-wrap gap-3 pt-2">
+                    <Link
+                      to={event.vendorId?._id ? USER_ROUTES.ORGANIZER_PROFILE.replace(':id', event.vendorId._id) : USER_ROUTES.ORGANIZER_PROFILE.replace(':id', event.vendorId)}
+                      className="inline-flex items-center gap-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-[0_4px_12px_rgba(147,51,234,0.3)] cursor-pointer"
+                    >
+                      <span>View Profile</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </Link>
+
                     <button
                       onClick={handleFollowToggle}
                       className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                         isFollowing
                           ? "bg-purple-950/50 border border-purple-500/30 text-purple-300"
-                          : "bg-purple-600 hover:bg-purple-500 text-white shadow-[0_4px_12px_rgba(147,51,234,0.3)]"
+                          : "bg-white/5 hover:bg-white/10 border border-white/10 text-white"
                       }`}
                     >
                       {isFollowing ? "Following" : "Follow"}

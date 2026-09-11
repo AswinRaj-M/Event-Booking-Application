@@ -10,6 +10,7 @@ export const USER_ROUTES = {
   PAYMENT_STATUS: '/user/payment-status',
   TICKET_VIEW: '/user/booking/:id',
   WALLET: '/user/wallet',
+  ORGANIZER_PROFILE: '/user/organizer/:id',
   SETTINGS: '/user/settings',
   SUPPORT: '/user/support',
   HELP: '/user/help',

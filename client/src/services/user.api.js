@@ -74,6 +74,10 @@ export const getOrganizersApi = (params) => {
   return axiosInstance.get("/users/organizers", { params });
 };
 
+export const getOrganizerProfileApi = (vendorId) => {
+  return axiosInstance.get(`/users/organizers/profile/${vendorId}`);
+};
+
 export const changePassword = (data) => {
   return axiosInstance.put("/users/change-password", data);
 };

@@ -2,6 +2,8 @@ import mongoose from "mongoose";
 import Event from "../../models/event.model.js";
 import Category from "../../models/category.model.js";
 import User from "../../models/user.model.js";
+import Vendor from "../../models/vendor.model.js";
+import Review from "../../models/review.model.js";
 import { updateCompletedEvents } from "../../utils/eventStatusUpdater.js";
 
 export const getExploreEventsRepo = async (filters = {}) => {
@@ -210,3 +212,66 @@ export const getOrganizersRepo = async (limit = 8) => {
 
   return organizers;
 };
+
+export const getOrganizerProfileRepo = async (vendorId) => {
+  await updateCompletedEvents();
+
+  if (!mongoose.Types.ObjectId.isValid(vendorId)) {
+    return null;
+  }
+
+  const vId = new mongoose.Types.ObjectId(vendorId);
+
+  // 1. Fetch Vendor details (excluding sensitive fields)
+  const vendorDoc = await Vendor.findOne({
+    _id: vId,
+    applicationStatus: "approved",
+    isBlocked: { $ne: true }
+  }).select("-password -refreshToken -businessDocument -idProof").lean();
+
+  if (!vendorDoc) {
+    return null;
+  }
+
+  // 2. Fetch completed events for this vendor
+  const completedEvents = await Event.find({
+    vendorId: vId,
+    isDeleted: { $ne: true },
+    eventStatus: "completed"
+  })
+    .populate("category")
+    .sort({ "schedule.date": -1, createdAt: -1 })
+    .lean();
+
+  // 3. Fetch reviews & calculate rating summary
+  const [reviews, summary] = await Promise.all([
+    Review.find({ vendorId: vId })
+      .populate("userId", "fullName profilePicture")
+      .populate("eventId", "title")
+      .sort({ createdAt: -1 })
+      .lean(),
+    Review.aggregate([
+      { $match: { vendorId: vId } },
+      {
+        $group: {
+          _id: "$vendorId",
+          avgRating: { $avg: "$rating" },
+          totalReviews: { $sum: 1 }
+        }
+      }
+    ])
+  ]);
+
+  const avgRating = summary.length > 0 ? Math.round(summary[0].avgRating * 100) / 100 : 0;
+  const totalReviews = summary.length > 0 ? summary[0].totalReviews : 0;
+
+  return {
+    vendor: vendorDoc,
+    completedEvents,
+    reviews,
+    avgRating,
+    totalReviews,
+    totalCompletedEvents: completedEvents.length
+  };
+};
+
