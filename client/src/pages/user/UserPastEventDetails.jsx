@@ -47,8 +47,14 @@ const UserPastEventDetails = () => {
       setLoading(true);
       setError(null);
       const res = await getEventById(id);
-      if (res.data?.success && res.data.data) {
-        setEvent(res.data.data);
+      const eventData = res.data?.event || res.data?.data;
+      if (res.data?.success && eventData) {
+        if (eventData.isBlocked) {
+          toast.error("This event is blocked by admin");
+          navigate(-1);
+          return;
+        }
+        setEvent(eventData);
       } else {
         setError("Event details could not be found.");
       }
@@ -70,6 +76,16 @@ const UserPastEventDetails = () => {
       month: "long",
       day: "numeric",
     });
+  };
+
+  const formatLocation = (loc) => {
+    if (!loc) return "";
+    if (typeof loc === "string") return loc;
+    if (typeof loc === "object") {
+      const parts = [loc.city, loc.state, loc.country].filter(Boolean);
+      return parts.length > 0 ? parts.join(", ") : "";
+    }
+    return "";
   };
 
   const handleShare = () => {
@@ -498,10 +514,10 @@ const UserPastEventDetails = () => {
                   </div>
                   <div className="space-y-1 truncate">
                     <h3 className="font-bold text-white text-base truncate">{organizer.organizerName || organizer.businessName}</h3>
-                    {organizer.location && (
+                    {formatLocation(organizer.location) && (
                       <div className="flex items-center gap-1.5 text-xs text-zinc-400">
                         <MapPin className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-                        <span className="truncate">{organizer.location}</span>
+                        <span className="truncate">{formatLocation(organizer.location)}</span>
                       </div>
                     )}
                   </div>
