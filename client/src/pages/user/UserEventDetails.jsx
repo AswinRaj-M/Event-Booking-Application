@@ -740,25 +740,6 @@ const UserEventDetails = () => {
                       <span>View Profile</span>
                       <ExternalLink className="w-3.5 h-3.5" />
                     </Link>
-
-                    <button
-                      onClick={handleFollowToggle}
-                      className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                        isFollowing
-                          ? "bg-purple-950/50 border border-purple-500/30 text-purple-300"
-                          : "bg-white/5 hover:bg-white/10 border border-white/10 text-white"
-                      }`}
-                    >
-                      {isFollowing ? "Following" : "Follow"}
-                    </button>
-                    
-                    <button
-                      onClick={handleContactOrganizer}
-                      className="inline-flex items-center gap-1.5 bg-[#120f26] hover:bg-[#1a1538] border border-purple-900/30 text-zinc-300 hover:text-white px-4 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer"
-                    >
-                      <MessageSquare className="w-3.5 h-3.5 text-purple-400" />
-                      Contact
-                    </button>
                   </div>
                 </div>
               </div>
