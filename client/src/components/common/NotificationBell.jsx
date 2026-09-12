@@ -27,11 +27,17 @@ import {
   clearAllAdminNotificationsApi
 } from "../../services/admin.api";
 
+// Shared cache across all mounted NotificationBell instances to deduplicate & throttle network requests
+const notificationFetchPromises = new Map();
+const lastFetchTimestamps = new Map();
+const FETCH_COOLDOWN_MS = 60000; // 1 minute cache TTL for automatic fetch
+
 const NotificationBell = ({ placement = "right", className = "" }) => {
   const { user } = useSelector((state) => state.user || {});
   const { vendor } = useSelector((state) => state.vendor || {});
   const { admin } = useSelector((state) => state.admin || {});
-  const activeUserId = user?.id || user?._id || vendor?.id || vendor?._id || admin?.id || admin?._id || null;
+  const rawUserId = user?.id || user?._id || vendor?.id || vendor?._id || admin?.id || admin?._id || null;
+  const activeUserId = rawUserId ? rawUserId.toString() : null;
   const isAdmin = Boolean(admin?.id || admin?._id);
 
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
@@ -60,22 +66,42 @@ const NotificationBell = ({ placement = "right", className = "" }) => {
       }
     } catch (e) {}
 
-    // 2. Fetch fresh user-owned notifications from backend DB
+    // 2. Fetch fresh user-owned notifications from backend DB (deduplicated & throttled)
     let isMounted = true;
-    const fetchApi = isAdmin ? getAdminNotificationsApi : getUserNotificationsApi;
-    fetchApi()
-      .then((res) => {
-        if (!isMounted || !res.data?.success) return;
-        const fetchedNotifs = Array.isArray(res.data.notifications) ? res.data.notifications : [];
-        const count = typeof res.data.unreadCount === "number" ? res.data.unreadCount : 0;
-        setNotifications(fetchedNotifs);
-        setUnreadCount(count);
-        try {
-          localStorage.setItem(`festivo_notifications_${activeUserId}`, JSON.stringify(fetchedNotifs));
-          localStorage.setItem(`festivo_unread_notifications_${activeUserId}`, count.toString());
-        } catch (e) {}
-      })
-      .catch(() => {});
+    const cacheKey = `${isAdmin ? "admin" : "user"}_${activeUserId}`;
+    const now = Date.now();
+    const lastFetch = lastFetchTimestamps.get(cacheKey) || 0;
+
+    let fetchPromise = notificationFetchPromises.get(cacheKey);
+
+    if (!fetchPromise && now - lastFetch > FETCH_COOLDOWN_MS) {
+      const fetchApi = isAdmin ? getAdminNotificationsApi : getUserNotificationsApi;
+      fetchPromise = fetchApi()
+        .then((res) => {
+          lastFetchTimestamps.set(cacheKey, Date.now());
+          return res;
+        })
+        .finally(() => {
+          notificationFetchPromises.delete(cacheKey);
+        });
+      notificationFetchPromises.set(cacheKey, fetchPromise);
+    }
+
+    if (fetchPromise) {
+      fetchPromise
+        .then((res) => {
+          if (!isMounted || !res?.data?.success) return;
+          const fetchedNotifs = Array.isArray(res.data.notifications) ? res.data.notifications : [];
+          const count = typeof res.data.unreadCount === "number" ? res.data.unreadCount : 0;
+          setNotifications(fetchedNotifs);
+          setUnreadCount(count);
+          try {
+            localStorage.setItem(`festivo_notifications_${activeUserId}`, JSON.stringify(fetchedNotifs));
+            localStorage.setItem(`festivo_unread_notifications_${activeUserId}`, count.toString());
+          } catch (e) {}
+        })
+        .catch(() => {});
+    }
 
     return () => {
       isMounted = false;

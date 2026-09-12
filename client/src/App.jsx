@@ -23,7 +23,8 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const activeId = user?.id || user?._id || vendor?.id || vendor?._id || admin?.id || admin?._id;
+    const rawActiveId = user?.id || user?._id || vendor?.id || vendor?._id || admin?.id || admin?._id;
+    const activeId = rawActiveId ? rawActiveId.toString() : null;
     if (!activeId) {
       disconnectSocket();
       return;
@@ -80,7 +81,7 @@ function App() {
     return () => {
       socket.off("notification", handleNotification);
     };
-  }, [user, vendor, admin]);
+  }, [user?.id, user?._id, vendor?.id, vendor?._id, admin?.id, admin?._id]);
 
   return (
     <>
