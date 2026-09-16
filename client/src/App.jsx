@@ -1,10 +1,10 @@
 import React, { useEffect } from 'react';
-import AppRoutes from './routes/AppRoutes';
-import AdminRoutes from './routes/AdminRoutes';
-import VendorRoutes from './routes/vendorRoutes';
+import AppRoutes from './routes/AppRoutes.jsx';
+import AdminRoutes from './routes/AdminRoutes.jsx';
+import VendorRoutes from './routes/VendorRoutes.jsx';
 import { Toaster, toast } from "sonner";
 import { Routes, Route } from 'react-router-dom';
-import GlobalSmoothScroll from './components/common/GlobalSmoothScroll';
+import GlobalSmoothScroll from './components/common/GlobalSmoothScroll.jsx';
 
 import { useSelector } from 'react-redux';
 import { getSocket, disconnectSocket } from './services/socket';
