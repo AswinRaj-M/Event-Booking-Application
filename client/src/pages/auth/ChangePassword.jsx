@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Eye, EyeOff, CheckCircle2, XCircle } from "lucide-react";
 import { useSelector } from "react-redux";
 import { changePassword } from "../../services/user.api";
 import { changeVendorPasswordApi } from "../../services/vendor.api";
@@ -17,6 +18,7 @@ export default function ChangePassword() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -253,22 +255,52 @@ export default function ChangePassword() {
 
         .cp-toggle-btn {
           position: absolute;
-          right: 12px;
+          right: 8px;
           top: 50%;
           transform: translateY(-50%);
           background: none;
           border: none;
           cursor: pointer;
-          padding: 4px;
+          padding: 6px;
           display: flex;
           align-items: center;
           justify-content: center;
+          color: #8b8ba7;
+          border-radius: 6px;
+          transition: color 0.2s, background-color 0.2s;
+          z-index: 2;
         }
-        .cp-toggle-dot {
-          width: 10px;
-          height: 10px;
-          background: #a78bfa;
-          border-radius: 50%;
+        .cp-toggle-btn:hover {
+          color: #a78bfa;
+          background: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Hide browser native password reveal / clear buttons */
+        input::-ms-reveal,
+        input::-ms-clear,
+        input::-webkit-contacts-auto-fill-button,
+        input::-webkit-credentials-auto-fill-button {
+          display: none !important;
+          width: 0 !important;
+          height: 0 !important;
+          pointer-events: none !important;
+        }
+
+        /* confirm password match status */
+        .cp-match-status {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 0.75rem;
+          margin-top: 8px;
+          font-weight: 500;
+          transition: all 0.2s ease;
+        }
+        .cp-match-status.valid {
+          color: #10b981;
+        }
+        .cp-match-status.invalid {
+          color: #ef4444;
         }
 
         /* password strength */
@@ -494,18 +526,28 @@ export default function ChangePassword() {
               <h1 className="cp-title">Change Password</h1>
               <p className="cp-subtitle">Update your password to keep your account secure</p>
 
-              <form onSubmit={handleSubmit}>
+              <form onSubmit={handleSubmit} autoComplete="off">
                 <div className="cp-form-group">
                   <label className="cp-label">Current Password</label>
                   <div className="cp-input-wrap">
                     <input
-                      type="password"
+                      type={showCurrentPassword ? "text" : "password"}
                       className="cp-input"
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
                       placeholder="Enter current password"
-                      autoComplete="new-password"
+                      autoComplete="off"
+                      style={{ paddingRight: "44px" }}
                     />
+                    <button 
+                      type="button" 
+                      className="cp-toggle-btn"
+                      onClick={() => setShowCurrentPassword((prev) => !prev)}
+                      tabIndex={-1}
+                      aria-label={showCurrentPassword ? "Hide current password" : "Show current password"}
+                    >
+                      {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
                 </div>
 
@@ -518,14 +560,17 @@ export default function ChangePassword() {
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="Enter new password"
-                      style={{ paddingRight: "40px" }}
+                      autoComplete="new-password"
+                      style={{ paddingRight: "44px" }}
                     />
                     <button 
                       type="button" 
                       className="cp-toggle-btn"
-                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      onClick={() => setShowNewPassword((prev) => !prev)}
+                      tabIndex={-1}
+                      aria-label={showNewPassword ? "Hide new password" : "Show new password"}
                     >
-                      <div className="cp-toggle-dot" style={{ opacity: showNewPassword ? 1 : 0.4 }}></div>
+                      {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
@@ -570,16 +615,39 @@ export default function ChangePassword() {
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="Confirm new password"
-                      style={{ paddingRight: "40px" }}
+                      autoComplete="new-password"
+                      style={{
+                        paddingRight: "44px",
+                        borderColor: confirmPassword.length > 0
+                          ? (newPassword === confirmPassword ? "rgba(16, 185, 129, 0.5)" : "rgba(239, 68, 68, 0.5)")
+                          : undefined
+                      }}
                     />
                     <button 
                       type="button" 
                       className="cp-toggle-btn"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      onClick={() => setShowConfirmPassword((prev) => !prev)}
+                      tabIndex={-1}
+                      aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
                     >
-                      <div className="cp-toggle-dot" style={{ opacity: showConfirmPassword ? 1 : 0.4 }}></div>
+                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
+                  {confirmPassword.length > 0 && (
+                    <div className={`cp-match-status ${newPassword === confirmPassword ? "valid" : "invalid"}`}>
+                      {newPassword === confirmPassword ? (
+                        <>
+                          <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                          <span>Passwords match</span>
+                        </>
+                      ) : (
+                        <>
+                          <XCircle className="w-3.5 h-3.5 shrink-0" />
+                          <span>Passwords do not match</span>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <button type="submit" className="cp-btn" disabled={isSubmitting}>
@@ -611,8 +679,8 @@ export default function ChangePassword() {
           return (
             <div className="flex h-screen bg-[#070514] text-white font-sans selection:bg-purple-500/30 overflow-hidden">
               <VendorSidebar />
-              <main data-lenis-prevent className="flex-1 ml-64 h-screen overflow-y-auto p-6 md:p-10 flex flex-col items-center justify-start">
-                <div className="w-full max-w-md my-auto py-6">
+              <main className="flex-1 ml-64 h-screen overflow-y-auto p-6 md:p-10 flex flex-col items-center justify-start scrollbar-thin scrollbar-thumb-purple-900/50">
+                <div className="w-full max-w-md py-6 my-auto">
                   {cardContent}
                 </div>
               </main>
@@ -621,8 +689,8 @@ export default function ChangePassword() {
         }
 
         return (
-          <div className="cp-root" data-lenis-prevent>
-            <div className="w-full max-w-md my-auto py-6">
+          <div className="cp-root">
+            <div className="w-full max-w-md py-6 my-auto">
               {cardContent}
             </div>
           </div>

@@ -23,7 +23,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { USER_ROUTES } from '../../constants/Routes';
-import { createBooking, getEventById } from '../../services/user.api.js';
+import { getEventById, getPublicCouponsApi } from '../../services/user.api.js';
 import axiosInstance from '../../services/axiosInstance.js';
 import { toast } from 'sonner';
 
@@ -116,6 +116,58 @@ const PaymentCheckout = () => {
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [applyingCoupon, setApplyingCoupon] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [availableCoupons, setAvailableCoupons] = useState([]);
+  const [loadingCoupons, setLoadingCoupons] = useState(false);
+
+  // Fetch Available Public Coupons
+  React.useEffect(() => {
+    let isMounted = true;
+    const fetchCoupons = async () => {
+      try {
+        setLoadingCoupons(true);
+        const res = await getPublicCouponsApi();
+        if (isMounted && res.data?.success) {
+          const allCoupons = res.data.coupons || [];
+          const now = new Date();
+          const targetEventId = event?._id || event?.id;
+          const targetCategoryId = event?.category?._id || event?.category;
+
+          const applicable = allCoupons.filter((c) => {
+            if (!c.isActive) return false;
+            if (c.startDate && new Date(c.startDate) > now) return false;
+            if (c.endDate && new Date(c.endDate) < now) return false;
+            if (c.usagelimit && c.usedCount >= c.usagelimit) return false;
+            
+            // Check event applicability
+            if (c.applicableEvents) {
+              const couponEventId = typeof c.applicableEvents === 'object' ? c.applicableEvents._id : c.applicableEvents;
+              if (couponEventId && String(couponEventId) !== String(targetEventId)) return false;
+            }
+            
+            // Check category applicability
+            if (c.applicableCategory) {
+              const couponCatId = typeof c.applicableCategory === 'object' ? c.applicableCategory._id : c.applicableCategory;
+              if (couponCatId && String(couponCatId) !== String(targetCategoryId)) return false;
+            }
+
+            return true;
+          });
+          setAvailableCoupons(applicable);
+        }
+      } catch (err) {
+        console.error('Failed to load available coupons:', err);
+      } finally {
+        if (isMounted) setLoadingCoupons(false);
+      }
+    };
+
+    if (event) {
+      fetchCoupons();
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [event]);
 
   // Expiring Checkout Session State (10 Minutes)
   const [sessionExpiresAt, setSessionExpiresAt] = useState(() => {
@@ -191,23 +243,26 @@ const PaymentCheckout = () => {
     }
   };
 
-  // Apply Coupon Handler
-  const handleApplyCoupon = async (e) => {
-    e.preventDefault();
-    if (!couponInput.trim()) {
+  // Apply Coupon Code Helper
+  const applyCouponCode = async (codeToApply) => {
+    const cleanCode = codeToApply ? codeToApply.trim().toUpperCase() : '';
+    if (!cleanCode) {
       toast.error('Please enter a coupon code');
       return;
     }
-    if (!event?._id) {
+    if (!event?._id && !event?.id) {
       toast.error('Missing event details to apply coupon');
       return;
     }
 
+    const targetEventId = event?._id || event?.id;
+
     try {
       setApplyingCoupon(true);
+      setCouponInput(cleanCode);
       const res = await axiosInstance.post('/users/booking/validate-coupon', {
-        couponCode: couponInput.trim(),
-        eventId: event._id,
+        couponCode: cleanCode,
+        eventId: targetEventId,
         subtotal: subtotal,
         quantity: Number(quantity) || 1
       });
@@ -215,7 +270,7 @@ const PaymentCheckout = () => {
       if (res.data && res.data.success) {
         const discountVal = Number(res.data.discountAmount) || 0;
         setAppliedCoupon({
-          code: res.data.couponCode || couponInput.trim().toUpperCase(),
+          code: res.data.couponCode || cleanCode,
           discountType: res.data.discountType,
           discountValue: res.data.discountValue,
           maxDiscountAmount: res.data.maxDiscountAmount,
@@ -240,6 +295,12 @@ const PaymentCheckout = () => {
     } finally {
       setApplyingCoupon(false);
     }
+  };
+
+  // Apply Coupon Handler for manual form submit
+  const handleApplyCoupon = (e) => {
+    e.preventDefault();
+    applyCouponCode(couponInput);
   };
 
   // Remove Applied Coupon
@@ -745,11 +806,23 @@ const PaymentCheckout = () => {
 
               </div>
 
-              {/* Promo Code Box */}
-              <div className="space-y-2">
-                <label className="block text-xs font-bold text-gray-300">
-                  Have a promo code?
-                </label>
+              {/* Promo Code & Available Coupons Box */}
+              <div className="bg-[#120F20] border border-gray-800/80 rounded-2xl p-5 space-y-4 shadow-xl">
+                
+                {/* Header */}
+                <div className="flex items-center justify-between pb-3 border-b border-gray-800/60">
+                  <div className="flex items-center gap-2">
+                    <Tag className="w-4 h-4 text-purple-400" />
+                    <span className="text-sm font-bold text-white">Coupons & Promo Codes</span>
+                  </div>
+                  {availableCoupons.length > 0 && (
+                    <span className="text-[11px] font-semibold text-purple-300 bg-purple-950/80 border border-purple-500/30 px-2.5 py-0.5 rounded-full">
+                      {availableCoupons.length} Available
+                    </span>
+                  )}
+                </div>
+
+                {/* Manual Promo Code Input Form */}
                 <form onSubmit={handleApplyCoupon} className="flex gap-2">
                   <div className="relative flex-1">
                     <Tag className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -757,9 +830,9 @@ const PaymentCheckout = () => {
                       type="text"
                       value={couponInput}
                       onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                      placeholder="Enter code here"
+                      placeholder="Enter promo code"
                       disabled={!!appliedCoupon || applyingCoupon}
-                      className="w-full bg-[#120F20] border border-gray-800 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors disabled:opacity-60"
+                      className="w-full bg-[#0B0914] border border-gray-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors disabled:opacity-60"
                     />
                   </div>
 
@@ -767,7 +840,7 @@ const PaymentCheckout = () => {
                     <button
                       type="button"
                       onClick={handleRemoveCoupon}
-                      className="px-5 py-3 bg-red-950/40 border border-red-800/60 text-red-300 hover:bg-red-900/60 text-xs font-bold rounded-xl transition-all"
+                      className="px-4 py-2.5 bg-rose-950/40 border border-rose-800/60 text-rose-300 hover:bg-rose-900/60 text-xs font-bold rounded-xl transition-all cursor-pointer shrink-0"
                     >
                       Remove
                     </button>
@@ -775,7 +848,7 @@ const PaymentCheckout = () => {
                     <button
                       type="submit"
                       disabled={applyingCoupon || !couponInput.trim()}
-                      className="px-6 py-3 bg-gray-800 hover:bg-purple-600 disabled:bg-gray-800/50 text-white text-xs font-bold rounded-xl transition-all cursor-pointer disabled:cursor-not-allowed flex items-center gap-2"
+                      className="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 disabled:bg-gray-800 text-white text-xs font-bold rounded-xl transition-all cursor-pointer disabled:cursor-not-allowed flex items-center gap-2 shrink-0"
                     >
                       {applyingCoupon ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Apply'}
                     </button>
@@ -783,10 +856,95 @@ const PaymentCheckout = () => {
                 </form>
 
                 {appliedCoupon && (
-                  <div className="flex items-center gap-2 text-xs text-emerald-400 pt-1 font-medium">
-                    <Check className="w-4 h-4" /> Coupon <strong>{appliedCoupon.code}</strong> applied! You saved ₹{couponDiscount.toFixed(2)}
+                  <div className="flex items-center gap-2 text-xs text-emerald-400 bg-emerald-950/30 border border-emerald-500/30 rounded-xl p-3 font-medium">
+                    <Check className="w-4 h-4 shrink-0 text-emerald-400" />
+                    <span>Coupon <strong>{appliedCoupon.code}</strong> applied! You saved <strong>₹{couponDiscount.toFixed(2)}</strong></span>
                   </div>
                 )}
+
+                {/* Available Coupons List */}
+                <div className="pt-2 border-t border-gray-800/60 space-y-2.5">
+                  <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                    Available Coupons
+                  </div>
+
+                  {loadingCoupons ? (
+                    <div className="flex items-center justify-center py-4 text-xs text-gray-400 gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
+                      <span>Checking available coupons...</span>
+                    </div>
+                  ) : availableCoupons.length > 0 ? (
+                    <div className="grid grid-cols-1 gap-2.5 max-h-60 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-purple-900/50">
+                      {availableCoupons.map((coupon) => {
+                        const isApplied = appliedCoupon?.code === coupon.code;
+                        const isPercentage = coupon.discountType === 'percentage';
+                        const discountLabel = isPercentage
+                          ? `${coupon.discountValue}% OFF`
+                          : `₹${coupon.discountValue} OFF`;
+
+                        return (
+                          <div
+                            key={coupon._id || coupon.code}
+                            className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 ${
+                              isApplied
+                                ? 'bg-purple-950/40 border-purple-500/60 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
+                                : 'bg-[#0B0914] border-gray-800/80 hover:border-purple-500/40'
+                            }`}
+                          >
+                            <div className="space-y-1 min-w-0 flex-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-mono font-bold text-xs text-purple-300 bg-purple-950/80 border border-purple-500/40 px-2 py-0.5 rounded-md">
+                                  {coupon.code}
+                                </span>
+                                <span className="text-[11px] font-black text-emerald-400">
+                                  {discountLabel}
+                                </span>
+                              </div>
+                              {coupon.description && (
+                                <p className="text-[11px] text-gray-400 truncate">
+                                  {coupon.description}
+                                </p>
+                              )}
+                              <div className="flex items-center gap-2.5 text-[10px] text-gray-400 flex-wrap">
+                                {coupon.minPurchaseAmount > 0 && (
+                                  <span>Min spend ₹{coupon.minPurchaseAmount}</span>
+                                )}
+                                {coupon.minTickets > 1 && (
+                                  <span>Min {coupon.minTickets} tickets</span>
+                                )}
+                                {coupon.maxDiscountAmount > 0 && isPercentage && (
+                                  <span>Max disc. ₹{coupon.maxDiscountAmount}</span>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="shrink-0">
+                              {isApplied ? (
+                                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-500/40 px-3 py-1.5 rounded-lg">
+                                  <Check className="w-3.5 h-3.5" /> Applied
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled={applyingCoupon || !!appliedCoupon}
+                                  onClick={() => applyCouponCode(coupon.code)}
+                                  className="text-[11px] font-bold text-purple-300 hover:text-white bg-purple-900/40 hover:bg-purple-600 border border-purple-500/40 px-3 py-1.5 rounded-lg transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                  Apply
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-[11px] text-gray-500 text-center py-2 italic">
+                      No active coupons available for this event at present.
+                    </div>
+                  )}
+                </div>
+
               </div>
 
               {/* Pay / Action Button */}
