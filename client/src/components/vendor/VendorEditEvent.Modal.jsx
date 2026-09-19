@@ -112,6 +112,7 @@ const VendorEditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
   
   // Offer states
   const [enableOffer, setEnableOffer] = useState(false);
+  const [offerType, setOfferType] = useState('percentage');
   const [discountValue, setDiscountValue] = useState('');
   const [minTickets, setMinTickets] = useState('');
   const [validFrom, setValidFrom] = useState('');
@@ -202,6 +203,7 @@ const VendorEditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
       
       const offer = raw.offer || {};
       setEnableOffer(offer.enabled || false);
+      setOfferType(offer.discountType === 'flat' || offer.offerType === 'flat' ? 'flat' : 'percentage');
       setDiscountValue(offer.discountValue !== undefined ? String(offer.discountValue) : '');
       setMinTickets(offer.minTicketsRequired !== undefined ? String(offer.minTicketsRequired) : '');
       setValidFrom(formatDateForInput(offer.validFrom));
@@ -437,9 +439,33 @@ const VendorEditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
         return;
       }
       const val = parseFloat(discountValue);
-      if (isNaN(val) || val <= 0 || val > 100) {
-        toast.error('Discount percentage must be between 1 and 100');
-        return;
+      if (offerType === 'percentage') {
+        if (isNaN(val) || val <= 0 || val > 100) {
+          toast.error('Discount percentage must be between 1 and 100');
+          return;
+        }
+      } else {
+        if (isNaN(val) || val <= 0) {
+          toast.error('Discount amount must be greater than 0');
+          return;
+        } else if (val > 100000) {
+          toast.error('Discount amount cannot exceed ₹1,00,000');
+          return;
+        } else if (ticketType === 'free') {
+          toast.error('Offer discount cannot be applied to free events');
+          return;
+        } else if (ticketType === 'paid') {
+          const validPrices = (ticketTiers || [])
+            .map(t => parseFloat(t.price))
+            .filter(p => !isNaN(p) && p > 0);
+          if (validPrices.length > 0) {
+            const minTicketPrice = Math.min(...validPrices);
+            if (val > minTicketPrice) {
+              toast.error(`Offer price (₹${val}) cannot be greater than ticket price (₹${minTicketPrice})`);
+              return;
+            }
+          }
+        }
       }
       if (!minTickets) {
         toast.error('Minimum tickets required is required when offer is enabled');
@@ -519,11 +545,13 @@ const VendorEditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
 
     formData.append('offerEnabled', enableOffer ? 'true' : 'false');
     if (enableOffer) {
+      formData.append('offerType', offerType || 'percentage');
       formData.append('discountValue', discountValue || '0');
       formData.append('minTicketsRequired', minTickets || '0');
       formData.append('validFrom', validFrom || '');
       formData.append('validUntil', validUntil || '');
     } else {
+      formData.append('offerType', 'percentage');
       formData.append('discountValue', '0');
       formData.append('minTicketsRequired', '0');
       formData.append('validFrom', '');
@@ -851,18 +879,34 @@ const VendorEditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
                       <span>This offer will apply automatically to all ticket bookings for this event.</span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-semibold text-zinc-400">Discount Value (%)</label>
+                        <label className="text-[10px] font-semibold text-zinc-400">Offer Type</label>
+                        <div className="relative">
+                          <select 
+                            value={offerType}
+                            onChange={(e) => setOfferType(e.target.value)}
+                            className="w-full bg-[#12101F] text-white px-3 py-2.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-purple-500 text-xs font-semibold appearance-none cursor-pointer"
+                          >
+                            <option value="percentage">Percentage (%)</option>
+                            <option value="flat">Flat Discount (₹)</option>
+                          </select>
+                          <ChevronDown className="absolute right-3 top-3 w-3.5 h-3.5 text-zinc-500 pointer-events-none" />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-semibold text-zinc-400">Discount Value <span className="text-rose-500">*</span></label>
                         <div className="relative">
                           <input 
                             type="number" 
+                            max={offerType === 'percentage' ? 100 : 100000}
                             placeholder="e.g. 10"
                             value={discountValue}
                             onChange={(e) => setDiscountValue(e.target.value)}
                             className="w-full bg-[#12101F] text-white px-3 py-2.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-purple-500 text-xs font-semibold pr-8"
                           />
-                          <span className="absolute right-3 top-2.5 text-xs text-zinc-500 font-bold">%</span>
+                          <span className="absolute right-3 top-2.5 text-xs text-zinc-500 font-bold">{offerType === 'percentage' ? '%' : '₹'}</span>
                         </div>
                       </div>
 

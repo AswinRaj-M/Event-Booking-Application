@@ -501,6 +501,20 @@ const VendorCreateEvent = () => {
               newErrors.discountValue = 'Discount amount must be greater than 0';
             } else if (val > 100000) {
               newErrors.discountValue = 'Discount amount cannot exceed ₹1,00,000';
+            } else if (ticketType === 'free') {
+              newErrors.discountValue = 'Offer discount cannot be applied to free events';
+            } else if (ticketType === 'paid') {
+              const validPrices = (ticketTiers || [])
+                .map(t => parseFloat(t.price))
+                .filter(p => !isNaN(p) && p > 0);
+              if (validPrices.length === 0) {
+                newErrors.discountValue = 'Please specify valid ticket tier prices first';
+              } else {
+                const minTicketPrice = Math.min(...validPrices);
+                if (val > minTicketPrice) {
+                  newErrors.discountValue = `Offer price (₹${val}) cannot be greater than ticket price (₹${minTicketPrice})`;
+                }
+              }
             }
           }
         }
