@@ -5,13 +5,11 @@ import { ADMIN_ROUTES } from "../../constants/Routes";
 import {
   Search,
   Sidebar,
-  FileText,
   Plus,
   Files,
   Hourglass,
   XCircle,
   CheckCircle,
-  Filter,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -98,11 +96,7 @@ function AdminVendorManagement() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <button className="flex items-center gap-2 px-4 py-2 bg-[#151221] border border-gray-700 hover:bg-gray-800 rounded-lg text-sm font-medium text-gray-200 transition-colors">
-                <FileText className="w-4 h-4" />
-                Export Report
-              </button>
-              <button className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 rounded-lg text-sm font-medium text-white shadow-lg shadow-purple-900/20 transition-all">
+              <button className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 rounded-lg text-sm font-medium text-white shadow-lg shadow-purple-900/20 transition-all cursor-pointer">
                 <Plus className="w-4 h-4" />
                 Invite Vendor
               </button>
@@ -110,7 +104,7 @@ function AdminVendorManagement() {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-5 gap-4 mb-8 shrink-0">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8 shrink-0">
             <div className="bg-[#151221] border border-gray-800/80 rounded-xl p-6 relative overflow-hidden flex flex-col justify-between h-[140px]">
               <div className="flex justify-between items-start">
                 <p className="text-sm font-medium text-gray-300">
@@ -190,13 +184,13 @@ function AdminVendorManagement() {
           </div>
 
           {/* Tabs */}
-          <div className="flex bg-[#151221] border border-gray-800/80 rounded-xl p-1 mb-8 shrink-0 w-fit">
+          <div className="flex bg-[#151221] border border-gray-800/80 rounded-xl p-1 mb-8 shrink-0 w-fit overflow-x-auto max-w-full">
             <button
               onClick={() => {
                 setActiveTab("pending");
                 setPage(1);
               }}
-              className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === "pending" ? "bg-[#2A204C] text-white shadow-sm" : "text-gray-400 hover:text-gray-200"}`}
+              className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${activeTab === "pending" ? "bg-[#2A204C] text-white shadow-sm" : "text-gray-400 hover:text-gray-200"}`}
             >
               New Applications
             </button>
@@ -205,7 +199,7 @@ function AdminVendorManagement() {
                 setActiveTab("approved");
                 setPage(1);
               }}
-              className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === "approved" ? "bg-[#2A204C] text-white shadow-sm" : "text-gray-400 hover:text-gray-200"}`}
+              className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${activeTab === "approved" ? "bg-[#2A204C] text-white shadow-sm" : "text-gray-400 hover:text-gray-200"}`}
             >
               Approved Vendors
             </button>
@@ -214,7 +208,7 @@ function AdminVendorManagement() {
                 setActiveTab("suspended");
                 setPage(1);
               }}
-              className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === "suspended" ? "bg-[#2A204C] text-white shadow-sm" : "text-gray-400 hover:text-gray-200"}`}
+              className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${activeTab === "suspended" ? "bg-[#2A204C] text-white shadow-sm" : "text-gray-400 hover:text-gray-200"}`}
             >
               Suspended Vendors
             </button>
@@ -223,7 +217,7 @@ function AdminVendorManagement() {
                 setActiveTab("rejected");
                 setPage(1);
               }}
-              className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === "rejected" ? "bg-[#2A204C] text-white shadow-sm" : "text-gray-400 hover:text-gray-200"}`}
+              className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${activeTab === "rejected" ? "bg-[#2A204C] text-white shadow-sm" : "text-gray-400 hover:text-gray-200"}`}
             >
               Rejected Applications
             </button>
@@ -262,29 +256,27 @@ function AdminVendorManagement() {
             </div>
           </div>
 
-          {/* Data Table */}
-          <div className="bg-[#151221] border border-gray-800/80 rounded-xl overflow-hidden flex flex-col shrink-0">
-            <div className="overflow-hidden">
-              <table className="w-full text-left text-sm whitespace-nowrap">
-                <thead className="text-xs text-gray-300 font-semibold border-b border-gray-800 bg-[#131022]">
+          {/* Data Table Container */}
+          <div className="bg-[#151221] border border-gray-800/80 rounded-xl overflow-hidden flex flex-col shrink-0 shadow-xl">
+            <div className="w-full overflow-hidden">
+              <table className="w-full text-left text-sm">
+                <thead className="text-xs text-gray-400 font-semibold border-b border-gray-800 bg-[#131022]">
                   <tr className="h-12">
-                    <th className="px-6">App ID</th>
-                    <th className="px-6">Business Info</th>
-                    <th className="px-6">Contact</th>
-                    <th className="px-6">Category</th>
-                    <th className="px-6">Submitted</th>
-                    <th className="px-6">Status</th>
-                    <th className="px-6 text-right">Actions</th>
+                    <th className="px-4 text-left">App ID</th>
+                    <th className="px-4 text-left">Business Info</th>
+                    <th className="px-4 text-left">Contact</th>
+                    <th className="px-4 text-left">Category</th>
+                    <th className="px-4 text-left">Submitted</th>
+                    <th className="px-4 text-left">Status</th>
+                    <th className="px-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-800/50">
-                  {/* Empty state or dynamically mapped rows will go here */}
-
                   {loading ? (
                     <tr className="h-[288px]">
                       <td
                         colSpan="7"
-                        className="px-6 text-center text-gray-500"
+                        className="px-4 text-center text-gray-500"
                       >
                         <div className="flex items-center justify-center h-full">
                           Loading applications...
@@ -293,47 +285,47 @@ function AdminVendorManagement() {
                     </tr>
                   ) : vendors.length > 0 ? (
                     vendors.map((vendor) => (
-                      <tr key={vendor._id} className="h-[72px]">
-                        <td className="px-6">#{vendor._id.toString().slice(-6).toUpperCase()}</td>
-                        <td className="px-6">
+                      <tr key={vendor._id} className="h-[72px] hover:bg-[#1A162B] transition-colors">
+                        <td className="px-4 text-left font-mono text-gray-300 font-medium">#{vendor._id.toString().slice(-6).toUpperCase()}</td>
+                        <td className="px-4 text-left">
                           <div className="flex flex-col">
                             <span className="text-white font-medium font-sans">{vendor.businessName}</span>
-                            <span className="text-gray-500 text-xs font-sans ">{vendor.organizerName}</span>
+                            <span className="text-gray-500 text-xs font-sans">{vendor.organizerName}</span>
                           </div>
                         </td>
-                        <td className="px-6">
+                        <td className="px-4 text-left">
                           <div className="flex flex-col font-sans">
-                            <span className="text-gray-300">{vendor.businessEmail}</span>
+                            <span className="text-gray-300 truncate max-w-[200px]">{vendor.businessEmail}</span>
                             <span className="text-gray-500 text-xs">{vendor.contactPhone}</span>
                           </div>
                         </td>
-                        <td className="px-6">
-                          <span className="px-2 py-1 bg-purple-900/30 text-purple-400 rounded text-xs font-sans">
+                        <td className="px-4 text-left">
+                          <span className="px-2.5 py-1 bg-purple-900/30 text-purple-400 border border-purple-800/40 rounded-md text-xs font-medium font-sans inline-block">
                             {vendor.eventCategory}
                           </span>
                         </td>
-                        <td className="px-6 text-gray-400 font-sans">
+                        <td className="px-4 text-left text-gray-400 font-sans">
                           {new Date(vendor.createdAt).toLocaleDateString()}
                         </td>
-                        <td className="px-6">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium font-sans ${
+                        <td className="px-4 text-left">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium font-sans inline-block ${
                             vendor.isBlocked
                               ? 'bg-red-900/30 text-red-400 border border-red-800/30'
                               : vendor.applicationStatus === 'approved'
-                              ? 'bg-emerald-900/30 text-emerald-400'
+                              ? 'bg-emerald-900/30 text-emerald-400 border border-emerald-800/30'
                               : vendor.applicationStatus === 'pending'
-                              ? 'bg-amber-900/30 text-amber-400'
-                              : 'bg-red-900/30 text-red-400'
+                              ? 'bg-amber-900/30 text-amber-400 border border-amber-800/30'
+                              : 'bg-red-900/30 text-red-400 border border-red-800/30'
                             }`}>
                             {vendor.isBlocked
                               ? 'Suspended'
                               : vendor.applicationStatus.charAt(0).toUpperCase() + vendor.applicationStatus.slice(1)}
                           </span>
                         </td>
-                        <td className="px-6 text-right">
+                        <td className="px-4 text-right">
                           <Link
                             to={ADMIN_ROUTES.VENDOR_APPLICATION.replace(':id', vendor._id)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#2A204C] text-purple-300 hover:text-white rounded-lg text-xs font-medium transition-colors"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#2A204C] text-purple-300 hover:text-white hover:bg-purple-600 rounded-lg text-xs font-medium transition-all shadow-sm"
                           >
                             View Details
                             <ArrowRight className="w-3.5 h-3.5" />
@@ -345,7 +337,7 @@ function AdminVendorManagement() {
                     <tr className="h-[288px]">
                       <td
                         colSpan="7"
-                        className="px-6 text-center text-gray-500"
+                        className="px-4 text-center text-gray-500"
                       >
                         <div className="flex items-center justify-center h-full">
                           No applications found.
@@ -372,7 +364,7 @@ function AdminVendorManagement() {
                 <button
                   onClick={() => setPage((prev) => Math.max(1, prev - 1))}
                   disabled={page === 1}
-                  className="p-2 text-gray-400 hover:text-white disabled:opacity-50 transition-colors"
+                  className="p-2 text-gray-400 hover:text-white disabled:opacity-50 transition-colors cursor-pointer"
                 >
                   <ChevronLeft className="w-5 h-5" />
                 </button>
@@ -381,7 +373,7 @@ function AdminVendorManagement() {
                   <button
                     key={i}
                     onClick={() => setPage(i + 1)}
-                    className={`w-8 h-8 rounded-lg text-sm font-medium transition-all ${page === i + 1
+                    className={`w-8 h-8 rounded-lg text-sm font-medium transition-all cursor-pointer ${page === i + 1
                       ? "bg-purple-600 text-white shadow-lg shadow-purple-900/30"
                       : "text-gray-400 hover:bg-gray-800 hover:text-gray-200"
                       }`}
@@ -392,7 +384,7 @@ function AdminVendorManagement() {
 
                 <button
                   onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-                  className="p-2 text-gray-400 hover:text-white disabled:opacity-50 transition-colors"
+                  className="p-2 text-gray-400 hover:text-white disabled:opacity-50 transition-colors cursor-pointer"
                   disabled={page === totalPages || totalPages === 0}
                 >
                   <ChevronRight className="w-5 h-5" />
