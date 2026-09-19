@@ -44,19 +44,6 @@ const PaymentCheckout = () => {
   }
   checkoutData = checkoutData || {};
 
-  // Save latest valid checkout state to sessionStorage
-  React.useEffect(() => {
-    if (checkoutData && checkoutData.event) {
-      try {
-        sessionStorage.setItem('lastCheckoutState', JSON.stringify({
-          ...checkoutData,
-          appliedCoupon: appliedCoupon || checkoutData.appliedCoupon,
-          couponDiscount: couponDiscount || checkoutData.couponDiscount || 0
-        }));
-      } catch (e) {}
-    }
-  }, [checkoutData, appliedCoupon, couponDiscount]);
-
   const { 
     event, 
     selectedTier, 
@@ -75,6 +62,48 @@ const PaymentCheckout = () => {
   const effectiveTotalPlatformFee = Number(passedTotalPlatformFee) >= 0 
     ? Number(passedTotalPlatformFee) 
     : (effectivePlatformFeePerTicket * quantity) || Number(serviceFee) || 0;
+
+  // Local Form & Checkout States
+  const [paymentMethod, setPaymentMethod] = useState('razorpay'); // 'razorpay' | 'card' | 'venue'
+  const [couponInput, setCouponInput] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [availableCoupons, setAvailableCoupons] = useState([]);
+  const [loadingCoupons, setLoadingCoupons] = useState(false);
+  const [currentCouponIndex, setCurrentCouponIndex] = useState(0);
+
+  // Expiring Checkout Session State (10 Minutes)
+  const [sessionExpiresAt, setSessionExpiresAt] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('checkoutSessionExpiresAt');
+      if (saved && Number(saved) > Date.now()) {
+        return Number(saved);
+      }
+    } catch (e) {}
+    const defaultExp = Date.now() + 10 * 60 * 1000;
+    try {
+      sessionStorage.setItem('checkoutSessionExpiresAt', defaultExp.toString());
+    } catch (e) {}
+    return defaultExp;
+  });
+
+  const [timeLeft, setTimeLeft] = useState(() => Math.max(0, Math.floor((sessionExpiresAt - Date.now()) / 1000)));
+  const [isExpired, setIsExpired] = useState(() => (sessionExpiresAt - Date.now()) <= 0);
+
+  // Save latest valid checkout state to sessionStorage
+  React.useEffect(() => {
+    if (checkoutData && checkoutData.event) {
+      try {
+        sessionStorage.setItem('lastCheckoutState', JSON.stringify({
+          ...checkoutData,
+          appliedCoupon: appliedCoupon || checkoutData.appliedCoupon,
+          couponDiscount: couponDiscount || checkoutData.couponDiscount || 0
+        }));
+      } catch (e) {}
+    }
+  }, [checkoutData, appliedCoupon, couponDiscount]);
 
   // Verify event status (blocked / deleted) whenever user enters checkout page
   React.useEffect(() => {
@@ -113,17 +142,6 @@ const PaymentCheckout = () => {
       isMounted = false;
     };
   }, [event?._id, event?.id, checkoutData?.event?._id, checkoutData?.event?.id, navigate]);
-
-  // Local Form & Checkout States
-  const [paymentMethod, setPaymentMethod] = useState('razorpay'); // 'razorpay' | 'card' | 'venue'
-  const [couponInput, setCouponInput] = useState('');
-  const [appliedCoupon, setAppliedCoupon] = useState(null);
-  const [couponDiscount, setCouponDiscount] = useState(0);
-  const [applyingCoupon, setApplyingCoupon] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [availableCoupons, setAvailableCoupons] = useState([]);
-  const [loadingCoupons, setLoadingCoupons] = useState(false);
-  const [currentCouponIndex, setCurrentCouponIndex] = useState(0);
 
   const handleNextCouponCard = () => {
     if (availableCoupons.length <= 1) return;
@@ -184,24 +202,6 @@ const PaymentCheckout = () => {
       isMounted = false;
     };
   }, [event]);
-
-  // Expiring Checkout Session State (10 Minutes)
-  const [sessionExpiresAt, setSessionExpiresAt] = useState(() => {
-    try {
-      const saved = sessionStorage.getItem('checkoutSessionExpiresAt');
-      if (saved && Number(saved) > Date.now()) {
-        return Number(saved);
-      }
-    } catch (e) {}
-    const defaultExp = Date.now() + 10 * 60 * 1000;
-    try {
-      sessionStorage.setItem('checkoutSessionExpiresAt', defaultExp.toString());
-    } catch (e) {}
-    return defaultExp;
-  });
-
-  const [timeLeft, setTimeLeft] = useState(() => Math.max(0, Math.floor((sessionExpiresAt - Date.now()) / 1000)));
-  const [isExpired, setIsExpired] = useState(() => (sessionExpiresAt - Date.now()) <= 0);
 
   // Real-time countdown tick
   React.useEffect(() => {
