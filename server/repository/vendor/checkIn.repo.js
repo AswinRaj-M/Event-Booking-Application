@@ -19,10 +19,9 @@ export const findBookingByQrTokenRepo = async (qrToken) => {
     });
 };
 
-export const updateBookingCheckInRepo = async (bookingId, vendorId) => {
+export const updateBookingCheckInRepo = async (bookingId, vendorId, targetQrToken) => {
   const checkInDate = new Date();
 
-  // Find document and update all valid tickets in array
   const booking = await Booking.findById(bookingId)
     .populate({
       path: "eventId",
@@ -35,11 +34,17 @@ export const updateBookingCheckInRepo = async (bookingId, vendorId) => {
 
   if (!booking) return null;
 
-  booking.isCheckedIn = true;
-  booking.checkedInAt = checkInDate;
-  booking.checkedInBy = vendorId;
+  let matchedTicket = null;
 
-  if (booking.tickets && booking.tickets.length > 0) {
+  if (targetQrToken && booking.tickets && booking.tickets.length > 0) {
+    matchedTicket = booking.tickets.find(t => t.qrCodeToken === targetQrToken || t.ticketId === targetQrToken);
+  }
+
+  if (matchedTicket) {
+    matchedTicket.status = "checked-in";
+    matchedTicket.checkedInAt = checkInDate;
+    matchedTicket.checkedInBy = vendorId;
+  } else if (booking.tickets && booking.tickets.length > 0) {
     booking.tickets.forEach(ticket => {
       if (ticket.status !== "cancelled") {
         ticket.status = "checked-in";
@@ -49,8 +54,17 @@ export const updateBookingCheckInRepo = async (bookingId, vendorId) => {
     });
   }
 
+  const allCheckedIn = booking.tickets && booking.tickets.length > 0
+    && booking.tickets.every(t => t.status === "checked-in" || t.status === "cancelled");
+
+  if (allCheckedIn || !booking.tickets || booking.tickets.length === 0) {
+    booking.isCheckedIn = true;
+    booking.checkedInAt = checkInDate;
+    booking.checkedInBy = vendorId;
+  }
+
   await booking.save();
-  return booking;
+  return { booking, matchedTicket };
 };
 
 export const findVendorRecentCheckInsRepo = async (vendorId, limit = 20) => {

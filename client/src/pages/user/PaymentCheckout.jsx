@@ -395,10 +395,15 @@ const PaymentCheckout = () => {
       setIsProcessing(true);
 
       // Step 1: Create Razorpay order on backend
+      const itemsPayload = checkoutData.items && checkoutData.items.length > 0
+        ? checkoutData.items.map(it => ({ tierId: it.tierId, quantity: it.quantity }))
+        : undefined;
+
       const orderPayload = {
         eventId: targetEventId,
         tierId: (tierId && tierId !== "undefined" && tierId !== "null") ? tierId : (selectedTier?._id || undefined),
         quantity: Number(quantity) || 1,
+        items: itemsPayload,
         couponCode: appliedCoupon?.code ? appliedCoupon.code.trim().toUpperCase() : undefined
       };
 
@@ -716,12 +721,28 @@ const PaymentCheckout = () => {
 
                   {/* Price Breakdown */}
                   <div className="pt-4 border-t border-gray-800/80 space-y-2.5">
-                    <div className="flex justify-between items-center text-gray-300">
-                      <span>
-                        Ticket Price ({selectedTier?.name || 'Standard'} ₹{ticketPrice.toFixed(2)} <span className="text-purple-400 font-bold">x{quantity}</span>)
-                      </span>
-                      <span className="font-semibold text-white">₹{subtotal.toFixed(2)}</span>
-                    </div>
+                    {checkoutData.items && checkoutData.items.length > 0 ? (
+                      <div className="space-y-1.5 pb-2 border-b border-gray-800/40">
+                        <span className="text-[10px] text-purple-400 font-bold uppercase tracking-wider block mb-1">
+                          Purchased Tiers ({checkoutData.items.length})
+                        </span>
+                        {checkoutData.items.map((it, idx) => (
+                          <div key={idx} className="flex justify-between items-center text-gray-300">
+                            <span>
+                              {it.tierName || 'Tier'} (₹{Number(it.ticketPrice || 0).toFixed(2)} <span className="text-purple-400 font-bold">x{it.quantity}</span>)
+                            </span>
+                            <span className="font-semibold text-white">₹{(Number(it.ticketPrice || 0) * Number(it.quantity || 1)).toFixed(2)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex justify-between items-center text-gray-300">
+                        <span>
+                          Ticket Price ({selectedTier?.name || 'Standard'} ₹{ticketPrice.toFixed(2)} <span className="text-purple-400 font-bold">x{quantity}</span>)
+                        </span>
+                        <span className="font-semibold text-white">₹{subtotal.toFixed(2)}</span>
+                      </div>
+                    )}
 
                     {effectiveTotalPlatformFee > 0 && (
                       <div className="flex justify-between items-center text-gray-400">

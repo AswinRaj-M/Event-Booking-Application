@@ -14,13 +14,14 @@ import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
  */
 export const createRazorpayOrder = async (req, res) => {
   const userId = req.user._id;
-  const { eventId, tierId, quantity, couponCode } = req.body;
+  const { eventId, tierId, quantity, couponCode, items } = req.body;
 
   const result = await createRazorpayOrderService(userId, {
     eventId,
     tierId,
     quantity,
-    couponCode
+    couponCode,
+    items
   });
 
   return res.status(HTTP_STATUS.CREATED).json({

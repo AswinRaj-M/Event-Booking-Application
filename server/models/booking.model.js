@@ -7,6 +7,22 @@ export const ticketSchema = new mongoose.Schema({
     type : String,
     required : true
   },
+  tierId :{
+    type : mongoose.Schema.Types.ObjectId,
+    required : false
+  },
+  tierName : {
+    type : String,
+    default : "Standard",
+  },
+  ticketPrice : {
+    type : Number,
+    default : 0,
+  },
+  quantity : {
+    type : Number,
+    default : 1,
+  },
   qrCodeToken :{
     type : String,
     default: null

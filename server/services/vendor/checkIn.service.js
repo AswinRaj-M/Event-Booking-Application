@@ -43,7 +43,17 @@ export const validateAndCheckInBookingService = async (vendorId, qrToken) => {
     throw new AppError("This booking was cancelled and refunded. Admission denied.", HTTP_STATUS.BAD_REQUEST);
   }
 
-  // Prevent duplicate check-in
+  // Check if specific scanned tier ticket was already checked in
+  const targetTicket = booking.tickets?.find(t => t.qrCodeToken === cleanToken);
+  if (targetTicket && targetTicket.status === "checked-in") {
+    const checkedInTime = targetTicket.checkedInAt ? new Date(targetTicket.checkedInAt).toLocaleString() : "previously";
+    throw new AppError(
+      `Duplicate Entry Warning: The "${targetTicket.tierName}" tier pass for booking (#${booking.bookingId}) was already checked in on ${checkedInTime}.`,
+      HTTP_STATUS.CONFLICT
+    );
+  }
+
+  // Prevent duplicate check-in for full booking
   if (booking.isCheckedIn || (booking.tickets && booking.tickets.length > 0 && booking.tickets.every(t => t.status === "checked-in"))) {
     const checkedInTime = booking.checkedInAt ? new Date(booking.checkedInAt).toLocaleString() : "previously";
     throw new AppError(
@@ -52,16 +62,19 @@ export const validateAndCheckInBookingService = async (vendorId, qrToken) => {
     );
   }
 
-  // Perform Booking Check-in
-  const updatedBooking = await updateBookingCheckInRepo(booking._id, vendorId);
+  // Perform Tier / Booking Check-in
+  const { booking: updatedBooking, matchedTicket } = await updateBookingCheckInRepo(booking._id, vendorId, cleanToken);
+  const admittedTier = matchedTicket || targetTicket || (updatedBooking.tickets?.[0]);
+  const admittedQuantity = admittedTier?.quantity || updatedBooking.quantity;
+  const admittedTierName = admittedTier?.tierName || updatedBooking.tierName;
 
-  // 7. TICKET_CHECKED_IN notification
+  // TICKET_CHECKED_IN notification
   try {
     const attendeeUserId = updatedBooking.userId?._id ? updatedBooking.userId._id : updatedBooking.userId;
     if (attendeeUserId) {
       sendNotification(attendeeUserId, {
         title: "Ticket Checked-In 🎟️",
-        message: `Your ticket for "${updatedBooking.eventId?.title || "Event"}" has been checked in successfully. Enjoy the event!`,
+        message: `Your ${admittedTierName} pass (${admittedQuantity} ticket(s)) for "${updatedBooking.eventId?.title || "Event"}" has been checked in successfully. Enjoy the event!`,
         type: "TICKET_CHECKED_IN",
       });
     }
@@ -71,23 +84,23 @@ export const validateAndCheckInBookingService = async (vendorId, qrToken) => {
 
   return {
     success: true,
-    message: `Check-in successful! Admitted ${booking.quantity} attendee(s).`,
-    admittedCount: booking.quantity,
+    message: `Check-in successful! Admitted ${admittedQuantity} attendee(s) for "${admittedTierName}" tier.`,
+    admittedCount: admittedQuantity,
     booking: {
       id: updatedBooking._id,
       bookingId: updatedBooking.bookingId || updatedBooking._id,
-      eventTitle: updatedBooking.eventId.title,
-      eventType: updatedBooking.eventId.eventType,
-      venue: updatedBooking.eventId.venue,
-      city: updatedBooking.eventId.city,
-      tierName: updatedBooking.tierName,
-      quantity: updatedBooking.quantity,
-      ticketPrice: updatedBooking.ticketPrice,
+      eventTitle: updatedBooking.eventId?.title,
+      eventType: updatedBooking.eventId?.eventType,
+      venue: updatedBooking.eventId?.venue,
+      city: updatedBooking.eventId?.city,
+      tierName: admittedTierName,
+      quantity: admittedQuantity,
+      ticketPrice: admittedTier?.ticketPrice || updatedBooking.ticketPrice,
       totalAmount: updatedBooking.totalAmount,
       attendeeName: updatedBooking.userId?.fullName || "Guest",
       attendeeEmail: updatedBooking.userId?.email || "N/A",
       attendeePhone: updatedBooking.userId?.phoneNumber || "N/A",
-      checkedInAt: updatedBooking.checkedInAt,
+      checkedInAt: admittedTier?.checkedInAt || updatedBooking.checkedInAt,
       tickets: updatedBooking.tickets
     }
   };

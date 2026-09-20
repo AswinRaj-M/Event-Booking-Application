@@ -8,7 +8,8 @@ import {
   Download, 
   ArrowLeft,
   Loader2,
-  AlertTriangle
+  AlertTriangle,
+  CheckCircle2
 } from "lucide-react";
 import { toPng } from "html-to-image";
 import { getBookingDetails } from "../../services/user.api.js";
@@ -23,6 +24,7 @@ const TicketViewPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [downloading, setDownloading] = useState(false);
+  const [selectedTierPassIndex, setSelectedTierPassIndex] = useState(0);
   const ticketPassRef = useRef(null);
 
   useEffect(() => {
@@ -273,28 +275,82 @@ const TicketViewPage = () => {
               
               {/* Header */}
               <div className="w-full">
-                <h3 className="text-base sm:text-lg font-bold text-white">Entry Pass</h3>
-                <p className="text-xs text-zinc-400 font-medium mt-0.5">Scan at the gate</p>
+                <h3 className="text-base sm:text-lg font-bold text-white">Tier Entry Passes</h3>
+                <p className="text-xs text-zinc-400 font-medium mt-0.5">1 QR Code generated per tier</p>
               </div>
 
-              {/* QR Code Container */}
-              <div className="my-6 p-3 sm:p-3.5 bg-white rounded-2xl shadow-2xl flex items-center justify-center">
-                {booking.qrCodeImage ? (
-                  <img 
-                    src={booking.qrCodeImage} 
-                    alt="Entry Pass QR Code" 
-                    className="w-44 h-44 sm:w-48 sm:h-48 object-contain rounded-lg"
-                  />
-                ) : (
-                  <div className="w-44 h-44 sm:w-48 sm:h-48 flex flex-col items-center justify-center text-zinc-400 text-xs">
-                    <Loader2 className="w-8 h-8 animate-spin text-purple-600 mb-2" />
-                    <span className="font-bold text-zinc-700">Generating QR...</span>
+              {/* Tier Passes Selector if multiple tiers */}
+              {booking.tickets && booking.tickets.length > 1 && (
+                <div className="w-full my-3 flex flex-wrap gap-1.5 justify-center">
+                  {booking.tickets.map((t, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setSelectedTierPassIndex(idx)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        selectedTierPassIndex === idx
+                          ? "bg-purple-600 text-white shadow-md shadow-purple-900/40"
+                          : "bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800"
+                      }`}
+                    >
+                      {t.tierName || `Tier ${idx + 1}`} ({t.quantity})
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Selected Tier Item details */}
+              {(() => {
+                const currentTierItem = (booking.tickets && booking.tickets.length > 0)
+                  ? (booking.tickets[selectedTierPassIndex] || booking.tickets[0])
+                  : null;
+
+                const tierName = currentTierItem?.tierName || booking.tierName || "Pass";
+                const tierQty = currentTierItem?.quantity || booking.quantity || 1;
+                const qrImg = currentTierItem?.qrCodeImage || booking.qrCodeImage;
+                const isCheckedIn = currentTierItem?.status === "checked-in" || booking.isCheckedIn;
+
+                return (
+                  <div className="w-full flex flex-col items-center">
+                    {/* Tier Badge & Quantity Info */}
+                    <div className="mt-2 mb-3 px-3 py-1 bg-purple-950/60 border border-purple-500/30 rounded-full flex items-center gap-1.5">
+                      <TicketIcon className="w-3.5 h-3.5 text-purple-400" />
+                      <span className="text-xs font-bold text-purple-300">
+                        {tierName} • {tierQty} {tierQty > 1 ? "Passes" : "Pass"}
+                      </span>
+                    </div>
+
+                    {/* QR Code Container */}
+                    <div className="my-3 p-3 sm:p-3.5 bg-white rounded-2xl shadow-2xl flex flex-col items-center justify-center relative">
+                      {qrImg ? (
+                        <img 
+                          src={qrImg} 
+                          alt={`${tierName} Entry Pass QR Code`} 
+                          className="w-44 h-44 sm:w-48 sm:h-48 object-contain rounded-lg"
+                        />
+                      ) : (
+                        <div className="w-44 h-44 sm:w-48 sm:h-48 flex flex-col items-center justify-center text-zinc-400 text-xs">
+                          <Loader2 className="w-8 h-8 animate-spin text-purple-600 mb-2" />
+                          <span className="font-bold text-zinc-700">Generating QR...</span>
+                        </div>
+                      )}
+                      {isCheckedIn && (
+                        <div className="absolute inset-0 bg-black/80 backdrop-blur-xs rounded-2xl flex flex-col items-center justify-center p-3 text-emerald-400 space-y-1">
+                          <CheckCircle2 className="w-10 h-10" />
+                          <span className="font-extrabold text-xs uppercase tracking-wider">Checked In</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <p className="text-[11px] text-zinc-400 font-medium mb-4">
+                      This QR code admits all <strong className="text-white">{tierQty}</strong> attendee(s) for <strong className="text-purple-300">{tierName}</strong> tier.
+                    </p>
                   </div>
-                )}
-              </div>
+                );
+              })()}
 
               {/* Ticket Holder Name */}
-              <div className="w-full mb-6">
+              <div className="w-full mb-4">
                 <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block">Ticket Holder</span>
                 <span className="text-base font-bold text-white mt-0.5 block">{holderName}</span>
               </div>

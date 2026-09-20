@@ -103,6 +103,7 @@ const UserEventDetails = () => {
 
   const [quantity, setQuantity] = useState(1);
   const [selectedTierIndex, setSelectedTierIndex] = useState(0);
+  const [tierQuantities, setTierQuantities] = useState({});
   const [isBooking, setIsBooking] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [activeImage, setActiveImage] = useState(null);
@@ -124,6 +125,13 @@ const UserEventDetails = () => {
             return;
           }
           setEvent(foundEvent);
+          if (foundEvent?.ticketTiers && foundEvent.ticketTiers.length > 0) {
+            const initialQty = {};
+            foundEvent.ticketTiers.forEach((tier) => {
+              initialQty[tier._id] = 0;
+            });
+            setTierQuantities(initialQty);
+          }
           
           try {
             const exploreRes = await getExploreEvents({ limit: 9 });
@@ -195,12 +203,51 @@ const UserEventDetails = () => {
  
   const isFree = event?.ticketType === "Free";
 
+  const selectedItems = useMemo(() => {
+    if (!event) return [];
+    if (isFree) {
+      const freeTier = event.ticketTiers?.[0];
+      const tierId = freeTier?._id || event._id;
+      const tierName = freeTier?.name || "General Admission";
+      return [{
+        tierId,
+        tierName,
+        ticketPrice: 0,
+        quantity: quantity || 1
+      }];
+    }
+    if (event.ticketTiers && event.ticketTiers.length > 0) {
+      return event.ticketTiers
+        .map((tier) => {
+          const qty = tierQuantities[tier._id] || 0;
+          return {
+            tierId: tier._id,
+            tierName: tier.name,
+            ticketPrice: tier.price || 0,
+            quantity: qty,
+            tierObj: tier
+          };
+        })
+        .filter((item) => item.quantity > 0);
+    }
+    return [{
+      tierId: event._id,
+      tierName: "Standard",
+      ticketPrice: event.ticketPrice || 0,
+      quantity: quantity || 1
+    }];
+  }, [event, isFree, tierQuantities, quantity]);
+
+  const totalSelectedQuantity = useMemo(() => {
+    return selectedItems.reduce((sum, item) => sum + item.quantity, 0);
+  }, [selectedItems]);
+
   const ticketPrice = useMemo(() => {
-    if (event?.ticketTiers && event.ticketTiers.length > 0) {
-      return event.ticketTiers[selectedTierIndex]?.price || 0;
+    if (selectedItems.length > 0) {
+      return selectedItems[0].ticketPrice;
     }
     return event?.ticketPrice || 0;
-  }, [event, selectedTierIndex]);
+  }, [selectedItems, event]);
 
   const availableSeats = useMemo(() => {
     if (!event) return 0;
@@ -249,11 +296,11 @@ const UserEventDetails = () => {
   }, []);
 
   const platformFee = isFree ? 0 : platformFeePerTicket;
-  const totalPlatformFee = platformFee * quantity;
+  const totalPlatformFee = platformFee * totalSelectedQuantity;
   const serviceFee = totalPlatformFee;
 
   const discountPercent = useMemo(() => {
-    if (event?.offer?.enabled && quantity >= (event.offer.minTicketsRequired || 0)) {
+    if (event?.offer?.enabled && totalSelectedQuantity >= (event.offer.minTicketsRequired || 0)) {
       const now = new Date();
       let valid = true;
       if (event.offer.validFrom) {
@@ -272,11 +319,15 @@ const UserEventDetails = () => {
       }
     }
     return 0;
-  }, [event?.offer, quantity]);
+  }, [event?.offer, totalSelectedQuantity]);
 
-  const subtotal = isFree ? 0 : ticketPrice * quantity;
+  const subtotal = useMemo(() => {
+    if (isFree) return 0;
+    return selectedItems.reduce((sum, item) => sum + (item.ticketPrice * item.quantity), 0);
+  }, [isFree, selectedItems]);
+
   const discountAmount = (subtotal * discountPercent) / 100;
-  const totalAmount = isFree ? 0 : subtotal - discountAmount + totalPlatformFee;
+  const totalAmount = isFree ? 0 : Math.max(0, subtotal - discountAmount + totalPlatformFee);
 
   const isEventCompleted = useMemo(() => {
     if (!event) return false;
@@ -316,20 +367,19 @@ const UserEventDetails = () => {
       navigate(USER_ROUTES.EXPLORE, { replace: true });
       return;
     }
-    if (availableSeats <= 0) {
-      toast.error("This ticket tier is sold out!");
+    if (selectedItems.length === 0 || totalSelectedQuantity === 0) {
+      toast.error("Please select at least 1 ticket to book!");
       return;
     }
-    const tier = !isFree && event?.ticketTiers?.[selectedTierIndex] 
-      ? event.ticketTiers[selectedTierIndex] 
-      : null;
 
+    const primaryItem = selectedItems[0] || {};
     const checkoutState = {
       event,
-      selectedTier: tier,
-      tierId: tier?._id,
-      quantity,
-      ticketPrice: isFree ? 0 : ticketPrice,
+      selectedTier: primaryItem.tierObj || null,
+      tierId: primaryItem.tierId,
+      items: selectedItems,
+      quantity: totalSelectedQuantity,
+      ticketPrice: primaryItem.ticketPrice,
       subtotal,
       platformFee,
       totalPlatformFee,
@@ -778,24 +828,27 @@ const UserEventDetails = () => {
                 {/* Ticket Tier Cards Selection if multiple tiers exist */}
                 {!isFree && event?.ticketTiers && event.ticketTiers.length > 0 && (
                   <div className="mb-6 space-y-3">
-                    <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold block mb-1">Select Ticket Tier</label>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold block">Select Ticket Tiers</label>
+                      <span className="text-[10px] text-purple-400 font-bold">Multi-tier purchase available</span>
+                    </div>
                     <div className="grid grid-cols-1 gap-3">
                       {event.ticketTiers.map((tier, idx) => {
-                        const left = tier.capacity - (tier.sold || 0);
-                        const isSelected = selectedTierIndex === idx;
+                        const left = (tier.capacity || 0) - (tier.sold || 0);
+                        const qty = tierQuantities[tier._id] || 0;
                         const isSoldOut = left <= 0;
+                        const isSelected = qty > 0;
                         
                         return (
                           <div
-                            key={idx}
-                            onClick={() => setSelectedTierIndex(idx)}
-                            className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between gap-3 text-left relative ${
+                            key={tier._id || idx}
+                            className={`p-4 rounded-2xl border transition-all flex flex-col justify-between gap-3 text-left relative ${
                               isSelected
-                                ? "bg-[#1c1437]/50 border-purple-500/70 shadow-[0_0_15px_rgba(139,92,246,0.15)]"
+                                ? "bg-[#1c1437]/60 border-purple-500/70 shadow-[0_0_15px_rgba(139,92,246,0.2)]"
                                 : "bg-[#120f26]/40 border-purple-900/25 hover:border-purple-500/30"
                             } ${isSoldOut ? "opacity-60" : ""}`}
                           >
-                            <div className="flex justify-between items-start pr-4">
+                            <div className="flex justify-between items-start">
                               <div>
                                 <h4 className="font-bold text-white text-sm tracking-tight">{tier.name}</h4>
                                 <span className={`text-[10px] font-semibold block mt-0.5 ${isSoldOut ? "text-rose-500" : "text-purple-400"}`}>
@@ -820,13 +873,43 @@ const UserEventDetails = () => {
                                 </ul>
                               </div>
                             )}
-                            
-                            {/* Checkmark indicator for selected */}
-                            {isSelected && (
-                              <div className="absolute top-4 right-4 flex items-center justify-center w-4 h-4 bg-purple-500 rounded-full">
-                                <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+
+                            {/* Per-Tier Quantity Stepper */}
+                            <div className="pt-2 border-t border-purple-950/40 flex items-center justify-between">
+                              <span className="text-[11px] text-zinc-400 font-semibold">Quantity</span>
+                              <div className="flex items-center gap-2.5">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setTierQuantities(prev => ({
+                                      ...prev,
+                                      [tier._id]: Math.max(0, (prev[tier._id] || 0) - 1)
+                                    }));
+                                  }}
+                                  disabled={qty <= 0 || isSoldOut}
+                                  className="w-7 h-7 rounded-lg bg-[#1a1437]/80 hover:bg-[#251b4c] border border-purple-500/20 text-purple-300 hover:text-white flex items-center justify-center transition-all cursor-pointer disabled:opacity-30 disabled:pointer-events-none"
+                                >
+                                  <Minus className="w-3 h-3" />
+                                </button>
+                                <span className="text-white font-extrabold text-sm w-5 text-center">{qty}</span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const maxAllowed = Math.min(event?.maxTicketPerPerson || 5, left);
+                                    setTierQuantities(prev => ({
+                                      ...prev,
+                                      [tier._id]: Math.min(maxAllowed, (prev[tier._id] || 0) + 1)
+                                    }));
+                                  }}
+                                  disabled={isSoldOut || qty >= Math.min(event?.maxTicketPerPerson || 5, left)}
+                                  className="w-7 h-7 rounded-lg bg-[#1a1437]/80 hover:bg-[#251b4c] border border-purple-500/20 text-purple-300 hover:text-white flex items-center justify-center transition-all cursor-pointer disabled:opacity-30 disabled:pointer-events-none"
+                                >
+                                  <Plus className="w-3 h-3" />
+                                </button>
                               </div>
-                            )}
+                            </div>
                           </div>
                         );
                       })}
@@ -892,39 +975,41 @@ const UserEventDetails = () => {
                   </div>
                 ) : (
                   <>
-                    {/* Quantity Control Stepper */}
-                    <div className="mb-6 bg-[#120f26]/60 border border-purple-900/10 rounded-2xl p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <span className="text-white text-sm font-bold tracking-tight">Quantity</span>
-                          <span className={`${availableSeats > 0 ? "text-purple-400" : "text-rose-500"} text-[10px] font-semibold block mt-0.5`}>
-                            {availableSeats > 0 ? `${availableSeats} tickets left` : "Sold Out"}
-                          </span>
-                        </div>
+                    {/* Quantity Control Stepper (only for events without defined ticket tiers) */}
+                    {(!event?.ticketTiers || event.ticketTiers.length === 0) && (
+                      <div className="mb-6 bg-[#120f26]/60 border border-purple-900/10 rounded-2xl p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="text-white text-sm font-bold tracking-tight">Quantity</span>
+                            <span className={`${availableSeats > 0 ? "text-purple-400" : "text-rose-500"} text-[10px] font-semibold block mt-0.5`}>
+                              {availableSeats > 0 ? `${availableSeats} tickets left` : "Sold Out"}
+                            </span>
+                          </div>
 
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                            disabled={quantity <= 1}
-                            className="w-8 h-8 rounded-lg bg-[#1a1437]/80 hover:bg-[#251b4c] border border-purple-500/20 text-purple-300 hover:text-white flex items-center justify-center transition-all cursor-pointer disabled:opacity-40 disabled:pointer-events-none"
-                          >
-                            <Minus className="w-3.5 h-3.5" />
-                          </button>
-                          
-                          <span className="text-white font-extrabold text-base w-6 text-center">
-                            {quantity}
-                          </span>
-                          
-                          <button
-                            onClick={() => setQuantity(q => Math.min(maxQuantity, q + 1))}
-                            disabled={quantity >= maxQuantity || availableSeats <= 0}
-                            className="w-8 h-8 rounded-lg bg-[#1a1437]/80 hover:bg-[#251b4c] border border-purple-500/20 text-purple-300 hover:text-white flex items-center justify-center transition-all cursor-pointer disabled:opacity-40 disabled:pointer-events-none"
-                          >
-                            <Plus className="w-3.5 h-3.5" />
-                          </button>
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                              disabled={quantity <= 1}
+                              className="w-8 h-8 rounded-lg bg-[#1a1437]/80 hover:bg-[#251b4c] border border-purple-500/20 text-purple-300 hover:text-white flex items-center justify-center transition-all cursor-pointer disabled:opacity-40 disabled:pointer-events-none"
+                            >
+                              <Minus className="w-3.5 h-3.5" />
+                            </button>
+                            
+                            <span className="text-white font-extrabold text-base w-6 text-center">
+                              {quantity}
+                            </span>
+                            
+                            <button
+                              onClick={() => setQuantity(q => Math.min(maxQuantity, q + 1))}
+                              disabled={quantity >= maxQuantity || availableSeats <= 0}
+                              className="w-8 h-8 rounded-lg bg-[#1a1437]/80 hover:bg-[#251b4c] border border-purple-500/20 text-purple-300 hover:text-white flex items-center justify-center transition-all cursor-pointer disabled:opacity-40 disabled:pointer-events-none"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* Financial breakdown */}
                     {!isFree && (

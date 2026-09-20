@@ -32,8 +32,13 @@ const getRazorpayInstance = () => {
 };
 
 
-export const createRazorpayOrderService = async (userId, { eventId, tierId, quantity, couponCode }) => {
-  if (!eventId || !quantity || Number(quantity) <= 0) {
+export const createRazorpayOrderService = async (userId, { eventId, tierId, quantity, couponCode, items }) => {
+  const isMultiTier = Array.isArray(items) && items.length > 0;
+  const totalQuantity = isMultiTier
+    ? items.reduce((sum, it) => sum + (Number(it.quantity) || 0), 0)
+    : Number(quantity || 0);
+
+  if (!eventId || totalQuantity <= 0) {
     throw new AppError("Valid Event ID and Quantity are required", HTTP_STATUS.BAD_REQUEST);
   }
 
@@ -53,8 +58,9 @@ export const createRazorpayOrderService = async (userId, { eventId, tierId, quan
     userId,
     eventId,
     tierId,
-    Number(quantity),
-    couponCode
+    totalQuantity,
+    couponCode,
+    items
   );
 
   if (!booking || booking.totalAmount === undefined || booking.totalAmount === null) {
