@@ -10,6 +10,9 @@ import {
 import { createPendingBookingService, confirmBookingAfterPaymentService } from "./booking.service.js";
 import Booking from "../../models/booking.model.js";
 import Event from "../../models/event.model.js";
+import User from "../../models/user.model.js";
+import UserWalletTransaction from "../../models/userWalletTransaction.model.js";
+import { createUserWalletTransactionRepo } from "../../repository/user/userWallet.repo.js";
 import { AppError } from "../../utils/AppError.js";
 import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
 
@@ -287,3 +290,97 @@ export const getPaymentByIdService = async (userId, paymentId) => {
 export const getUserPaymentsService = async (userId) => {
   return await findPaymentsByUserIdRepo(userId);
 };
+
+/**
+ * 6. Pay with Wallet Service
+ */
+export const payWithWalletService = async (userId, { eventId, tierId, quantity, couponCode, items }) => {
+  const isMultiTier = Array.isArray(items) && items.length > 0;
+  const totalQuantity = isMultiTier
+    ? items.reduce((sum, it) => sum + (Number(it.quantity) || 0), 0)
+    : Number(quantity || 0);
+
+  if (!eventId || totalQuantity <= 0) {
+    throw new AppError("Valid Event ID and Quantity are required", HTTP_STATUS.BAD_REQUEST);
+  }
+
+  const event = await Event.findOne({ _id: eventId, isDeleted: false });
+  if (!event) {
+    throw new AppError("Event not found or is currently unavailable", HTTP_STATUS.NOT_FOUND);
+  }
+  if (event.isBlocked) {
+    throw new AppError("This event is blocked by admin", HTTP_STATUS.FORBIDDEN);
+  }
+  if (event.eventStatus === "cancelled" || event.eventStatus === "draft") {
+    throw new AppError(`This event is currently ${event.eventStatus} and unavailable for booking`, HTTP_STATUS.BAD_REQUEST);
+  }
+
+  // Step A: Create initial pending booking
+  const booking = await createPendingBookingService(
+    userId,
+    eventId,
+    tierId,
+    totalQuantity,
+    couponCode,
+    items
+  );
+
+  if (!booking || booking.totalAmount === undefined || booking.totalAmount === null) {
+    throw new AppError("Failed to initiate event booking", HTTP_STATUS.INTERNAL_SERVER_ERROR);
+  }
+
+  const payableAmount = booking.totalAmount;
+
+  // Step B: Atomic wallet balance check & deduction to prevent negative balance or double spending
+  const user = await User.findOneAndUpdate(
+    { _id: userId, walletBalance: { $gte: payableAmount } },
+    { $inc: { walletBalance: -payableAmount } },
+    { new: true }
+  );
+
+  if (!user) {
+    booking.bookingStatus = "failed";
+    booking.paymentStatus = "failed";
+    booking.isInventoryReleased = true;
+    await booking.save();
+
+    throw new AppError("Insufficient wallet balance to complete this transaction", HTTP_STATUS.BAD_REQUEST);
+  }
+
+  const walletOrderId = `wallet_ord_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const walletPaymentId = `wallet_pay_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
+  // Step C: Record Payment document
+  const paymentRecord = await createPaymentRepo({
+    userId,
+    orderId: booking._id,
+    razorpayOrderId: walletOrderId,
+    razorpayPaymentId: walletPaymentId,
+    razorpaySignature: "wallet_payment",
+    amount: payableAmount,
+    currency: "INR",
+    status: "SUCCESS",
+    receipt: `rcpt_wlt_${booking._id.toString().slice(-8)}`,
+    paymentMethod: "wallet"
+  });
+
+  // Step D: Record UserWalletTransaction document
+  await createUserWalletTransactionRepo({
+    userId,
+    amount: payableAmount,
+    transactionType: "purchase",
+    description: `Ticket purchase for ${event.title} (Booking ID: ${booking._id})`
+  });
+
+  // Step E: Confirm booking (generates per-tier QR codes, updates sold count, processes vendor wallet earnings & admin commission)
+  await confirmBookingAfterPaymentService(booking._id);
+
+  return {
+    success: true,
+    message: "Payment completed successfully using Wallet",
+    bookingId: booking._id,
+    paymentId: paymentRecord._id,
+    newWalletBalance: user.walletBalance
+  };
+};
+

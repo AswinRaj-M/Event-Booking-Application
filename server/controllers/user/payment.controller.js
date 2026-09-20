@@ -3,7 +3,8 @@ import {
   verifyPaymentSignatureService,
   recordPaymentFailureService,
   getPaymentByIdService,
-  getUserPaymentsService
+  getUserPaymentsService,
+  payWithWalletService
 } from "../../services/user/payment.service.js";
 import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
 
@@ -27,6 +28,30 @@ export const createRazorpayOrder = async (req, res) => {
   return res.status(HTTP_STATUS.CREATED).json({
     success: true,
     message: "Razorpay order created successfully",
+    ...result
+  });
+};
+
+/**
+ * @desc Pay with Wallet
+ * @route POST /api/payments/pay-with-wallet
+ * @access Private (User)
+ */
+export const payWithWallet = async (req, res) => {
+  const userId = req.user._id;
+  const { eventId, tierId, quantity, couponCode, items } = req.body;
+
+  const result = await payWithWalletService(userId, {
+    eventId,
+    tierId,
+    quantity,
+    couponCode,
+    items
+  });
+
+  return res.status(HTTP_STATUS.OK).json({
+    success: true,
+    message: "Payment completed successfully using Wallet",
     ...result
   });
 };

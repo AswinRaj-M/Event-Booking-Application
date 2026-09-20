@@ -1,6 +1,7 @@
 import express from "express";
 import { 
   createRazorpayOrder, 
+  payWithWallet,
   verifyPayment, 
   recordPaymentFailure,
   getPaymentById, 
@@ -16,6 +17,7 @@ const router = express.Router();
 router.use(protect, requireRole("user"));
 
 router.post("/create-order", asyncHandler(createRazorpayOrder));
+router.post("/pay-with-wallet", asyncHandler(payWithWallet));
 router.post("/verify", asyncHandler(verifyPayment));
 router.post("/fail", asyncHandler(recordPaymentFailure));
 router.get("/user", asyncHandler(getUserPayments));

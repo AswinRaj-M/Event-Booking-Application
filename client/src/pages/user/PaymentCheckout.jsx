@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
+import { updateUserData } from '../../features/user.slice';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
+import WalletPaymentConfirmModal from '../../components/user/WalletPaymentConfirmModal';
 import { 
   Lock, 
   ShieldCheck, 
@@ -21,7 +24,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
-  RefreshCw
+  RefreshCw,
+  X
 } from 'lucide-react';
 import { USER_ROUTES } from '../../constants/Routes';
 import { getEventById, getPublicCouponsApi } from '../../services/user.api.js';
@@ -31,6 +35,9 @@ import { toast } from 'sonner';
 const PaymentCheckout = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const user = useSelector((state) => state.user?.user);
+  const walletBalance = Number(user?.walletBalance) || 0;
 
   // State passed from UserEventDetails or restored from sessionStorage
   let checkoutData = location.state;
@@ -70,6 +77,7 @@ const PaymentCheckout = () => {
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [applyingCoupon, setApplyingCoupon] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showWalletConfirmModal, setShowWalletConfirmModal] = useState(false);
   const [availableCoupons, setAvailableCoupons] = useState([]);
   const [loadingCoupons, setLoadingCoupons] = useState(false);
   const [currentCouponIndex, setCurrentCouponIndex] = useState(0);
@@ -378,7 +386,83 @@ const PaymentCheckout = () => {
     });
   };
 
-  // Final Payment Submission & Razorpay Integration
+  // Execute Wallet Payment API call after user confirms in modal
+  const executeWalletPayment = async () => {
+    const targetEventId = event?._id || event?.id;
+    if (!targetEventId) {
+      toast.error('Booking information is invalid');
+      setShowWalletConfirmModal(false);
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+      toast.loading("Processing wallet payment...", { id: "wallet-pay" });
+
+      const itemsPayload = checkoutData.items && checkoutData.items.length > 0
+        ? checkoutData.items.map(it => ({ tierId: it.tierId, quantity: it.quantity }))
+        : undefined;
+
+      const payload = {
+        eventId: targetEventId,
+        tierId: (tierId && tierId !== "undefined" && tierId !== "null") ? tierId : (selectedTier?._id || undefined),
+        quantity: Number(quantity) || 1,
+        items: itemsPayload,
+        couponCode: appliedCoupon?.code ? appliedCoupon.code.trim().toUpperCase() : undefined
+      };
+
+      const res = await axiosInstance.post('/payments/pay-with-wallet', payload);
+      toast.dismiss("wallet-pay");
+
+      if (res.data && res.data.success) {
+        if (res.data.newWalletBalance !== undefined) {
+          dispatch(updateUserData({ ...user, walletBalance: res.data.newWalletBalance }));
+        }
+        try {
+          sessionStorage.removeItem('lastAppliedCoupon');
+          sessionStorage.removeItem('checkoutSessionExpiresAt');
+          sessionStorage.removeItem('lastCheckoutState');
+        } catch (e) {}
+
+        setShowWalletConfirmModal(false);
+        toast.success("Payment verified & booking confirmed via Wallet!");
+        navigate(USER_ROUTES.PAYMENT_STATUS, {
+          state: {
+            status: 'success',
+            payment: {
+              paymentMethod: 'wallet',
+              amount: currentTotal,
+              status: 'SUCCESS',
+              razorpayOrderId: `wallet_${res.data.bookingId.slice(-8)}`,
+              razorpayPaymentId: `wallet_pay_${res.data.bookingId.slice(-8)}`,
+              bookingId: res.data.bookingId
+            },
+            event: event
+          }
+        });
+      }
+    } catch (err) {
+      toast.dismiss("wallet-pay");
+      console.error('Wallet payment error:', err);
+      const errorMsg = err.response?.data?.message || 'Wallet payment failed.';
+      setShowWalletConfirmModal(false);
+
+      if (err.response?.status === 403 || errorMsg.toLowerCase().includes("blocked")) {
+        try {
+          sessionStorage.removeItem('checkoutSessionExpiresAt');
+          sessionStorage.removeItem('lastCheckoutState');
+        } catch (e) {}
+        toast.error(errorMsg || "This event is blocked by admin");
+        navigate(USER_ROUTES.EXPLORE, { replace: true });
+        return;
+      }
+      toast.error(errorMsg);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Final Payment Submission (Razorpay / Wallet Integration)
   const handleFinalPayment = async () => {
     const targetEventId = event?._id || event?.id;
     if (!targetEventId) {
@@ -391,6 +475,21 @@ const PaymentCheckout = () => {
       return;
     }
 
+    // ---------------------------------------------------
+    // WALLET PAYMENT FLOW -> Prompt Confirmation Modal
+    // ---------------------------------------------------
+    if (paymentMethod === 'wallet') {
+      if (walletBalance < currentTotal) {
+        toast.error("Insufficient wallet balance to complete purchase");
+        return;
+      }
+      setShowWalletConfirmModal(true);
+      return;
+    }
+
+    // ---------------------------------------------------
+    // RAZORPAY PAYMENT FLOW
+    // ---------------------------------------------------
     try {
       setIsProcessing(true);
 
@@ -878,6 +977,80 @@ const PaymentCheckout = () => {
                       </span>
                     </div>
                   </label>
+
+                  {/* Option 2: Festivo Wallet */}
+                  <label 
+                    onClick={() => setPaymentMethod('wallet')}
+                    className={`block rounded-xl border p-4 cursor-pointer transition-all ${
+                      paymentMethod === 'wallet'
+                        ? 'border-purple-500 bg-purple-950/20 shadow-[0_0_20px_rgba(168,85,247,0.15)]'
+                        : 'border-gray-800/80 bg-black/40 hover:border-gray-700'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3 w-full">
+                        <div className="mt-1">
+                          <input 
+                            type="radio" 
+                            name="paymentMethod" 
+                            value="wallet"
+                            checked={paymentMethod === 'wallet'} 
+                            onChange={() => setPaymentMethod('wallet')}
+                            className="accent-purple-500 w-4 h-4 cursor-pointer"
+                          />
+                        </div>
+                        <div className="w-full">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <Wallet className="w-4 h-4 text-purple-400" />
+                              <span className="font-bold text-sm text-white">Festivo Wallet</span>
+                            </div>
+                            <span className="text-xs font-black text-purple-300 bg-purple-950/80 border border-purple-500/30 px-2.5 py-0.5 rounded-full">
+                              Balance: ₹{walletBalance.toFixed(2)}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Instant 1-click payment using your wallet balance.
+                          </p>
+
+                          {/* Wallet Payment Details & Balance Check */}
+                          {paymentMethod === 'wallet' && (
+                            <div className="mt-4 pt-3 border-t border-purple-900/40 space-y-3">
+                              <div className="grid grid-cols-3 gap-2 text-xs">
+                                <div className="bg-[#1A162B] border border-purple-500/20 rounded-xl p-2.5">
+                                  <span className="text-[10px] text-gray-400 font-medium block">Current Balance</span>
+                                  <span className="font-bold text-white text-sm">₹{walletBalance.toFixed(2)}</span>
+                                </div>
+                                <div className="bg-[#1A162B] border border-purple-500/20 rounded-xl p-2.5">
+                                  <span className="text-[10px] text-gray-400 font-medium block">Total Payable</span>
+                                  <span className="font-bold text-purple-400 text-sm">₹{currentTotal.toFixed(2)}</span>
+                                </div>
+                                <div className={`border rounded-xl p-2.5 ${walletBalance >= currentTotal ? 'bg-[#1A162B] border-purple-500/20' : 'bg-rose-950/40 border-rose-500/40'}`}>
+                                  <span className="text-[10px] text-gray-400 font-medium block">Balance After</span>
+                                  <span className={`font-bold text-sm ${walletBalance >= currentTotal ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                    ₹{Math.max(0, walletBalance - currentTotal).toFixed(2)}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {walletBalance < currentTotal && (
+                                <div className="bg-rose-950/50 border border-rose-500/40 rounded-xl p-3 flex items-center gap-2.5 text-xs text-rose-300">
+                                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                                  <span>
+                                    Insufficient wallet balance. You need <strong>₹{(currentTotal - walletBalance).toFixed(2)}</strong> more.
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <span className="text-[10px] text-purple-400 font-semibold px-2 py-0.5 rounded bg-purple-950/80 border border-purple-500/30 shrink-0">
+                        Instant
+                      </span>
+                    </div>
+                  </label>
                 </div>
 
               </div>
@@ -1092,13 +1265,23 @@ const PaymentCheckout = () => {
               ) : (
                 <button
                   onClick={handleFinalPayment}
-                  disabled={isProcessing}
-                  className="w-full py-4 px-6 bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-base rounded-2xl transition-all shadow-[0_0_30px_rgba(168,85,247,0.3)] hover:shadow-[0_0_40px_rgba(168,85,247,0.5)] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isProcessing || (paymentMethod === 'wallet' && walletBalance < currentTotal)}
+                  className="w-full py-4 px-6 bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 disabled:from-gray-800 disabled:to-gray-800 text-white font-extrabold text-base rounded-2xl transition-all shadow-[0_0_30px_rgba(168,85,247,0.3)] hover:shadow-[0_0_40px_rgba(168,85,247,0.5)] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isProcessing ? (
                     <>
                       <Loader2 className="w-5 h-5 animate-spin" />
                       <span>Processing Order...</span>
+                    </>
+                  ) : paymentMethod === 'wallet' && walletBalance < currentTotal ? (
+                    <>
+                      <AlertCircle className="w-4 h-4 text-rose-400" />
+                      <span>Insufficient Wallet Balance (₹{walletBalance.toFixed(2)})</span>
+                    </>
+                  ) : paymentMethod === 'wallet' ? (
+                    <>
+                      <Wallet className="w-4 h-4" />
+                      <span>Pay ₹{currentTotal.toFixed(2)} using Festivo Wallet</span>
                     </>
                   ) : (
                     <>
@@ -1129,6 +1312,17 @@ const PaymentCheckout = () => {
 
         </main>
       </div>
+
+      {/* Wallet Payment Confirmation Modal Component */}
+      <WalletPaymentConfirmModal
+        isOpen={showWalletConfirmModal}
+        onClose={() => setShowWalletConfirmModal(false)}
+        onConfirm={executeWalletPayment}
+        isProcessing={isProcessing}
+        event={event}
+        walletBalance={walletBalance}
+        currentTotal={currentTotal}
+      />
 
       {/* Footer */}
       <Footer />
