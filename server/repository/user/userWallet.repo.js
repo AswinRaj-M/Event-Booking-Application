@@ -12,18 +12,22 @@ export const findUserWalletRepo = async (userId) => {
 /**
  * Update user wallet balance atomically
  */
-export const updateUserWalletBalanceRepo = async (userId, balanceInc = 0) => {
+export const updateUserWalletBalanceRepo = async (userId, balanceInc = 0, options = {}) => {
   return await User.findByIdAndUpdate(
     userId,
     { $inc: { walletBalance: balanceInc } },
-    { new: true, runValidators: true }
+    { new: true, runValidators: true, session: options?.session }
   );
 };
 
 /**
  * Create a UserWalletTransaction record
  */
-export const createUserWalletTransactionRepo = async (data) => {
+export const createUserWalletTransactionRepo = async (data, options = {}) => {
+  if (options?.session) {
+    const docs = await UserWalletTransaction.create([data], options);
+    return docs[0];
+  }
   return await UserWalletTransaction.create(data);
 };
 

@@ -4,6 +4,7 @@ import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
 import Event from "../../models/event.model.js";
 import Booking from "../../models/booking.model.js";
 import { processVendorBookingRefund } from "./vendorWallet.service.js";
+import { processAdminBookingRefund } from "../admin/adminWallet.service.js";
 import {
   updateUserWalletBalanceRepo,
   createUserWalletTransactionRepo
@@ -276,8 +277,9 @@ export const cancelEventService = async (eventId, vendorId) => {
   let refundedCount = 0;
   for (const booking of paidBookings) {
     try {
-      // 1. Process vendor wallet deduction
+      // 1. Process vendor wallet deduction & admin wallet refund
       await processVendorBookingRefund(booking);
+      await processAdminBookingRefund(booking);
 
       // 2. Calculate remaining uncancelled tickets refund amount
       const uncancelledTickets = (booking.tickets || []).filter(t => t.status !== "cancelled");

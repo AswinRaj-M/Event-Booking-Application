@@ -3,7 +3,7 @@ import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
 
 export const validateCoupon = async (req, res) => {
   const userId = req.user._id;
-  const { couponCode, eventId, subtotal, quantity, ticketCount } = req.body;
+  const { couponCode, eventId, subtotal, effectiveSubtotal, quantity, ticketCount } = req.body;
 
   if (!couponCode || !eventId || subtotal === undefined) {
     return res.status(HTTP_STATUS.BAD_REQUEST).json({
@@ -19,7 +19,8 @@ export const validateCoupon = async (req, res) => {
     userId,
     eventId,
     Number(subtotal),
-    ticketsNumber
+    ticketsNumber,
+    effectiveSubtotal !== undefined && effectiveSubtotal !== null ? Number(effectiveSubtotal) : null
   );
 
   return res.status(HTTP_STATUS.OK).json({

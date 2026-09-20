@@ -344,8 +344,10 @@ const MyBookings = () => {
   };
 
   const handleCancelClick = (booking) => {
-    if (!booking || !booking.tickets || booking.tickets.length === 0) {
-      toast.info("Please contact the event organizer directly to request a ticket cancellation or refund.");
+    if (!booking) return;
+
+    if (booking.bookingStatus === "cancelled") {
+      toast.info("This booking is already cancelled.");
       return;
     }
 
@@ -356,10 +358,13 @@ const MyBookings = () => {
       return;
     }
 
-    const unCancelledTickets = booking.tickets.filter((t) => t.status !== "cancelled");
-    if (unCancelledTickets.length === 0 || booking.bookingStatus === "cancelled") {
-      toast.info("All tickets for this booking are already cancelled.");
-      return;
+    const ticketsArray = booking.tickets || [];
+    if (ticketsArray.length > 0) {
+      const unCancelledTickets = ticketsArray.filter((t) => t.status !== "cancelled");
+      if (unCancelledTickets.length === 0) {
+        toast.info("All tickets for this booking are already cancelled.");
+        return;
+      }
     }
 
     const bookingCode = booking.bookingId || "Booking";

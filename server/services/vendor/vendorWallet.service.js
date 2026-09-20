@@ -18,6 +18,32 @@ import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
  * Vendor receives 100% of the vendor ticket price (Ticket Price x Quantity).
  * Platform fee is credited separately to the Admin wallet.
  */
+/**
+ * Vendor Ticket Revenue Calculation
+ * Vendor Receivable = Effective Vendor Ticket Price = Original Ticket Subtotal - Vendor Offer Discount.
+ * IMPORTANT: Admin Coupon Discount MUST NOT reduce Vendor Revenue.
+ */
+export const calculateVendorReceivable = (booking) => {
+  if (!booking) return 0;
+
+  if (booking.originalAmount !== undefined && booking.originalAmount !== null && !isNaN(Number(booking.originalAmount))) {
+    return Math.max(0, Number(booking.originalAmount));
+  }
+
+  let subtotal = 0;
+  if (Array.isArray(booking.tickets) && booking.tickets.length > 0) {
+    subtotal = booking.tickets.reduce(
+      (sum, t) => sum + ((Number(t.ticketPrice) || 0) * (Number(t.quantity) || 1)),
+      0
+    );
+  } else {
+    subtotal = (Number(booking.ticketPrice) || 0) * (Number(booking.quantity) || 1);
+  }
+
+  const vendorOfferDiscount = Number(booking.eventDiscount) || 0;
+  return Math.max(0, Number((subtotal - vendorOfferDiscount).toFixed(2)));
+};
+
 export const calculateVendorGrossEarnings = (ticketPrice, quantity = 1) => {
   const price = Number(ticketPrice) || 0;
   const qty = Number(quantity) || 1;
@@ -68,10 +94,8 @@ export const processVendorBookingEarnings = async (booking) => {
     return null;
   }
 
-  // Calculate exact Vendor Ticket Amount (Vendor Ticket Price x Quantity)
-  const vendorTicketAmount = Number(booking.originalAmount) > 0 
-    ? Number(booking.originalAmount) 
-    : (Number(booking.ticketPrice) * (Number(booking.quantity) || 1));
+  // Calculate exact Vendor Ticket Revenue (Original Ticket Price - Vendor Offer Discount, BEFORE Admin Coupon)
+  const vendorTicketAmount = calculateVendorReceivable(booking);
 
   const earningsData = {
     grossAmount: vendorTicketAmount,
@@ -117,16 +141,20 @@ export const processVendorBookingEarnings = async (booking) => {
  */
 export const processVendorBookingRefund = async (
   booking,
-  { isPartial = false, ticketId = null, cancelledTicketsCount = 1, totalQuantity = 1 } = {}
+  { isPartial = false, ticketId = null, ticketShare = null, cancelledTicketsCount = 1, totalQuantity = 1 } = {},
+  options = {}
 ) => {
   if (!booking || !booking._id) return null;
 
-  // 1. Idempotency Check: Prevent duplicate refund transactions
+  // 1. Idempotency Check: Prevent duplicate refund transactions for the same booking/ticket
   const query = isPartial && ticketId
-    ? { bookingId: booking._id, transactionType: "refund", description: { $regex: ticketId } }
-    : { bookingId: booking._id, transactionType: "refund" };
+    ? { bookingId: booking._id, transactionType: "refund", "metadata.ticketId": ticketId }
+    : { bookingId: booking._id, transactionType: "refund", "metadata.isPartial": false };
 
-  const existingRefundTx = await WalletTransaction.findOne(query);
+  const existingRefundTx = options?.session
+    ? await WalletTransaction.findOne(query).session(options.session)
+    : await WalletTransaction.findOne(query);
+
   if (existingRefundTx) {
     console.log(`[Vendor Wallet] Refund transaction already processed for booking/ticket: ${booking._id}`);
     return existingRefundTx;
@@ -136,7 +164,7 @@ export const processVendorBookingRefund = async (
   let event = booking.eventId;
   if (!event || typeof event !== "object" || !event.vendorId) {
     const eventId = booking.eventId?._id || booking.eventId;
-    event = await Event.findById(eventId);
+    event = options?.session ? await Event.findById(eventId).session(options.session) : await Event.findById(eventId);
   }
 
   if (!event || !event.vendorId) {
@@ -146,24 +174,51 @@ export const processVendorBookingRefund = async (
 
   const vendorId = event.vendorId?._id || event.vendorId;
 
-  // Calculate Proportional Vendor Ticket Refund Amount based on cancelled tickets
-  const fullVendorAmount = Number(booking.originalAmount) > 0 
-    ? Number(booking.originalAmount) 
-    : (Number(booking.ticketPrice) * (Number(booking.quantity) || 1));
+  // 2. Look up actual earnings transaction created during purchase if available
+  let fullVendorAmount = 0;
+  const existingEarningsTx = options?.session
+    ? await WalletTransaction.findOne({ bookingId: booking._id, transactionType: "earnings" }).session(options.session)
+    : await WalletTransaction.findOne({ bookingId: booking._id, transactionType: "earnings" });
 
-  const count = Number(cancelledTicketsCount) || 1;
-  const total = Number(totalQuantity) || (Number(booking.quantity) || 1);
+  if (existingEarningsTx) {
+    fullVendorAmount = Math.abs(Number(existingEarningsTx.netAmount ?? existingEarningsTx.amount ?? 0));
+  }
+  if (fullVendorAmount <= 0) {
+    fullVendorAmount = calculateVendorReceivable(booking);
+  }
 
-  const proportionalVendorRefund = Number(((fullVendorAmount * count) / total).toFixed(2));
+  // 3. Determine Exact Vendor Reversal Amount
+  let vendorReversalAmount = 0;
+  if (!isPartial) {
+    // FULL BOOKING CANCELLATION: Reverse 100% of original earnings credited (minus any prior partial refund reversals)
+    const priorRefunds = options?.session
+      ? await WalletTransaction.find({ bookingId: booking._id, transactionType: "refund" }).session(options.session)
+      : await WalletTransaction.find({ bookingId: booking._id, transactionType: "refund" });
+    const totalPriorRefunded = priorRefunds.reduce((sum, tx) => sum + Math.abs(Number(tx.netAmount ?? tx.amount ?? 0)), 0);
+    vendorReversalAmount = Math.max(0, Number((fullVendorAmount - totalPriorRefunded).toFixed(2)));
+  } else {
+    // PARTIAL / SINGLE TICKET CANCELLATION:
+    let ticketRatio = 1;
+    if (ticketShare !== undefined && !isNaN(Number(ticketShare))) {
+      ticketRatio = Number(ticketShare);
+    } else if (ticketId && booking.tickets && booking.tickets.length > 0) {
+      const targetTicket = booking.tickets.find(t => t.ticketId === ticketId);
+      const combinedSubtotal = booking.tickets.reduce((sum, t) => sum + ((Number(t.ticketPrice) || 0) * (Number(t.quantity) || 1)), 0);
+      if (combinedSubtotal > 0 && targetTicket && Number(targetTicket.ticketPrice) > 0) {
+        ticketRatio = ((Number(targetTicket.ticketPrice) || 0) * (Number(targetTicket.quantity) || 1)) / combinedSubtotal;
+      }
+    }
+    vendorReversalAmount = Number((fullVendorAmount * ticketRatio).toFixed(2));
+  }
 
   const wallet = await findOrCreateWalletRepo(vendorId);
 
-  // Deduct proportional vendor ticket earnings from Available Balance & Total Earnings
+  // Deduct vendor ticket earnings from Available Balance & Total Earnings
   const updatedWallet = await updateWalletBalanceRepo(wallet._id, {
-    availableBalanceInc: -proportionalVendorRefund,
-    totalEarningsInc: -proportionalVendorRefund,
+    availableBalanceInc: -vendorReversalAmount,
+    totalEarningsInc: -vendorReversalAmount,
     pendingBalanceInc: 0,
-  });
+  }, options);
 
   // Create WalletTransaction record for the refund
   const description = isPartial && ticketId
@@ -176,19 +231,26 @@ export const processVendorBookingRefund = async (
     bookingId: booking._id,
     eventId: event._id,
     transactionType: "refund",
-    amount: -proportionalVendorRefund,
+    amount: -vendorReversalAmount,
     platformCommission: 0,
     adminCouponDiscount: 0,
-    netAmount: -proportionalVendorRefund,
+    netAmount: -vendorReversalAmount,
     status: "completed",
     description,
+    metadata: {
+      ticketId: isPartial ? ticketId : undefined,
+      isPartial: isPartial,
+      vendorReversalAmount,
+      originalCreditedAmount: fullVendorAmount,
+    },
     createdTime: new Date(),
-  });
+  }, options);
 
   return {
     wallet: updatedWallet,
     transaction,
-    proportionalVendorRefund,
+    vendorReversalAmount,
+    proportionalVendorRefund: vendorReversalAmount,
   };
 };
 
@@ -202,11 +264,21 @@ export const getVendorWalletService = async (vendorId) => {
   const wallet = await findOrCreateWalletRepo(vendorId);
 
   try {
-    const vendorObjId = new mongoose.Types.ObjectId(vendorId.toString());
+    const vendorObjId = mongoose.isValidObjectId(vendorId)
+      ? new mongoose.Types.ObjectId(vendorId.toString())
+      : vendorId;
 
     const [txStats, withdrawalStats] = await Promise.all([
       WalletTransaction.aggregate([
-        { $match: { vendorId: vendorObjId, status: "completed" } },
+        {
+          $match: {
+            $or: [
+              { walletId: wallet._id },
+              { vendorId: { $in: [vendorObjId, vendorId.toString()] } },
+            ],
+            status: { $ne: "failed" },
+          },
+        },
         {
           $group: {
             _id: "$transactionType",
@@ -215,7 +287,14 @@ export const getVendorWalletService = async (vendorId) => {
         },
       ]),
       WithdrawalRequest.aggregate([
-        { $match: { vendorId: vendorObjId } },
+        {
+          $match: {
+            $or: [
+              { walletId: wallet._id },
+              { vendorId: { $in: [vendorObjId, vendorId.toString()] } },
+            ],
+          },
+        },
         {
           $group: {
             _id: "$status",
@@ -231,7 +310,7 @@ export const getVendorWalletService = async (vendorId) => {
     txStats.forEach((stat) => {
       if (stat._id === "earnings" || stat._id === "credit") {
         ledgerEarnings += Math.abs(stat.totalAmount || 0);
-      } else if (stat._id === "refund") {
+      } else if (stat._id === "refund" || stat._id === "debit") {
         ledgerRefunds += Math.abs(stat.totalAmount || 0);
       }
     });
@@ -255,17 +334,25 @@ export const getVendorWalletService = async (vendorId) => {
       Number((ledgerEarnings - ledgerRefunds - approvedWithdrawals - pendingWithdrawals).toFixed(2))
     );
 
+    // Only sync/update wallet properties if there are recorded transactions/withdrawals OR if balances differ
     if (
+      txStats.length > 0 ||
+      withdrawalStats.length > 0 ||
       wallet.availableBalance !== availableBalance ||
-      wallet.totalEarnings !== totalEarnings ||
-      wallet.pendingBalance !== pendingBalance ||
-      wallet.totalWithdrawn !== totalWithdrawn
+      wallet.totalEarnings !== totalEarnings
     ) {
-      wallet.availableBalance = availableBalance;
-      wallet.totalEarnings = totalEarnings;
-      wallet.pendingBalance = pendingBalance;
-      wallet.totalWithdrawn = totalWithdrawn;
-      await wallet.save();
+      if (
+        wallet.availableBalance !== availableBalance ||
+        wallet.totalEarnings !== totalEarnings ||
+        wallet.pendingBalance !== pendingBalance ||
+        wallet.totalWithdrawn !== totalWithdrawn
+      ) {
+        wallet.availableBalance = availableBalance;
+        wallet.totalEarnings = totalEarnings;
+        wallet.pendingBalance = pendingBalance;
+        wallet.totalWithdrawn = totalWithdrawn;
+        await wallet.save();
+      }
     }
   } catch (err) {
     console.error("[Vendor Wallet Sync Error]:", err);

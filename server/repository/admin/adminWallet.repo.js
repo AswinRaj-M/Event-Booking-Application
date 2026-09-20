@@ -33,7 +33,8 @@ export const findAdminWalletByAdminIdRepo = async (adminId) => {
  */
 export const updateAdminWalletBalanceRepo = async (
   walletId,
-  { balanceInc = 0, totalDepositedInc = 0, totalCommissionInc = 0, totalPayoutsInc = 0 }
+  { balanceInc = 0, totalDepositedInc = 0, totalCommissionInc = 0, totalPayoutsInc = 0 },
+  options = {}
 ) => {
   const updateOps = {};
   if (balanceInc !== 0) updateOps.balance = balanceInc;
@@ -44,14 +45,18 @@ export const updateAdminWalletBalanceRepo = async (
   return await AdminWallet.findByIdAndUpdate(
     walletId,
     { $inc: updateOps },
-    { new: true, runValidators: true }
+    { new: true, runValidators: true, session: options?.session }
   );
 };
 
 /**
  * Create an AdminWalletTransaction record
  */
-export const createAdminWalletTransactionRepo = async (data) => {
+export const createAdminWalletTransactionRepo = async (data, options = {}) => {
+  if (options?.session) {
+    const docs = await AdminWalletTransaction.create([data], options);
+    return docs[0];
+  }
   return await AdminWalletTransaction.create(data);
 };
 

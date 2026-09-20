@@ -422,8 +422,6 @@ export const processAdminBookingCommission = async (booking) => {
     const feePerTicket = Number(booking.platformFee) || 0;
     if (feePerTicket > 0) {
       totalPlatformFee = feePerTicket * (Number(booking.quantity) || 1);
-    } else if (Number(booking.ticketPrice) > 0) {
-      totalPlatformFee = 50 * (Number(booking.quantity) || 1);
     }
   }
 
@@ -480,63 +478,104 @@ export const processAdminBookingCommission = async (booking) => {
  */
 export const processAdminBookingRefund = async (
   booking,
-  { isPartial = false, ticketId = null, cancelledTicketsCount = 1, totalQuantity = 1 } = {}
+  { isPartial = false, ticketId = null, ticketShare = null, cancelledTicketsCount = 1, totalQuantity = 1 } = {},
+  options = {}
 ) => {
   if (!booking || !booking._id) return null;
 
   // 1. Idempotency Check: Prevent duplicate refund transactions
   const query = isPartial && ticketId
-    ? { "metadata.ticketId": ticketId, transactionType: "refund" }
+    ? { "metadata.bookingId": booking._id, "metadata.ticketId": ticketId, transactionType: "refund" }
     : { "metadata.bookingId": booking._id, transactionType: "refund", "metadata.isPartial": false };
 
-  const existingRefundTx = await AdminWalletTransaction.findOne(query);
+  const existingRefundTx = options?.session
+    ? await AdminWalletTransaction.findOne(query).session(options.session)
+    : await AdminWalletTransaction.findOne(query);
+
   if (existingRefundTx) {
     console.log(`[Admin Wallet] Refund transaction already processed for booking: ${booking._id}`);
     return existingRefundTx;
   }
 
   // 2. Find system administrator
-  const adminUser = await User.findOne({
-    $or: [{ role: { $regex: /^admin$/i } }, { email: { $regex: /admin/i } }],
-  });
+  const adminUser = options?.session
+    ? await User.findOne({ $or: [{ role: { $regex: /^admin$/i } }, { email: { $regex: /admin/i } }] }).session(options.session)
+    : await User.findOne({ $or: [{ role: { $regex: /^admin$/i } }, { email: { $regex: /admin/i } }] });
+
   if (!adminUser) {
     console.error("[Admin Wallet] System admin account not found for refund reversal.");
     return null;
   }
 
-  // 3. Calculate platform fee snapshot for full booking
+  // 3. Look up actual commission transaction recorded during purchase if available
   let fullPlatformFee = Number(booking.totalPlatformFee) || 0;
+  let fullCoupon = Number(booking.couponDiscount) || 0;
+
+  const existingCommissionTx = options?.session
+    ? await AdminWalletTransaction.findOne({ "metadata.bookingId": booking._id, transactionType: "commission" }).session(options.session)
+    : await AdminWalletTransaction.findOne({ "metadata.bookingId": booking._id, transactionType: "commission" });
+
+  if (existingCommissionTx && existingCommissionTx.metadata) {
+    if (existingCommissionTx.metadata.totalPlatformFee !== undefined) {
+      fullPlatformFee = Number(existingCommissionTx.metadata.totalPlatformFee) || fullPlatformFee;
+    }
+    if (existingCommissionTx.metadata.couponDiscount !== undefined) {
+      fullCoupon = Number(existingCommissionTx.metadata.couponDiscount) || fullCoupon;
+    }
+  }
+
   if (fullPlatformFee <= 0) {
     const feePerTicket = Number(booking.platformFee) || 0;
     if (feePerTicket > 0) {
       fullPlatformFee = feePerTicket * (Number(booking.quantity) || 1);
-    } else if (Number(booking.ticketPrice) > 0) {
-      fullPlatformFee = 50 * (Number(booking.quantity) || 1);
     }
   }
 
-  const fullCoupon = Number(booking.couponDiscount) || 0;
+  // 4. Calculate Exact Refunded Platform Fee and Recovered Coupon Subsidy
+  let refundedPlatformFee = 0;
+  let recoveredCoupon = 0;
 
-  // Proportional calculations based on cancelled ticket count
-  const count = Number(cancelledTicketsCount) || 1;
-  const total = Number(totalQuantity) || (Number(booking.quantity) || 1);
+  if (!isPartial) {
+    // FULL BOOKING CANCELLATION: Reverse 100% of recorded platform fee and coupon subsidy (minus any prior partial refund reversals)
+    const priorAdminRefunds = options?.session
+      ? await AdminWalletTransaction.find({ "metadata.bookingId": booking._id, transactionType: "refund" }).session(options.session)
+      : await AdminWalletTransaction.find({ "metadata.bookingId": booking._id, transactionType: "refund" });
 
-  const refundedPlatformFee = Number(((fullPlatformFee * count) / total).toFixed(2));
-  const recoveredCoupon = Number(((fullCoupon * count) / total).toFixed(2));
+    const totalPriorFeeRefunded = priorAdminRefunds.reduce((sum, tx) => sum + Number(tx.metadata?.refundedPlatformFee ?? 0), 0);
+    const totalPriorCouponRecovered = priorAdminRefunds.reduce((sum, tx) => sum + Number(tx.metadata?.recoveredCoupon ?? 0), 0);
+
+    refundedPlatformFee = Math.max(0, Number((fullPlatformFee - totalPriorFeeRefunded).toFixed(2)));
+    recoveredCoupon = Math.max(0, Number((fullCoupon - totalPriorCouponRecovered).toFixed(2)));
+  } else {
+    // PARTIAL / SINGLE TICKET CANCELLATION:
+    let couponRatio = 1;
+    if (ticketShare !== undefined && !isNaN(Number(ticketShare))) {
+      couponRatio = Number(ticketShare);
+    } else if (ticketId && booking.tickets && booking.tickets.length > 0) {
+      const targetTicket = booking.tickets.find(t => t.ticketId === ticketId);
+      const combinedSubtotal = booking.tickets.reduce((sum, t) => sum + ((Number(t.ticketPrice) || 0) * (Number(t.quantity) || 1)), 0);
+      if (combinedSubtotal > 0 && targetTicket && Number(targetTicket.ticketPrice) > 0) {
+        couponRatio = ((Number(targetTicket.ticketPrice) || 0) * (Number(targetTicket.quantity) || 1)) / combinedSubtotal;
+      }
+    }
+    refundedPlatformFee = Number((fullPlatformFee * couponRatio).toFixed(2));
+    recoveredCoupon = Number((fullCoupon * couponRatio).toFixed(2));
+  }
+
   const adminRefundDeduction = Number((refundedPlatformFee - recoveredCoupon).toFixed(2));
 
-  // 4. Update Admin Wallet balance & commission totals
+  // 5. Update Admin Wallet balance & commission totals
   const adminWallet = await findOrCreateAdminWalletRepo(adminUser._id);
   const updatedWallet = await updateAdminWalletBalanceRepo(adminWallet._id, {
     balanceInc: -adminRefundDeduction,
     totalCommissionInc: -refundedPlatformFee,
-  });
+  }, options);
 
-  // 5. Create AdminWalletTransaction refund ledger record
+  // 6. Create AdminWalletTransaction refund ledger record
   const bookingCode = booking.bookingId || `BK-${booking._id.toString().slice(-6).toUpperCase()}`;
   const description = isPartial
-    ? `Platform fee reversal on ticket cancellation (${ticketId})`
-    : `Platform fee reversal on booking cancellation #${bookingCode}`;
+    ? `Platform fee & coupon reversal on ticket cancellation (${ticketId})`
+    : `Platform fee & coupon reversal on booking cancellation #${bookingCode}`;
 
   const transaction = await createAdminWalletTransactionRepo({
     walletId: adminWallet._id,
@@ -550,15 +589,15 @@ export const processAdminBookingRefund = async (
     metadata: {
       bookingId: booking._id,
       bookingCode,
-      ticketId,
-      isPartial,
-      cancelledTicketsCount: count,
-      totalQuantity: total,
+      ticketId: isPartial ? ticketId : undefined,
+      isPartial: isPartial,
+      originalPlatformFee: fullPlatformFee,
+      originalCouponDiscount: fullCoupon,
       refundedPlatformFee,
       recoveredCoupon,
       netAdminRefundDeduction: adminRefundDeduction,
     },
-  });
+  }, options);
 
   return {
     adminWallet: updatedWallet,

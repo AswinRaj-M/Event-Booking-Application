@@ -38,7 +38,7 @@ const paymentSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ["CREATED", "PENDING", "SUCCESS", "FAILED", "CANCELLED", "EXPIRED"],
+    enum: ["CREATED", "PENDING", "SUCCESS", "FAILED", "CANCELLED", "EXPIRED", "REFUNDED"],
     default: "CREATED"
   },
   paymentMethod: {

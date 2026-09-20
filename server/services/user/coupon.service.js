@@ -7,7 +7,14 @@ import Event from "../../models/event.model.js";
 import { AppError } from "../../utils/AppError.js";
 import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
 
-export const validateAndApplyCoupon = async (couponCode, userId, eventId, subtotal, ticketCount = 1) => {
+export const validateAndApplyCoupon = async (
+  couponCode,
+  userId,
+  eventId,
+  subtotal,
+  ticketCount = 1,
+  effectiveSubtotal = null
+) => {
   if (!couponCode) {
     throw new AppError("Coupon code is required", HTTP_STATUS.BAD_REQUEST);
   }
@@ -67,7 +74,7 @@ export const validateAndApplyCoupon = async (couponCode, userId, eventId, subtot
     }
   }
 
-  // 2. Minimum Order Value Validation
+  // 2. Minimum Order Value Validation (Compared against Ticket Subtotal, subtotal)
   const subtotalCents = Math.round(Number(subtotal) * 100);
   const minPurchaseCents = Math.round(Number(coupon.minPurchaseAmount || 0) * 100);
   if (minPurchaseCents > 0 && subtotalCents < minPurchaseCents) {
@@ -77,11 +84,14 @@ export const validateAndApplyCoupon = async (couponCode, userId, eventId, subtot
     );
   }
 
-  // 3. Discount Calculation based on actual ticket price (subtotal)
+  // 3. Discount Calculation
+  const maxCap = (effectiveSubtotal !== null && effectiveSubtotal !== undefined)
+    ? Number(effectiveSubtotal)
+    : Number(subtotal);
+
   let discountAmount = 0;
   if (coupon.discountType === "percentage") {
-    // Calculate percentage discount based on actual subtotal (ticketPrice * quantity)
-    discountAmount = (subtotal * Number(coupon.discountValue)) / 100;
+    discountAmount = (maxCap * Number(coupon.discountValue)) / 100;
     
     // 4. Maximum Discount Limit enforcement
     if (coupon.maxDiscountAmount && Number(coupon.maxDiscountAmount) > 0) {
@@ -93,9 +103,9 @@ export const validateAndApplyCoupon = async (couponCode, userId, eventId, subtot
     discountAmount = Number(coupon.discountValue);
   }
 
-  // Ensure discount does not exceed subtotal and cannot be negative
-  if (discountAmount > subtotal) {
-    discountAmount = subtotal;
+  // Ensure discount does not exceed maxCap and cannot be negative
+  if (discountAmount > maxCap) {
+    discountAmount = maxCap;
   }
   if (discountAmount < 0) {
     discountAmount = 0;

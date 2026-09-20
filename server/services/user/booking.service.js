@@ -7,10 +7,11 @@ import Booking from "../../models/booking.model.js";
 import Coupon from "../../models/coupon.model.js";
 import User from "../../models/user.model.js";
 import mongoose from "mongoose";
+import Payment from "../../models/payment.model.js";
 import { validateAndApplyCoupon } from "./coupon.service.js";
 import CouponRedemption from "../../models/couponRedemption.model.js";
 import { generateQRCode } from "../../utils/generateQrCode.js";
-import { processVendorBookingEarnings, processVendorBookingRefund } from "../vendor/vendorWallet.service.js";
+import { processVendorBookingEarnings, processVendorBookingRefund, calculateVendorReceivable } from "../vendor/vendorWallet.service.js";
 import { processAdminBookingCommission, processAdminBookingRefund } from "../admin/adminWallet.service.js";
 import {
   updateUserWalletBalanceRepo,
@@ -30,6 +31,32 @@ import { sendNotification, sendAdminNotification } from "../../config/socket.js"
 
 export const CHECKOUT_EXPIRATION_MINUTES = 10;
 export const CHECKOUT_EXPIRATION_MS = CHECKOUT_EXPIRATION_MINUTES * 60 * 1000;
+
+/**
+ * Execute operations inside a MongoDB transaction session with automatic standalone fallback
+ */
+export const runInTransaction = async (fn) => {
+  let session = null;
+  try {
+    session = await mongoose.startSession();
+    session.startTransaction();
+    const result = await fn(session);
+    await session.commitTransaction();
+    return result;
+  } catch (err) {
+    if (session && session.inTransaction()) {
+      await session.abortTransaction();
+    }
+    if (err.message && (err.message.includes("replica set") || err.message.includes("Transaction numbers"))) {
+      return await fn(null);
+    }
+    throw err;
+  } finally {
+    if (session) {
+      session.endSession();
+    }
+  }
+};
 
 /**
  * Cleanup expired pending bookings and release reserved inventory
@@ -205,7 +232,7 @@ export const createPendingBookingService = async (userId, eventId, tierId, quant
    let validatedCoupon = null;
 
    if (couponCode && couponCode.trim() !== "") {
-     const result = await validateAndApplyCoupon(couponCode, userId, eventId, Math.max(combinedSubtotal, originalAmount), totalQuantity);
+     const result = await validateAndApplyCoupon(couponCode, userId, eventId, combinedSubtotal, totalQuantity, originalAmount);
      validatedCoupon = result.coupon;
      couponDiscount = result.discountAmount;
    }
@@ -443,11 +470,7 @@ export const confirmBookingAfterPaymentService = async (bookingId) => {
 
     // 8. NEW_BOOKING to Vendor
     if (vendorId) {
-      const vendorTicketAmount = vendorEarningsResult?.earningsData?.netEarnings ?? (
-        Number(booking.originalAmount) > 0 
-          ? Number(booking.originalAmount) 
-          : (Number(booking.ticketPrice || 0) * (Number(booking.quantity) || 1))
-      );
+      const vendorTicketAmount = vendorEarningsResult?.earningsData?.netEarnings ?? calculateVendorReceivable(booking);
 
       sendNotification(vendorId, {
         title: "New Booking Received! 🎟️",
@@ -509,6 +532,18 @@ export const getUserTicketsService = async(userId) => {
         await Booking.updateOne({ _id: bookingObj._id }, { $set: { qrCodeToken: qrToken } });
       }
 
+      if (!bookingObj.tickets || bookingObj.tickets.length === 0) {
+        bookingObj.tickets = [{
+          ticketId: bookingObj.bookingId || `TKT-${bookingObj._id.toString().slice(-6).toUpperCase()}`,
+          tierId: bookingObj.tierId,
+          tierName: bookingObj.tierName || "Standard",
+          ticketPrice: bookingObj.ticketPrice || 0,
+          quantity: bookingObj.quantity || 1,
+          status: bookingObj.bookingStatus === "cancelled" ? "cancelled" : "valid",
+          qrCodeToken: qrToken,
+        }];
+      }
+
       // Generate single booking-level QR code image
       bookingObj.qrCodeImage = qrToken ? await generateQRCode(qrToken) : null;
 
@@ -520,6 +555,9 @@ export const getUserTicketsService = async(userId) => {
 
 
 export const cancelTicketService = async(userId, ticketId, allowedLimitHours = 0) => {
+  let userBalanceAfter = 0;
+  let userWalletCredited = false;
+
   const booking = await findBookingByTicketRepo(ticketId);
   if (!booking) {
     throw new AppError("Booking Not Found!", HTTP_STATUS.NOT_FOUND);
@@ -594,87 +632,121 @@ export const cancelTicketService = async(userId, ticketId, allowedLimitHours = 0
   }
 
   // 1. Calculate the exact actual paid refund amount for this ticket
-  const isPaidBooking = (booking.paymentStatus === "paid" || booking.bookingStatus === "confirmed" || booking.bookingStatus === "completed");
-  const totalQuantity = Number(booking.quantity) || (booking.tickets ? booking.tickets.length : 1) || 1;
+  const isPaidBooking = (
+    ["paid", "success", "completed", "free"].includes(String(booking.paymentStatus || "").toLowerCase()) ||
+    ["confirmed", "completed"].includes(String(booking.bookingStatus || "").toLowerCase())
+  );
   const actualPaidAmount = Number(booking.totalAmount) || 0;
-  const ticketRefundAmount = (isPaidBooking && actualPaidAmount > 0)
-    ? Number((actualPaidAmount / totalQuantity).toFixed(2))
-    : 0;
 
-  // 2. Mark ticket as cancelled
-  ticket.status = "cancelled";
-  ticket.cancelledAt = new Date();
+  // Calculate ticket's weighted share of the original ticket value
+  const combinedSubtotal = (booking.tickets || []).reduce((sum, t) => sum + ((Number(t.ticketPrice) || 0) * (Number(t.quantity) || 1)), 0);
+  const ticketValue = (Number(ticket.ticketPrice) || 0) * (Number(ticket.quantity) || 1);
+  const ticketShare = combinedSubtotal > 0 ? (ticketValue / combinedSubtotal) : (1 / (booking.tickets?.length || 1));
 
-  const allCancelled = booking.tickets.every((t) => t.status === "cancelled");
-  if (allCancelled) {
-    booking.bookingStatus = "cancelled";
-    if (isPaidBooking && actualPaidAmount > 0) {
-      booking.paymentStatus = "refunded";
+  // Check how much of user's payment was already refunded
+  const priorUserRefunds = await UserWalletTransaction.find({
+    "metadata.bookingId": booking._id,
+    transactionType: "refund",
+    status: "completed",
+  });
+  const totalUserAlreadyRefunded = priorUserRefunds.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+
+  // If this is the last uncancelled ticket, refund whatever remains of actualPaidAmount to avoid any rounding loss
+  const remainingUncancelled = (booking.tickets || []).filter(t => t.ticketId !== ticket.ticketId && t.status !== "cancelled");
+  let ticketRefundAmount = 0;
+  if (isPaidBooking && actualPaidAmount > 0) {
+    if (remainingUncancelled.length === 0) {
+      ticketRefundAmount = Math.max(0, Number((actualPaidAmount - totalUserAlreadyRefunded).toFixed(2)));
+    } else {
+      ticketRefundAmount = Number((actualPaidAmount * ticketShare).toFixed(2));
     }
   }
 
-  await saveBookingRepo(booking);
+  await runInTransaction(async (session) => {
+    // 2. Mark ticket as cancelled
+    ticket.status = "cancelled";
+    ticket.cancelledAt = new Date();
 
-  // 3. Atomically credit User Wallet and create Wallet Transaction (with Idempotency check)
-  let userWalletCredited = false;
-  let userBalanceAfter = null;
-
-  if (ticketRefundAmount > 0) {
-    const existingRefundTx = await UserWalletTransaction.findOne({
-      "metadata.ticketId": ticket.ticketId,
-      transactionType: "refund",
-      status: "completed",
-    });
-
-    if (!existingRefundTx) {
-      const updatedUser = await updateUserWalletBalanceRepo(userId, ticketRefundAmount);
-      userBalanceAfter = updatedUser?.walletBalance || ticketRefundAmount;
-      userWalletCredited = true;
-
-      await createUserWalletTransactionRepo({
-        userId,
-        transactionType: "refund",
-        amount: ticketRefundAmount,
-        currency: "INR",
-        balanceAfter: userBalanceAfter,
-        status: "completed",
-        paymentMethod: "wallet",
-        description: `Ticket cancellation refund for "${event?.title || "Event"}" (${ticket.ticketId})`,
-        metadata: {
-          bookingId: booking._id,
-          bookingCode: booking.bookingId,
-          ticketId: ticket.ticketId,
-          eventId: event?._id || booking.eventId,
-          eventTitle: event?.title || "Event",
-          refundAmount: ticketRefundAmount,
-        },
-      });
+    const allCancelled = booking.tickets.every((t) => t.status === "cancelled");
+    if (allCancelled) {
+      booking.bookingStatus = "cancelled";
+      if (isPaidBooking && actualPaidAmount > 0) {
+        booking.paymentStatus = "refunded";
+      }
     }
-  }
 
-  // 4. Process Vendor Wallet Proportional Refund Deduction
-  try {
-    await processVendorBookingRefund(booking, {
-      isPartial: true,
-      ticketId: ticket.ticketId,
-      cancelledTicketsCount: 1,
-      totalQuantity,
-    });
-  } catch (err) {
-    console.error("Error processing vendor wallet refund deduction on ticket cancellation:", err);
-  }
+    if (session) {
+      await booking.save({ session });
+    } else {
+      await saveBookingRepo(booking);
+    }
 
-  // 5. Process Admin Wallet Commission & Coupon Reversal
-  try {
-    await processAdminBookingRefund(booking, {
-      isPartial: true,
-      ticketId: ticket.ticketId,
-      cancelledTicketsCount: 1,
-      totalQuantity,
-    });
-  } catch (err) {
-    console.error("Error processing admin wallet refund deduction on ticket cancellation:", err);
-  }
+    // 3. Atomically credit User Wallet and create Wallet Transaction (with Idempotency check)
+    if (ticketRefundAmount > 0) {
+      const existingRefundTx = session
+        ? await UserWalletTransaction.findOne({
+            "metadata.ticketId": ticket.ticketId,
+            transactionType: "refund",
+            status: "completed",
+          }).session(session)
+        : await UserWalletTransaction.findOne({
+            "metadata.ticketId": ticket.ticketId,
+            transactionType: "refund",
+            status: "completed",
+          });
+
+      if (!existingRefundTx) {
+        const updatedUser = await updateUserWalletBalanceRepo(userId, ticketRefundAmount, { session });
+        userBalanceAfter = updatedUser?.walletBalance || ticketRefundAmount;
+        userWalletCredited = true;
+
+        await createUserWalletTransactionRepo(
+          {
+            userId,
+            transactionType: "refund",
+            amount: ticketRefundAmount,
+            currency: "INR",
+            balanceAfter: userBalanceAfter,
+            status: "completed",
+            paymentMethod: "wallet",
+            description: `Ticket cancellation refund for "${event?.title || "Event"}" (${ticket.ticketId})`,
+            metadata: {
+              bookingId: booking._id,
+              bookingCode: booking.bookingId,
+              ticketId: ticket.ticketId,
+              eventId: event?._id || booking.eventId,
+              eventTitle: event?.title || "Event",
+              refundAmount: ticketRefundAmount,
+              isPartial: true,
+            },
+          },
+          { session }
+        );
+      }
+    }
+
+    // 4. Process Vendor Wallet Proportional Refund Deduction
+    await processVendorBookingRefund(
+      booking,
+      {
+        isPartial: true,
+        ticketId: ticket.ticketId,
+        ticketShare,
+      },
+      { session }
+    );
+
+    // 5. Process Admin Wallet Commission & Coupon Reversal
+    await processAdminBookingRefund(
+      booking,
+      {
+        isPartial: true,
+        ticketId: ticket.ticketId,
+        ticketShare,
+      },
+      { session }
+    );
+  });
 
   // 5. Decrement Event Sold Ticket Count
   try {
@@ -734,6 +806,9 @@ export const cancelTicketService = async(userId, ticketId, allowedLimitHours = 0
 // Cancel an entire booking
 
 export const cancelBookingService = async (userId, bookingId, allowedLimitHours = 0) => {
+  let userBalanceAfter = 0;
+  let userWalletCredited = false;
+
   const booking = await findBookingByIdRepo(bookingId);
   if (!booking) {
     throw new AppError("Booking Not Found!", HTTP_STATUS.NOT_FOUND);
@@ -747,7 +822,7 @@ export const cancelBookingService = async (userId, bookingId, allowedLimitHours 
     throw new AppError("You are not authorized to cancel this booking!", HTTP_STATUS.FORBIDDEN);
   }
 
-  if (booking.bookingStatus === "cancelled") {
+  if (booking.bookingStatus === "cancelled" || booking.paymentStatus === "refunded") {
     return {
       bookingId: booking.bookingId || booking._id,
       bookingStatus: "cancelled",
@@ -758,7 +833,7 @@ export const cancelBookingService = async (userId, bookingId, allowedLimitHours 
   }
 
   const unCancelledTickets = (booking.tickets || []).filter((t) => t.status !== "cancelled");
-  if (unCancelledTickets.length === 0) {
+  if (booking.tickets && booking.tickets.length > 0 && unCancelledTickets.length === 0) {
     return {
       bookingId: booking.bookingId || booking._id,
       bookingStatus: booking.bookingStatus,
@@ -772,18 +847,6 @@ export const cancelBookingService = async (userId, bookingId, allowedLimitHours 
   const hasCheckedIn = unCancelledTickets.some((t) => t.status === "checked-in");
   if (hasCheckedIn) {
     throw new AppError("Bookings with checked-in tickets cannot be cancelled!", HTTP_STATUS.BAD_REQUEST);
-  }
-
-  // Check 24-hour purchase refund policy
-  const nowTime = Date.now();
-  const bookingCreatedAt = booking.createdAt ? new Date(booking.createdAt).getTime() : nowTime;
-  const hoursSincePurchase = (nowTime - bookingCreatedAt) / (1000 * 60 * 60);
-
-  if (hoursSincePurchase > 24) {
-    throw new AppError(
-      "Refund window expired. Cancellations and refunds are only allowed within 24 hours of purchasing the ticket.",
-      HTTP_STATUS.BAD_REQUEST
-    );
   }
 
   const event = booking.eventId;
@@ -816,85 +879,122 @@ export const cancelBookingService = async (userId, bookingId, allowedLimitHours 
     }
   }
 
-  // 1. Calculate the exact total refund amount for the entire booking
-  const isPaidBooking = (booking.paymentStatus === "paid" || booking.bookingStatus === "confirmed" || booking.bookingStatus === "completed");
-  const totalQuantity = Number(booking.quantity) || (booking.tickets ? booking.tickets.length : 1) || 1;
+  // 1. Calculate the exact total refund amount for the entire booking (exact amount paid by user)
+  const isPaidBooking = (
+    ["paid", "success", "completed", "free"].includes(String(booking.paymentStatus || "").toLowerCase()) ||
+    ["confirmed", "completed"].includes(String(booking.bookingStatus || "").toLowerCase())
+  );
   const actualPaidAmount = Number(booking.totalAmount) || 0;
+
+  // Query any prior user refunds on this booking (e.g. from partial single-ticket cancellations)
+  const priorUserRefunds = await UserWalletTransaction.find({
+    "metadata.bookingId": booking._id,
+    transactionType: "refund",
+    status: "completed",
+  });
+  const totalUserAlreadyRefunded = priorUserRefunds.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+
+  // User receives 100% of the actual paid amount (minus whatever was already refunded to user)
   const totalRefundAmount = (isPaidBooking && actualPaidAmount > 0)
-    ? Number(((actualPaidAmount * unCancelledTickets.length) / totalQuantity).toFixed(2))
+    ? Math.max(0, Number((actualPaidAmount - totalUserAlreadyRefunded).toFixed(2)))
     : 0;
 
-  // 2. Mark all tickets and booking as cancelled
-  (booking.tickets || []).forEach((t) => {
-    t.status = "cancelled";
-    t.cancelledAt = new Date();
-  });
-  booking.bookingStatus = "cancelled";
-  if (isPaidBooking && actualPaidAmount > 0) {
-    booking.paymentStatus = "refunded";
-  }
-
-  await saveBookingRepo(booking);
-
-  // 3. Atomically credit User Wallet and create EXACTLY ONE Wallet Transaction (with Idempotency check)
-  let userWalletCredited = false;
-  let userBalanceAfter = null;
-
-  if (totalRefundAmount > 0) {
-    const existingRefundTx = await UserWalletTransaction.findOne({
-      "metadata.bookingId": booking._id,
-      transactionType: "refund",
-      status: "completed",
+  await runInTransaction(async (session) => {
+    // 2. Mark all tickets and booking as cancelled
+    (booking.tickets || []).forEach((t) => {
+      t.status = "cancelled";
+      t.cancelledAt = new Date();
     });
-
-    if (!existingRefundTx) {
-      const updatedUser = await updateUserWalletBalanceRepo(userId, totalRefundAmount);
-      userBalanceAfter = updatedUser?.walletBalance || totalRefundAmount;
-      userWalletCredited = true;
-
-      const bookingCode = booking.bookingId || `BK-${booking._id.toString().slice(-6).toUpperCase()}`;
-      await createUserWalletTransactionRepo({
-        userId,
-        transactionType: "refund",
-        amount: totalRefundAmount,
-        currency: "INR",
-        balanceAfter: userBalanceAfter,
-        status: "completed",
-        paymentMethod: "wallet",
-        description: `Booking Refund - ${bookingCode} ("${event?.title || "Event"}")`,
-        metadata: {
-          bookingId: booking._id,
-          bookingCode,
-          eventId: event?._id || booking.eventId,
-          eventTitle: event?.title || "Event",
-          refundAmount: totalRefundAmount,
-          quantity: unCancelledTickets.length,
-        },
-      });
+    booking.bookingStatus = "cancelled";
+    if (isPaidBooking && actualPaidAmount > 0) {
+      booking.paymentStatus = "refunded";
     }
-  }
 
-  // 4. Process Vendor Wallet Refund Deduction
-  try {
-    await processVendorBookingRefund(booking, {
-      isPartial: false,
-      cancelledTicketsCount: unCancelledTickets.length,
-      totalQuantity,
-    });
-  } catch (err) {
-    console.error("Error processing vendor wallet refund deduction on booking cancellation:", err);
-  }
+    if (session) {
+      await booking.save({ session });
+    } else {
+      await saveBookingRepo(booking);
+    }
 
-  // 5. Process Admin Wallet Commission & Coupon Reversal
-  try {
-    await processAdminBookingRefund(booking, {
-      isPartial: false,
-      cancelledTicketsCount: unCancelledTickets.length,
-      totalQuantity,
-    });
-  } catch (err) {
-    console.error("Error processing admin wallet refund deduction on booking cancellation:", err);
-  }
+    // Mark corresponding Payment records as REFUNDED
+    try {
+      if (session) {
+        await Payment.updateMany(
+          { orderId: booking._id, status: { $in: ["SUCCESS", "PAID", "CREATED"] } },
+          { $set: { status: "REFUNDED" } }
+        ).session(session);
+      } else {
+        await Payment.updateMany(
+          { orderId: booking._id, status: { $in: ["SUCCESS", "PAID", "CREATED"] } },
+          { $set: { status: "REFUNDED" } }
+        );
+      }
+    } catch (payErr) {
+      console.error("Error updating payment status on booking refund:", payErr);
+    }
+
+    // 3. Atomically credit User Wallet and create EXACTLY ONE Wallet Transaction (with Idempotency check)
+    if (totalRefundAmount > 0) {
+      const query = {
+        "metadata.bookingId": booking._id,
+        transactionType: "refund",
+        status: "completed",
+        "metadata.isPartial": false,
+      };
+
+      const existingRefundTx = session
+        ? await UserWalletTransaction.findOne(query).session(session)
+        : await UserWalletTransaction.findOne(query);
+
+      if (!existingRefundTx) {
+        const updatedUser = await updateUserWalletBalanceRepo(userId, totalRefundAmount, { session });
+        userBalanceAfter = updatedUser?.walletBalance || totalRefundAmount;
+        userWalletCredited = true;
+
+        const bookingCode = booking.bookingId || `BK-${booking._id.toString().slice(-6).toUpperCase()}`;
+        await createUserWalletTransactionRepo(
+          {
+            userId,
+            transactionType: "refund",
+            amount: totalRefundAmount,
+            currency: "INR",
+            balanceAfter: userBalanceAfter,
+            status: "completed",
+            paymentMethod: "wallet",
+            description: `Booking Refund - ${bookingCode} ("${event?.title || "Event"}")`,
+            metadata: {
+              bookingId: booking._id,
+              bookingCode,
+              eventId: event?._id || booking.eventId,
+              eventTitle: event?.title || "Event",
+              refundAmount: totalRefundAmount,
+              originalUserPaidAmount: actualPaidAmount,
+              isPartial: false,
+            },
+          },
+          { session }
+        );
+      }
+    }
+
+    // 4. Process Vendor Wallet Refund Deduction (Reverses 100% of recorded vendor earnings)
+    await processVendorBookingRefund(
+      booking,
+      {
+        isPartial: false,
+      },
+      { session }
+    );
+
+    // 5. Process Admin Wallet Commission & Coupon Reversal (Reverses 100% of platform fee & restores 100% of coupon subsidy)
+    await processAdminBookingRefund(
+      booking,
+      {
+        isPartial: false,
+      },
+      { session }
+    );
+  });
 
   // 5. Decrement Event Sold Ticket Count
   try {

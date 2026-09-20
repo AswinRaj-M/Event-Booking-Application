@@ -285,10 +285,12 @@ const PaymentCheckout = () => {
     try {
       setApplyingCoupon(true);
       setCouponInput(cleanCode);
+      const effectiveSubtotal = Math.max(0, subtotal - initialDiscount);
       const res = await axiosInstance.post('/users/booking/validate-coupon', {
         couponCode: cleanCode,
         eventId: targetEventId,
         subtotal: subtotal,
+        effectiveSubtotal: effectiveSubtotal,
         quantity: Number(quantity) || 1
       });
 
