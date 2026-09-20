@@ -6,6 +6,7 @@ import {
   Search, 
   Bell, 
   Calendar, 
+  Clock,
   MapPin, 
   Share2, 
   Download, 
@@ -348,6 +349,13 @@ const MyBookings = () => {
       return;
     }
 
+    const purchaseTime = booking.createdAt ? new Date(booking.createdAt).getTime() : Date.now();
+    const hoursSincePurchase = (Date.now() - purchaseTime) / (1000 * 60 * 60);
+    if (hoursSincePurchase > 24) {
+      toast.error("Refund window expired. Cancellations and refunds are only permitted within 24 hours of purchasing the ticket.");
+      return;
+    }
+
     const unCancelledTickets = booking.tickets.filter((t) => t.status !== "cancelled");
     if (unCancelledTickets.length === 0 || booking.bookingStatus === "cancelled") {
       toast.info("All tickets for this booking are already cancelled.");
@@ -647,22 +655,39 @@ const MyBookings = () => {
                                 </button>
                               </div>
 
-                              {booking.bookingStatus !== "cancelled" && (
-                                <div className="flex gap-2 w-full">
-                                  <button 
-                                    onClick={() => handleCancelClick(booking)}
-                                    className="flex-1 py-2 px-3 bg-rose-950/20 hover:bg-rose-900/40 border border-rose-500/20 hover:border-rose-500/40 text-rose-300 hover:text-rose-200 text-xs font-bold rounded-xl transition-all cursor-pointer"
-                                  >
-                                    Cancel
-                                  </button>
-                                  <button 
-                                    onClick={() => handleActionClick("View Ticket QR", booking._id)}
-                                    className="flex-1 py-2 px-3 bg-white text-[#05050C] hover:bg-zinc-200 text-xs font-extrabold rounded-xl transition-all cursor-pointer shadow-[0_0_15px_rgba(255,255,255,0.1)]"
-                                  >
-                                    View Ticket
-                                  </button>
-                                </div>
-                              )}
+                              {booking.bookingStatus !== "cancelled" && (() => {
+                                const purchaseTime = booking.createdAt ? new Date(booking.createdAt).getTime() : Date.now();
+                                const isWithin24Hours = (Date.now() - purchaseTime) <= 24 * 60 * 60 * 1000;
+                                return (
+                                  <div className="space-y-2 w-full">
+                                    <div className="flex items-center justify-start md:justify-end gap-1.5 text-[11px] font-medium">
+                                      <Clock className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                                      {isWithin24Hours ? (
+                                        <span className="text-emerald-400 font-semibold">Refund available (Within 24h of purchase)</span>
+                                      ) : (
+                                        <span className="text-zinc-500 font-semibold">Non-refundable (Purchased &gt;24h ago)</span>
+                                      )}
+                                    </div>
+
+                                    <div className="flex gap-2 w-full">
+                                      {isWithin24Hours && (
+                                        <button 
+                                          onClick={() => handleCancelClick(booking)}
+                                          className="flex-1 py-2 px-3 bg-rose-950/20 hover:bg-rose-900/40 border border-rose-500/20 hover:border-rose-500/40 text-rose-300 hover:text-rose-200 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                                        >
+                                          Cancel
+                                        </button>
+                                      )}
+                                      <button 
+                                        onClick={() => handleActionClick("View Ticket QR", booking._id)}
+                                        className="flex-1 py-2 px-3 bg-white text-[#05050C] hover:bg-zinc-200 text-xs font-extrabold rounded-xl transition-all cursor-pointer shadow-[0_0_15px_rgba(255,255,255,0.1)] text-center"
+                                      >
+                                        View Ticket
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })()}
                             </div>
                           )}
                         </div>

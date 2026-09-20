@@ -468,6 +468,18 @@ export const cancelTicketService = async(userId, ticketId, allowedLimitHours = 0
     throw new AppError("Checked-in tickets cannot be cancelled!", HTTP_STATUS.BAD_REQUEST);
   }
 
+  // Check 24-hour purchase refund policy
+  const nowTime = Date.now();
+  const bookingCreatedAt = booking.createdAt ? new Date(booking.createdAt).getTime() : nowTime;
+  const hoursSincePurchase = (nowTime - bookingCreatedAt) / (1000 * 60 * 60);
+
+  if (hoursSincePurchase > 24) {
+    throw new AppError(
+      "Refund window expired. Cancellations and refunds are only allowed within 24 hours of purchasing the ticket.",
+      HTTP_STATUS.BAD_REQUEST
+    );
+  }
+
   const event = booking.eventId;
 
   if (event && event.schedule && event.schedule.date) {
@@ -674,6 +686,18 @@ export const cancelBookingService = async (userId, bookingId, allowedLimitHours 
   const hasCheckedIn = unCancelledTickets.some((t) => t.status === "checked-in");
   if (hasCheckedIn) {
     throw new AppError("Bookings with checked-in tickets cannot be cancelled!", HTTP_STATUS.BAD_REQUEST);
+  }
+
+  // Check 24-hour purchase refund policy
+  const nowTime = Date.now();
+  const bookingCreatedAt = booking.createdAt ? new Date(booking.createdAt).getTime() : nowTime;
+  const hoursSincePurchase = (nowTime - bookingCreatedAt) / (1000 * 60 * 60);
+
+  if (hoursSincePurchase > 24) {
+    throw new AppError(
+      "Refund window expired. Cancellations and refunds are only allowed within 24 hours of purchasing the ticket.",
+      HTTP_STATUS.BAD_REQUEST
+    );
   }
 
   const event = booking.eventId;
