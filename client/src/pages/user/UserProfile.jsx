@@ -15,6 +15,7 @@ const UserProfile = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const user = useSelector((state) => state.user?.user);
+  const isGoogleUser = Boolean(user?.isGoogleAuth || user?.googleId);
 
   const fileInputRef = useRef(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -129,6 +130,10 @@ const UserProfile = () => {
     const emailChanged = email.trim().toLowerCase() !== user?.email?.toLowerCase();
 
     if (emailChanged) {
+      if (isGoogleUser) {
+        toast.error("Email address cannot be changed for accounts registered with Google");
+        return;
+      }
       // Open password verification modal before sending OTP
       setCurrentPassword("");
       setPasswordError("");
@@ -300,10 +305,12 @@ const UserProfile = () => {
                 <Pencil className="w-4 h-4" />
                 Edit Profile
               </button>
-              <button onClick={handleChangePassword} className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-white/[0.03] hover:bg-white/[0.07] text-white rounded-xl border border-white/10 hover:border-purple-500/30 transition-all duration-300 font-bold text-sm cursor-pointer">
-                <KeyRound className="w-4 h-4 text-purple-400" />
-                Change Password
-              </button>
+              {!isGoogleUser && (
+                <button onClick={handleChangePassword} className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-white/[0.03] hover:bg-white/[0.07] text-white rounded-xl border border-white/10 hover:border-purple-500/30 transition-all duration-300 font-bold text-sm cursor-pointer">
+                  <KeyRound className="w-4 h-4 text-purple-400" />
+                  Change Password
+                </button>
+              )}
             </div>
           </div>
 
@@ -459,17 +466,25 @@ const UserProfile = () => {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] uppercase font-bold tracking-widest text-zinc-400">
-                  Email Address
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] uppercase font-bold tracking-widest text-zinc-400">
+                    Email Address
+                  </label>
+                  {isGoogleUser && (
+                    <span className="text-[10px] text-purple-400 font-medium">Linked with Google</span>
+                  )}
+                </div>
                 <div className="relative">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-400/70" />
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    disabled={isGoogleUser}
                     placeholder="Enter your email"
-                    className="w-full bg-[#04020a]/80 text-white pl-11 pr-4 py-3 rounded-xl border border-white/10 hover:border-purple-500/30 focus:border-purple-500 focus:outline-none transition-all duration-300 text-sm"
+                    className={`w-full bg-[#04020a]/80 text-white pl-11 pr-4 py-3 rounded-xl border border-white/10 ${
+                      isGoogleUser ? "opacity-60 cursor-not-allowed" : "hover:border-purple-500/30 focus:border-purple-500"
+                    } focus:outline-none transition-all duration-300 text-sm`}
                   />
                 </div>
               </div>

@@ -81,6 +81,8 @@ export const verifyOTP = async (req, res) => {
       fullName: user.fullName,
       email: user.email,
       role: user.role,
+      isGoogleAuth: false,
+      googleId: null,
     },
   });
 };
@@ -137,6 +139,8 @@ export const loginUser = async (req, res) => {
       fullName: user.fullName,
       email: user.email,
       role: user.role,
+      isGoogleAuth: Boolean(user.googleId && !user.password),
+      googleId: user.googleId || null,
     },
   });
 };
@@ -177,6 +181,8 @@ export const googleCallback = async (req, res) => {
       fullName: user.fullName || user.name,
       email: user.email,
       role: user.role,
+      isGoogleAuth: true,
+      googleId: user.googleId || null,
     };
 
     res.redirect(

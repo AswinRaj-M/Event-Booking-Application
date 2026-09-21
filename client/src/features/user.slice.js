@@ -111,14 +111,20 @@ const userSlice = createSlice({
       state.ticketsError = null;
     },
     setGoogleAuthData: (state, action) => {
-      state.user = action.payload.user;
+      state.user = {
+        ...action.payload.user,
+        isGoogleAuth: true,
+      };
       state.success = true;
       state.error = null;
       state.unverified = false;
     },
     updateUserData: (state, action) => {
-      state.user = action.payload;
-    }
+      state.user = {
+        ...state.user,
+        ...action.payload,
+      };
+    },
   },
   extraReducers: (builder) => {
     builder

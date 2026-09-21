@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Eye, EyeOff, CheckCircle2, XCircle } from "lucide-react";
 import { useSelector } from "react-redux";
 import { changePassword } from "../../services/user.api";
@@ -12,8 +12,18 @@ export default function ChangePassword() {
   const navigate = useNavigate();
   const location = useLocation();
   const { vendor } = useSelector((state) => state.vendor || {});
+  const user = useSelector((state) => state.user?.user);
   const isVendorRoute = location.pathname.startsWith("/vendor");
   const isVendor = isVendorRoute || Boolean(vendor?.id || vendor?._id);
+  const isGoogleUser = Boolean(user?.isGoogleAuth || user?.googleId);
+
+  useEffect(() => {
+    if (!isVendor && isGoogleUser) {
+      toast.error("Accounts registered via Google OAuth cannot change password");
+      navigate(USER_ROUTES.PROFILE, { replace: true });
+    }
+  }, [isVendor, isGoogleUser, navigate]);
+
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");

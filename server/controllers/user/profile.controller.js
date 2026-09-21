@@ -27,6 +27,8 @@ export const getUserProfile = async (req, res) => {
       role: user.role,
       profilePicture: user.profilePicture,
       createdAt: user.createdAt,
+      isGoogleAuth: Boolean(user.googleId),
+      googleId: user.googleId || null,
     },
   });
 };
@@ -52,6 +54,8 @@ export const updateUserProfile = async (req, res) => {
       role: updatedUser.role,
       profilePicture: updatedUser.profilePicture,
       createdAt: updatedUser.createdAt,
+      isGoogleAuth: Boolean(updatedUser.googleId),
+      googleId: updatedUser.googleId || null,
     },
   });
 };
@@ -116,6 +120,8 @@ export const verifyEmailUpdateOtp = async (req, res) => {
       role: updatedUser.role,
       profilePicture: updatedUser.profilePicture,
       createdAt: updatedUser.createdAt,
+      isGoogleAuth: Boolean(updatedUser.googleId),
+      googleId: updatedUser.googleId || null,
     },
   });
 };
@@ -173,6 +179,8 @@ export const updateUserProfilePicture = async (req, res) => {
       role: updatedUser.role,
       profilePicture: updatedUser.profilePicture,
       createdAt: updatedUser.createdAt,
+      isGoogleAuth: Boolean(updatedUser.googleId),
+      googleId: updatedUser.googleId || null,
     },
   });
 };
