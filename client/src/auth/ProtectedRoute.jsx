@@ -1,10 +1,12 @@
 import { useEffect } from "react"
-import { useSelector } from "react-redux"
+import { useSelector, useDispatch } from "react-redux"
 import { Navigate, useLocation } from "react-router-dom"
 import { checkVendorStatus } from "../services/vendor.api"
+import { setVendorData } from "../features/vendorSlice"
 import { COMMON_ROUTES, USER_ROUTES, VENDOR_ROUTES, ADMIN_ROUTES } from "../constants/Routes"
 
 export const ProtectedRoute = ({ children, role = "user" }) => {
+  const dispatch = useDispatch()
   const user = useSelector((state) => state.user?.user)
   const vendor = useSelector((state) => state.vendor?.vendor)
   const admin = useSelector((state) => state.admin?.admin)
@@ -14,19 +16,25 @@ export const ProtectedRoute = ({ children, role = "user" }) => {
     if (role === "vendor" && vendor) {
       const poll = async () => {
         try {
-          await checkVendorStatus();
+          const res = await checkVendorStatus();
+          if (res.data?.success) {
+            const currentStatus = res.data.status || res.data.vendor?.applicationStatus;
+            if (currentStatus && currentStatus !== vendor.applicationStatus) {
+              const updatedVendor = res.data.vendor || { ...vendor, applicationStatus: currentStatus };
+              dispatch(setVendorData(updatedVendor));
+            }
+          }
         } catch (error) {
           console.error("[Vendor Poller] Polling status check failed:", error);
         }
       };
 
-
       poll();
 
-      const interval = setInterval(poll, 30000);
+      const interval = setInterval(poll, 15000);
       return () => clearInterval(interval);
     }
-  }, [role, vendor]);
+  }, [role, vendor, dispatch]);
 
   if (role === "admin" && !admin) return <Navigate to={ADMIN_ROUTES.LOGIN} replace />
   if (role === "vendor" && !vendor) return <Navigate to={COMMON_ROUTES.LOGIN} replace />

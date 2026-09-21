@@ -78,7 +78,13 @@ const vendorSlice = createSlice({
       state.unverified = false
     },
     setVendorData: (state, action) => {
-      state.vendor = action.payload
+      if (!action.payload) {
+        state.vendor = null;
+      } else if (state.vendor) {
+        state.vendor = { ...state.vendor, ...action.payload };
+      } else {
+        state.vendor = action.payload;
+      }
     }
   },
   extraReducers: (builder) => {

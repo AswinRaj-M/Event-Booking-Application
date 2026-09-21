@@ -139,7 +139,19 @@ router.get("/status", protect, requireRole("vendor"), (req, res) => {
   res.status(HTTP_STATUS.OK).json({
     success: true,
     status: req.user.applicationStatus,
-    isBlocked: req.user.isBlocked
+    isBlocked: req.user.isBlocked,
+    vendor: {
+      id: req.user._id,
+      _id: req.user._id,
+      organizerName: req.user.organizerName,
+      businessEmail: req.user.businessEmail,
+      businessName: req.user.businessName,
+      role: req.user.role,
+      applicationStatus: req.user.applicationStatus,
+      isBlocked: req.user.isBlocked,
+      profilePicture: req.user.profilePicture,
+      createdAt: req.user.createdAt,
+    }
   });
 })
 

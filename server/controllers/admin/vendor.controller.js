@@ -1,5 +1,6 @@
 import { sendMail } from "../../utils/sendMail.js";
 import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
+import { sendNotification } from "../../config/socket.js";
 
 import {
   getAllVendorsService,
@@ -47,6 +48,16 @@ export const vendorApprove = async (req, res) => {
     );
   } catch (err) {
     console.error("Error sending approval email:", err.message);
+  }
+
+  try {
+    await sendNotification(vendor._id, {
+      title: "Application Approved! 🎉",
+      message: message || "Your vendor application has been approved. Welcome to Festivo!",
+      type: "SYSTEM"
+    });
+  } catch (notifErr) {
+    console.error("Error sending approval notification:", notifErr.message);
   }
 
   return res.status(HTTP_STATUS.OK).json({

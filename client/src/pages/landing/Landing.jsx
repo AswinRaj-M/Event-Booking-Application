@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { VENDOR_ROUTES } from "../../constants/Routes";
 
 import logo from "../../assets/logo.jpeg";
 import heroBg from "../../assets/landing-page-party.jpg";
@@ -96,9 +97,11 @@ const LandingPage = () => {
               <p className="text-gray-400 text-sm mb-8 leading-relaxed max-w-sm mx-auto">
                 Create stunning event pages, manage ticket sales, and grow your audience with powerful hosting tools.
               </p>
-              <button className="w-full bg-white/5 hover:bg-white/10 border border-white/10 py-4 rounded-xl font-bold transition flex items-center justify-center gap-2">
-                Host an Event
-              </button>
+              <Link to={VENDOR_ROUTES.APPLICATION}>
+                <button className="w-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-pink-500/30 py-4 rounded-xl font-bold transition flex items-center justify-center gap-2 cursor-pointer">
+                  Host an Event <span className="group-hover:translate-x-1 transition-transform">→</span>
+                </button>
+              </Link>
             </div>
           </div>
 
