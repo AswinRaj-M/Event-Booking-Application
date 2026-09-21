@@ -355,7 +355,7 @@ const handleEditCategory = async (categoryData) => {
                     <div className="bg-[#0B0914] rounded-xl p-4 flex justify-between items-center mb-4 border border-gray-800/50">
                       <div>
                         <p className="text-gray-500 text-[10px] mb-1 uppercase tracking-wider">Total Events</p>
-                        <p className="text-lg font-bold text-white">{category.events || 0}</p>
+                        <p className="text-lg font-bold text-white">{category.events ?? category.eventCount ?? 0}</p>
                       </div>
                       <div className="text-right">
                         <p className="text-gray-500 text-[10px] mb-1 uppercase tracking-wider">Vendors</p>
@@ -371,7 +371,7 @@ const handleEditCategory = async (categoryData) => {
                             ))}
                           </div>
                           <span className="bg-gray-800 text-gray-300 text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
-                            {category.vendors || 0}
+                            {category.vendors ?? category.vendorCount ?? 0}
                           </span>
                         </div>
                       </div>

@@ -34,10 +34,21 @@ import Loader from "../../components/common/Loader";
 const AdminVendorApplicationView = () => {
   const { id } = useParams();
   const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   const { vendorDetails, vendorDetailsLoading: loading } = useSelector((state) => state.admin);
   const [message, setMessage] = useState("");
   const [viewingImageUrl, setViewingImageUrl] = useState(null);
+
+  const handlePrint = () => {
+    const originalTitle = document.title;
+    const vendorName = vendorDetails?.businessName || "Vendor";
+    document.title = `Vendor_Application_${vendorName.replace(/[^a-zA-Z0-9]/g, "_")}`;
+    window.print();
+    setTimeout(() => {
+      document.title = originalTitle;
+    }, 1000);
+  };
 
   useEffect(() => {
     dispatch(getVendorByIdThunk(id));
@@ -156,14 +167,56 @@ const AdminVendorApplicationView = () => {
   }
 
   return (
-    <div className="flex h-screen bg-[#0B0914] text-white font-sans overflow-hidden">
+    <div className="flex h-screen bg-[#0B0914] text-white font-sans overflow-hidden print:h-auto print:overflow-visible print:bg-white print:text-black">
+      {/* Print Specific CSS */}
+      <style>{`
+        @media print {
+          @page {
+            size: A4 portrait;
+            margin: 15mm;
+          }
+          html, body, #root {
+            background: #ffffff !important;
+            color: #111827 !important;
+            height: auto !important;
+            min-height: auto !important;
+            overflow: visible !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+          .print-card-clean {
+            background-color: #ffffff !important;
+            border: 1px solid #e5e7eb !important;
+            color: #111827 !important;
+            box-shadow: none !important;
+            page-break-inside: avoid;
+            break-inside: avoid;
+            margin-bottom: 1.25rem !important;
+          }
+          .print-box-clean {
+            background-color: #f9fafb !important;
+            border: 1px solid #e5e7eb !important;
+            color: #111827 !important;
+          }
+          .print-text-dark {
+            color: #111827 !important;
+          }
+          .print-text-muted {
+            color: #4b5563 !important;
+          }
+        }
+      `}</style>
+
       {/* Sidebar */}
-      <AdminSidebar />
+      <div className="print:hidden h-full">
+        <AdminSidebar />
+      </div>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden">
+      <main className="flex-1 flex flex-col h-full overflow-hidden print:h-auto print:overflow-visible print:bg-white">
         {/* Top Header */}
-        <header className="h-16 flex items-center justify-between px-8 border-b border-gray-800 bg-[#0B0914] shrink-0">
+        <header className="h-16 flex items-center justify-between px-8 border-b border-gray-800 bg-[#0B0914] shrink-0 print:hidden">
           <div className="flex items-center text-gray-400 text-sm">
             <Sidebar className="w-5 h-5 mr-4 text-gray-500 cursor-pointer hover:text-white" />
             <span>Dashboard</span>
@@ -177,19 +230,45 @@ const AdminVendorApplicationView = () => {
         </header>
 
         {/* Scrollable Content Area */}
-        <div data-lenis-prevent className="flex-1 overflow-y-auto p-8 scrollbar-hide flex flex-col min-h-0">
+        <div data-lenis-prevent className="flex-1 overflow-y-auto p-8 scrollbar-hide flex flex-col min-h-0 print:overflow-visible print:p-0 print:h-auto">
+          {/* Print Only Official Document Header */}
+          <div className="hidden print:flex items-start justify-between border-b-2 border-purple-600 pb-4 mb-6">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Festivo Event Platform</h1>
+              <p className="text-sm font-semibold text-purple-700">Vendor Application Official Record</p>
+            </div>
+            <div className="text-right">
+              <span className={`inline-block px-3 py-1 rounded text-xs font-bold uppercase border ${
+                badge.text === 'approved' 
+                  ? 'bg-emerald-100 text-emerald-800 border-emerald-300' 
+                  : badge.text === 'rejected' || badge.text === 'suspended'
+                  ? 'bg-rose-100 text-rose-800 border-rose-300'
+                  : 'bg-amber-100 text-amber-800 border-amber-300'
+              }`}>
+                Status: {badge.text}
+              </span>
+              <p className="text-xs text-gray-500 mt-1 font-mono">App ID: {vendorDetails?._id || "N/A"}</p>
+              <p className="text-xs text-gray-500">
+                Submitted: {vendorDetails?.createdAt ? new Date(vendorDetails.createdAt).toLocaleDateString() : "N/A"}
+              </p>
+            </div>
+          </div>
+
           {/* Page Header Area */}
-          <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4 mb-8 shrink-0">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4 mb-8 shrink-0 print:hidden">
             <div>
               <div className="flex items-center space-x-4 mb-2">
-                <button className="flex items-center space-x-2 px-3 py-1.5 bg-[#151221] hover:bg-[#2A204C] border border-gray-800 hover:border-purple-500/50 rounded-lg text-sm transition-colors text-purple-300">
+                <button 
+                  onClick={() => navigate(-1)}
+                  className="flex items-center space-x-2 px-3 py-1.5 bg-[#151221] hover:bg-[#2A204C] border border-gray-800 hover:border-purple-500/50 rounded-lg text-sm transition-colors text-purple-300 cursor-pointer"
+                >
                   <ArrowLeft size={16} />
                   <span className="hidden sm:inline">Back to list</span>
                 </button>
                 <span className={`px-3 py-1 rounded-md text-xs font-medium uppercase ${badge.className}`}>
                   {badge.text}
                 </span>
-                <span className="text-sm text-gray-500">
+                <span className="text-sm text-gray-500 font-mono">
                   ID: {vendorDetails?._id?.substring(0, 8) || "#"}
                 </span>
               </div>
@@ -205,11 +284,24 @@ const AdminVendorApplicationView = () => {
             </div>
 
             <div className="flex space-x-3">
-              <button className="flex items-center space-x-2 px-4 py-2 bg-[#151221] hover:bg-[#2A204C] border border-gray-700 hover:border-purple-500/50 rounded-lg text-sm font-medium transition-colors text-gray-300">
+              <button 
+                onClick={handlePrint}
+                className="flex items-center space-x-2 px-4 py-2 bg-[#151221] hover:bg-[#2A204C] border border-gray-700 hover:border-purple-500/50 rounded-lg text-sm font-medium transition-colors text-gray-300 hover:text-white cursor-pointer"
+                title="Print or Save as PDF"
+              >
                 <Printer size={16} />
                 <span className="hidden sm:inline">Print</span>
               </button>
-              <button className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-lg text-sm font-medium transition-all shadow-lg shadow-purple-900/20">
+              <button 
+                onClick={() => {
+                  if (vendorDetails?.businessEmail) {
+                    window.location.href = `mailto:${vendorDetails.businessEmail}?subject=Regarding your Festivo Vendor Application`;
+                  } else {
+                    toast.error("No email address available for this vendor");
+                  }
+                }}
+                className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-lg text-sm font-medium transition-all shadow-lg shadow-purple-900/20 cursor-pointer"
+              >
                 <Mail size={16} />
                 <span className="hidden sm:inline">Contact Vendor</span>
               </button>
@@ -217,11 +309,11 @@ const AdminVendorApplicationView = () => {
           </div>
 
           {/* Main Content Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 shrink-0">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 shrink-0 print:grid-cols-1 print:gap-4">
             {/* Left Column (Main Info) */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="lg:col-span-2 space-y-6 print:space-y-4">
               {/* Vendor Header Card */}
-              <div className="bg-[#151221] border border-gray-800/80 rounded-xl p-6 relative overflow-hidden">
+              <div className="bg-[#151221] border border-gray-800/80 rounded-xl p-6 relative overflow-hidden print-card-clean">
                 <div className="flex flex-col sm:flex-row sm:items-start gap-6 relative z-10">
                   <div className="relative shrink-0">
                     <div className="w-24 h-24 rounded-xl overflow-hidden border-2 border-gray-700/50 bg-[#2A204C] flex items-center justify-center text-3xl font-bold text-purple-300">
@@ -303,20 +395,20 @@ const AdminVendorApplicationView = () => {
               </div>
 
               {/* Business Details Card */}
-              <div className="bg-[#151221] border border-gray-800/80 rounded-xl p-6">
+              <div className="bg-[#151221] border border-gray-800/80 rounded-xl p-6 print-card-clean">
                 <div className="flex items-center space-x-2 mb-6">
                   <Building size={20} className="text-purple-400" />
-                  <h3 className="text-lg font-semibold text-white">
+                  <h3 className="text-lg font-semibold text-white print-text-dark">
                     Business Details
                   </h3>
                 </div>
 
                 <div className="space-y-6">
                   <div>
-                    <h4 className="text-sm font-medium text-gray-400 mb-3">
+                    <h4 className="text-sm font-medium text-gray-400 mb-3 print-text-muted">
                       Short Description
                     </h4>
-                    <div className="bg-[#0B0914] border border-gray-800/50 rounded-xl p-5 text-sm leading-relaxed text-gray-300">
+                    <div className="bg-[#0B0914] border border-gray-800/50 rounded-xl p-5 text-sm leading-relaxed text-gray-300 print-box-clean">
                       <p className="mb-4">
                         {vendorDetails?.description ||
                           "No description provided."}
@@ -325,46 +417,54 @@ const AdminVendorApplicationView = () => {
                   </div>
 
                   <div>
-                    <h4 className="text-sm font-medium text-gray-400 mb-3">
+                    <h4 className="text-sm font-medium text-gray-400 mb-3 print-text-muted">
                       Uploaded Documents
                     </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {vendorDetails?.businessDocument?.fileUrl && (
+                      {vendorDetails?.businessDocument?.fileUrl ? (
                         <button
                           onClick={() => setViewingImageUrl(vendorDetails.businessDocument.fileUrl)}
-                          className="flex items-center space-x-4 p-4 border border-gray-800 bg-[#0B0914] rounded-xl cursor-pointer hover:bg-[#2A204C]/50 hover:border-purple-500/30 transition-all duration-200 group text-left font-sans w-full"
+                          className="flex items-center space-x-4 p-4 border border-gray-800 bg-[#0B0914] rounded-xl cursor-pointer hover:bg-[#2A204C]/50 hover:border-purple-500/30 transition-all duration-200 group text-left font-sans w-full print-box-clean"
                         >
                           <div className="p-3 bg-red-500/10 text-red-400 rounded-lg group-hover:bg-red-500/20 transition-colors">
                             <FileText size={20} />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-200 truncate group-hover:text-purple-100 transition-colors">
+                            <p className="text-sm font-medium text-gray-200 truncate group-hover:text-purple-100 transition-colors print-text-dark">
                               Business Document
                             </p>
-                            <p className="text-xs text-gray-500 mt-0.5">
-                              Click to view
+                            <p className="text-xs text-gray-500 mt-0.5 print-text-muted">
+                              Attached
                             </p>
                           </div>
                         </button>
+                      ) : (
+                        <div className="p-4 border border-gray-800/50 bg-[#0B0914] rounded-xl text-xs text-gray-500 print-box-clean">
+                          No Business Document uploaded
+                        </div>
                       )}
 
-                      {vendorDetails?.idProof?.fileUrl && (
+                      {vendorDetails?.idProof?.fileUrl ? (
                         <button
                           onClick={() => setViewingImageUrl(vendorDetails.idProof.fileUrl)}
-                          className="flex items-center space-x-4 p-4 border border-gray-800 bg-[#0B0914] rounded-xl cursor-pointer hover:bg-[#2A204C]/50 hover:border-purple-500/30 transition-all duration-200 group text-left font-sans w-full"
+                          className="flex items-center space-x-4 p-4 border border-gray-800 bg-[#0B0914] rounded-xl cursor-pointer hover:bg-[#2A204C]/50 hover:border-purple-500/30 transition-all duration-200 group text-left font-sans w-full print-box-clean"
                         >
                           <div className="p-3 bg-blue-500/10 text-blue-400 rounded-lg group-hover:bg-blue-500/20 transition-colors">
                             <ImageIcon size={20} />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-200 truncate group-hover:text-purple-100 transition-colors">
+                            <p className="text-sm font-medium text-gray-200 truncate group-hover:text-purple-100 transition-colors print-text-dark">
                               ID Proof
                             </p>
-                            <p className="text-xs text-gray-500 mt-0.5">
-                              Click to view
+                            <p className="text-xs text-gray-500 mt-0.5 print-text-muted">
+                              Attached
                             </p>
                           </div>
                         </button>
+                      ) : (
+                        <div className="p-4 border border-gray-800/50 bg-[#0B0914] rounded-xl text-xs text-gray-500 print-box-clean">
+                          No ID Proof uploaded
+                        </div>
                       )}
                     </div>
                   </div>
@@ -373,36 +473,36 @@ const AdminVendorApplicationView = () => {
             </div>
 
             {/* Right Column (Sidebar) */}
-            <div className="space-y-6">
+            <div className="space-y-6 print:space-y-4">
               {/* Location Card */}
-              <div className="bg-[#151221] border border-gray-800/80 rounded-xl p-6">
+              <div className="bg-[#151221] border border-gray-800/80 rounded-xl p-6 print-card-clean">
                 <div className="flex items-center space-x-2 mb-6">
                   <div className="w-2 h-2 rounded-full bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.8)]"></div>
-                  <h3 className="text-lg font-semibold text-white">
+                  <h3 className="text-lg font-semibold text-white print-text-dark">
                     Location Detail
                   </h3>
                 </div>
 
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-[#0B0914] border border-gray-800/50 rounded-xl p-4">
-                      <p className="text-xs text-gray-500 mb-1.5">City</p>
-                      <p className="text-sm font-medium text-gray-200">
+                    <div className="bg-[#0B0914] border border-gray-800/50 rounded-xl p-4 print-box-clean">
+                      <p className="text-xs text-gray-500 mb-1.5 print-text-muted">City</p>
+                      <p className="text-sm font-medium text-gray-200 print-text-dark">
                         {vendorDetails?.location?.city || "City name"}
                       </p>
                     </div>
-                    <div className="bg-[#0B0914] border border-gray-800/50 rounded-xl p-4">
-                      <p className="text-xs text-gray-500 mb-1.5">State</p>
-                      <p className="text-sm font-medium text-gray-200">
+                    <div className="bg-[#0B0914] border border-gray-800/50 rounded-xl p-4 print-box-clean">
+                      <p className="text-xs text-gray-500 mb-1.5 print-text-muted">State</p>
+                      <p className="text-sm font-medium text-gray-200 print-text-dark">
                         {vendorDetails?.location?.state || "State name"}
                       </p>
                     </div>
                   </div>
 
-                  <div className="bg-[#0B0914] border border-gray-800/50 rounded-xl p-4 flex justify-between items-center">
+                  <div className="bg-[#0B0914] border border-gray-800/50 rounded-xl p-4 flex justify-between items-center print-box-clean">
                     <div>
-                      <p className="text-xs text-gray-500 mb-1.5">Country</p>
-                      <p className="text-sm font-medium text-gray-200">
+                      <p className="text-xs text-gray-500 mb-1.5 print-text-muted">Country</p>
+                      <p className="text-sm font-medium text-gray-200 print-text-dark">
                         {vendorDetails?.location?.country || "Country name"}
                       </p>
                     </div>
@@ -411,7 +511,7 @@ const AdminVendorApplicationView = () => {
               </div>
 
               {/* Admin Review Action Card */}
-              <div className="bg-[#151221] border border-gray-800/80 rounded-xl p-6 relative overflow-hidden">
+              <div className="bg-[#151221] border border-gray-800/80 rounded-xl p-6 relative overflow-hidden print:hidden">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-indigo-500"></div>
                 <div className="flex items-center space-x-2 mb-2 mt-1">
                   <CheckCircle size={18} className="text-purple-400" />
@@ -524,6 +624,12 @@ const AdminVendorApplicationView = () => {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Print Only Footer */}
+          <div className="hidden print:block text-center text-xs text-gray-500 mt-8 pt-4 border-t border-gray-300">
+            <p className="font-semibold text-gray-700">Festivo Event Booking Platform &bull; Confidential Vendor Application</p>
+            <p className="mt-0.5">Printed on {new Date().toLocaleString()}</p>
           </div>
         </div>
       </main>

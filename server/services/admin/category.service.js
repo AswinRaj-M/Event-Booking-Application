@@ -62,7 +62,7 @@ export const getAllCategoriesService = async (query = {}) => {
     const limitNum = parseInt(limit) || 10;
     const skip = (pageNum - 1) * limitNum;
     
-    const { categories, total } = await getAllCategories(filter, sort, skip, limitNum);
+    const { categories, total } = await getAllCategories(filter, sort, skip, limitNum, sortBy);
     return {
       categories,
       total,
@@ -70,7 +70,7 @@ export const getAllCategoriesService = async (query = {}) => {
       currentPage: pageNum
     };
   } else {
-    const { categories } = await getAllCategories(filter, sort, 0, 0);
+    const { categories } = await getAllCategories(filter, sort, 0, 0, sortBy);
     return categories;
   }
 }
