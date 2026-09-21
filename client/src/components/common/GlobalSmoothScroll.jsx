@@ -38,9 +38,17 @@ const GlobalSmoothScroll = () => {
     };
   }, []);
 
-  // Pause Lenis smooth scrolling on dashboard routes (admin & vendor) to allow native inner scrolling
+  // Pause Lenis smooth scrolling only on actual dashboard routes (with fixed sidebars and inner scrolling)
   useEffect(() => {
-    const isDashboardRoute = location.pathname.startsWith('/admin') || location.pathname.startsWith('/vendor');
+    const isStandaloneRoute =
+      location.pathname === '/vendor/application' ||
+      location.pathname === '/vendor/status' ||
+      location.pathname === '/admin/login';
+
+    const isDashboardRoute =
+      !isStandaloneRoute &&
+      (location.pathname.startsWith('/admin') || location.pathname.startsWith('/vendor'));
+
     if (window.lenis) {
       if (isDashboardRoute) {
         window.lenis.stop();
