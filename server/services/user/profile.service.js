@@ -6,6 +6,7 @@ import {
   findUserById,
   updateUser,
   updatePassword,
+  saveUser,
 } from "../../repository/user/profile.repo.js";
 
 import {
@@ -104,7 +105,7 @@ export const verifyEmailUpdateOtpService = async (userId, otp, profileData) => {
   if (profileData.fullName) user.fullName = profileData.fullName;
   if (profileData.phoneNumber) user.phoneNumber = profileData.phoneNumber;
 
-  await user.save();
+  await saveUser(user);
   await deleteOtpByUserId(userId);
 
   return user;

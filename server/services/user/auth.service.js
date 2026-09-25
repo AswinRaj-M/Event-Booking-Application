@@ -2,8 +2,6 @@ import bcrypt from "bcryptjs";
 import { hashToken } from "../../utils/hashToken.js";
 import { AppError } from "../../utils/AppError.js";
 import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
-import Vendor from "../../models/vendor.model.js";
-import User from "../../models/user.model.js";
 import { generateResetToken } from "../../utils/generateToken.js";
 
 import {
@@ -15,6 +13,9 @@ import {
   upsertOtp,
   findOtpByUserId,
   deleteOtpByUserId,
+  findUserByIdAuthRepo,
+  findVendorByIdAuthRepo,
+  saveUserAuthRepo,
 } from "../../repository/user/auth.repo.js";
 
 import {
@@ -124,7 +125,7 @@ export const verifyOtpService = async (userId, otp) => {
 
   user.isVerified = true;
 
-  await user.save();
+  await saveUserAuthRepo(user);
   await deleteOtpByUserId(userId);
 
   return user;
@@ -160,13 +161,13 @@ export const updateRefreshTokenService = async (userId, refreshToken) => {
 export const refreshAccessTokenService = async (token, decoded) => {
   let user;
   if (decoded.role === 'vendor') {
-    user = await Vendor.findById(decoded.id);
+    user = await findVendorByIdAuthRepo(decoded.id);
   } else if (decoded.role === 'admin' || decoded.role === 'user') {
-    user = await User.findById(decoded.id);
+    user = await findUserByIdAuthRepo(decoded.id);
   } else {
-    user = await Vendor.findById(decoded.id);
+    user = await findVendorByIdAuthRepo(decoded.id);
     if (!user) {
-      user = await User.findById(decoded.id);
+      user = await findUserByIdAuthRepo(decoded.id);
     }
   }
 

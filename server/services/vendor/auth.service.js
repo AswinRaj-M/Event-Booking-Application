@@ -2,14 +2,15 @@ import bcrypt from "bcryptjs";
 import { hashToken } from "../../utils/hashToken.js";
 import { AppError } from "../../utils/AppError.js";
 import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
-import Otp from "../../models/user.otp.model.js";
-import Vendor from "../../models/vendor.model.js";
 import { sendAdminNotification } from "../../config/socket.js";
-
 import {
   createVendor,
   saveVendor,
   clearVendorRefreshToken,
+  findVendorById,
+  upsertVendorOtp,
+  findVendorOtp,
+  deleteVendorOtp,
 } from "../../repository/vendor/auth.repo.js";
 
 export const applyVendorService = async (data) => {
@@ -43,11 +44,7 @@ export const applyVendorService = async (data) => {
 };
 
 export const createVendorOtpService = async (vendorId, otp, extraData = {}) => {
-  return await Otp.findOneAndUpdate(
-    { userId: vendorId },
-    { otp, createdAt: new Date(), ...extraData },
-    { upsert: true, new: true }
-  );
+  return await upsertVendorOtp(vendorId, otp, extraData);
 };
 
 export const verifyVendorOtpService = async (vendorId, otp) => {
@@ -55,12 +52,12 @@ export const verifyVendorOtpService = async (vendorId, otp) => {
     throw new AppError("OTP Required", HTTP_STATUS.BAD_REQUEST);
   }
 
-  const vendor = await Vendor.findById(vendorId);
+  const vendor = await findVendorById(vendorId);
   if (!vendor) {
     throw new AppError("Vendor not found", HTTP_STATUS.NOT_FOUND);
   }
 
-  const otpDoc = await Otp.findOne({ userId: vendorId });
+  const otpDoc = await findVendorOtp(vendorId);
   if (!otpDoc) {
     throw new AppError("Invalid or Expired OTP", HTTP_STATUS.BAD_REQUEST);
   }
@@ -70,9 +67,9 @@ export const verifyVendorOtpService = async (vendorId, otp) => {
   }
 
   vendor.emailVerify = true;
-  await vendor.save();
+  await saveVendor(vendor);
 
-  await Otp.deleteOne({ userId: vendorId });
+  await deleteVendorOtp(vendorId);
 
   return vendor;
 };

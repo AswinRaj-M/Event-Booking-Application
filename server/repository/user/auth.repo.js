@@ -1,5 +1,6 @@
 import User from "../../models/user.model.js";
 import Otp from "../../models/user.otp.model.js";
+import Vendor from "../../models/vendor.model.js";
 
 export const findUserByEmail = async (email) => {
   return await User.findOne({ email });
@@ -30,8 +31,6 @@ export const findByRefreshToken = async (token) => {
 };
 
 
-
-
 export const upsertOtp = async (userId, otp, extraData = {}) => {
   return await Otp.findOneAndUpdate(
     { userId },
@@ -47,4 +46,16 @@ export const findOtpByUserId = async (userId) => {
 
 export const deleteOtpByUserId = async (userId) => {
   return await Otp.deleteOne({ userId });
+};
+
+export const findUserByIdAuthRepo = async (id) => {
+  return await User.findById(id);
+};
+
+export const findVendorByIdAuthRepo = async (id) => {
+  return await Vendor.findById(id);
+};
+
+export const saveUserAuthRepo = async (user) => {
+  return await user.save();
 };

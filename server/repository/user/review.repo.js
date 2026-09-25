@@ -1,5 +1,27 @@
 import mongoose from "mongoose";
 import Review from "../../models/review.model.js";
+import Event from "../../models/event.model.js";
+import Booking from "../../models/booking.model.js";
+
+export const findEventForReviewRepo = async (eventId) => {
+  return await Event.findOne({ _id: eventId, isDeleted: { $ne: true } });
+};
+
+export const findAttendedBookingForReviewRepo = async (userId, eventId) => {
+  return await Booking.findOne({
+    userId,
+    eventId,
+    paymentStatus: "paid",
+    bookingStatus: { $in: ["confirmed", "checked-in", "completed"] },
+  });
+};
+
+export const updateEventReviewSummaryRepo = async (eventId, { avgRating, totalReviews }) => {
+  return await Event.findByIdAndUpdate(eventId, {
+    averageRating: avgRating,
+    totalReviews: totalReviews,
+  });
+};
 
 export const createReviewRepo = async ({ userId, vendorId, eventId, rating, feedback }) => {
   return await Review.create({

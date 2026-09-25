@@ -1,4 +1,3 @@
-import mongoose from "mongoose";
 import { getRazorpayInstance, verifyRazorpaySignature } from "../../config/razorpay.config.js";
 import {
   findUserWalletRepo,
@@ -264,7 +263,7 @@ export const requestUserWithdrawalService = async (userId, { amount, payoutMetho
   }
 
   // Prevent Duplicate Pending Requests
-  const { findPendingWithdrawalByUserIdRepo } = await import("../../repository/vendor/withdrawal.repo.js");
+  const { findPendingWithdrawalByUserIdRepo, createWithdrawalRequestRepo } = await import("../../repository/vendor/withdrawal.repo.js");
   const existingPending = await findPendingWithdrawalByUserIdRepo(userId);
   if (existingPending) {
     throw new AppError(
@@ -274,8 +273,7 @@ export const requestUserWithdrawalService = async (userId, { amount, payoutMetho
   }
 
   // Create Pending Withdrawal Request (Money is NOT deducted yet until admin approves)
-  const WithdrawalRequest = (await import("../../models/withdrawalRequest.model.js")).default;
-  const withdrawalRequest = await WithdrawalRequest.create({
+  const withdrawalRequest = await createWithdrawalRequestRepo({
     userId,
     userType: "user",
     amount: numAmount,

@@ -3,7 +3,7 @@ import {
   countUserCouponRedemptionsRepo,
   findActivePublicCouponsRepo
 } from "../../repository/user/coupon.repo.js";
-import Event from "../../models/event.model.js";
+import { findEventById } from "../../repository/user/event.repo.js";
 import { AppError } from "../../utils/AppError.js";
 import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
 
@@ -20,7 +20,7 @@ export const validateAndApplyCoupon = async (
   }
 
   if (eventId) {
-    const event = await Event.findById(eventId);
+    const event = await findEventById(eventId);
     if (!event || event.isDeleted) {
       throw new AppError("Event not found or is currently unavailable", HTTP_STATUS.NOT_FOUND);
     }

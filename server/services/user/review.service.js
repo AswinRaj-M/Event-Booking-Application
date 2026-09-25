@@ -1,6 +1,4 @@
 import mongoose from "mongoose";
-import Event from "../../models/event.model.js";
-import Booking from "../../models/booking.model.js";
 import {
   createReviewRepo,
   findUserReviewForEventRepo,
@@ -8,6 +6,9 @@ import {
   getOrganizerReviewsRepo,
   getEventRatingSummaryRepo,
   getOrganizerRatingSummaryRepo,
+  findEventForReviewRepo,
+  findAttendedBookingForReviewRepo,
+  updateEventReviewSummaryRepo,
 } from "../../repository/user/review.repo.js";
 import { updateCompletedEvents } from "../../utils/eventStatusUpdater.js";
 import { AppError } from "../../utils/AppError.js";
@@ -63,7 +64,7 @@ export const createOrganizerReviewService = async ({ userId, eventId, rating, fe
   }
 
   // 1. Fetch Event
-  const event = await Event.findOne({ _id: eventId, isDeleted: { $ne: true } });
+  const event = await findEventForReviewRepo(eventId);
   if (!event) {
     throw new AppError("Event not found", HTTP_STATUS.NOT_FOUND);
   }
@@ -79,12 +80,7 @@ export const createOrganizerReviewService = async ({ userId, eventId, rating, fe
   }
 
   // 3. Verify User Purchased & Attended the Event
-  const booking = await Booking.findOne({
-    userId,
-    eventId,
-    paymentStatus: "paid",
-    bookingStatus: { $in: ["confirmed", "checked-in", "completed"] },
-  });
+  const booking = await findAttendedBookingForReviewRepo(userId, eventId);
 
   if (!booking) {
     throw new AppError(
@@ -117,8 +113,8 @@ export const createOrganizerReviewService = async ({ userId, eventId, rating, fe
 
   // 6. Update Event's averageRating and totalReviews in DB
   const eventRatingSummary = await getEventRatingSummaryRepo(eventId);
-  await Event.findByIdAndUpdate(eventId, {
-    averageRating: eventRatingSummary.avgRating,
+  await updateEventReviewSummaryRepo(eventId, {
+    avgRating: eventRatingSummary.avgRating,
     totalReviews: eventRatingSummary.totalReviews,
   });
 

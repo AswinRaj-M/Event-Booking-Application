@@ -1,4 +1,3 @@
-import mongoose from "mongoose";
 import { getRazorpayInstance, verifyRazorpaySignature } from "../../config/razorpay.config.js";
 import {
   findOrCreateAdminWalletRepo,
@@ -8,12 +7,12 @@ import {
   createDepositPaymentRepo,
   findDepositPaymentByOrderIdRepo,
   updateDepositPaymentRepo,
+  getPlatformFinancialKpisRepo,
+  saveAdminWalletRepo,
+  findAdminWalletTransactionRepo,
+  findAdminWalletTransactionsByQueryRepo,
+  findSystemAdminUserRepo,
 } from "../../repository/admin/adminWallet.repo.js";
-import WithdrawalRequest from "../../models/withdrawalRequest.model.js";
-import WalletTransaction from "../../models/walletTransaction.model.js";
-import AdminWalletTransaction from "../../models/adminWalletTransaction.model.js";
-import Booking from "../../models/booking.model.js";
-import User from "../../models/user.model.js";
 import { AppError } from "../../utils/AppError.js";
 import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
 
@@ -244,83 +243,11 @@ export const getAdminWalletDetailsService = async (adminId, queryParams = {}) =>
   const wallet = await findOrCreateAdminWalletRepo(adminId);
 
   // Fetch real financial aggregations across platform
-  const [withdrawalStats, ledgerCommissionStats, bookingCommissionStats, couponStats, walletTxData] = await Promise.all([
-    // Approved & Pending Withdrawals
-    WithdrawalRequest.aggregate([
-      {
-        $group: {
-          _id: "$status",
-          totalAmount: { $sum: "$amount" },
-          count: { $sum: 1 },
-        },
-      },
-    ]),
-    // Commission earned from AdminWalletTransaction ledger
-    AdminWalletTransaction.aggregate([
-      { $match: { transactionType: "commission", status: "completed" } },
-      {
-        $group: {
-          _id: null,
-          totalLedgerCommission: { $sum: "$amount" },
-        },
-      },
-    ]),
-    // Platform fee earned across paid bookings
-    Booking.aggregate([
-      {
-        $match: {
-          $or: [
-            { paymentStatus: "paid" },
-            { bookingStatus: { $in: ["confirmed", "completed"] } }
-          ]
-        }
-      },
-      {
-        $group: {
-          _id: null,
-          totalBookingCommission: {
-            $sum: {
-              $cond: [
-                { $gt: ["$totalPlatformFee", 0] },
-                "$totalPlatformFee",
-                {
-                  $cond: [
-                    { $gt: ["$platformFee", 0] },
-                    { $multiply: ["$platformFee", { $ifNull: ["$quantity", 1] }] },
-                    {
-                      $cond: [
-                        { $gt: ["$ticketPrice", 0] },
-                        { $multiply: [50, { $ifNull: ["$quantity", 1] }] },
-                        0
-                      ]
-                    }
-                  ]
-                }
-              ]
-            }
-          },
-        },
-      },
-    ]),
-    // Coupon discounts absorbed/funded by platform across confirmed bookings
-    Booking.aggregate([
-      {
-        $match: {
-          $or: [
-            { paymentStatus: "paid" },
-            { bookingStatus: { $in: ["confirmed", "completed"] } }
-          ],
-          couponDiscount: { $gt: 0 }
-        }
-      },
-      {
-        $group: {
-          _id: null,
-          totalCouponSponsored: { $sum: "$couponDiscount" },
-        },
-      },
-    ]),
-    // Admin deposit / wallet transactions
+  const [
+    [withdrawalStats, ledgerCommissionStats, bookingCommissionStats, couponStats],
+    walletTxData,
+  ] = await Promise.all([
+    getPlatformFinancialKpisRepo(),
     findAdminWalletTransactionsRepo(adminId, queryParams),
   ]);
 
@@ -358,7 +285,7 @@ export const getAdminWalletDetailsService = async (adminId, queryParams = {}) =>
     wallet.balance = calculatedPlatformBalance;
     wallet.totalCommissionEarned = commissionEarned;
     wallet.totalPayoutsDisbursed = vendorPayouts;
-    await wallet.save();
+    await saveAdminWalletRepo(wallet);
   }
 
   return {
@@ -398,7 +325,7 @@ export const processAdminBookingCommission = async (booking) => {
   }
 
   // 1. Idempotency Check: Prevent duplicate commission processing
-  const existingTx = await AdminWalletTransaction.findOne({
+  const existingTx = await findAdminWalletTransactionRepo({
     "metadata.bookingId": booking._id,
     transactionType: "commission",
   });
@@ -408,9 +335,7 @@ export const processAdminBookingCommission = async (booking) => {
   }
 
   // 2. Find system administrator
-  const adminUser = await User.findOne({
-    $or: [{ role: { $regex: /^admin$/i } }, { email: { $regex: /admin/i } }],
-  });
+  const adminUser = await findSystemAdminUserRepo();
   if (!adminUser) {
     console.error("[Admin Wallet] System admin account not found.");
     return null;
@@ -488,9 +413,7 @@ export const processAdminBookingRefund = async (
     ? { "metadata.bookingId": booking._id, "metadata.ticketId": ticketId, transactionType: "refund" }
     : { "metadata.bookingId": booking._id, transactionType: "refund", "metadata.isPartial": false };
 
-  const existingRefundTx = options?.session
-    ? await AdminWalletTransaction.findOne(query).session(options.session)
-    : await AdminWalletTransaction.findOne(query);
+  const existingRefundTx = await findAdminWalletTransactionRepo(query, options?.session);
 
   if (existingRefundTx) {
     console.log(`[Admin Wallet] Refund transaction already processed for booking: ${booking._id}`);
@@ -498,9 +421,7 @@ export const processAdminBookingRefund = async (
   }
 
   // 2. Find system administrator
-  const adminUser = options?.session
-    ? await User.findOne({ $or: [{ role: { $regex: /^admin$/i } }, { email: { $regex: /admin/i } }] }).session(options.session)
-    : await User.findOne({ $or: [{ role: { $regex: /^admin$/i } }, { email: { $regex: /admin/i } }] });
+  const adminUser = await findSystemAdminUserRepo(options?.session);
 
   if (!adminUser) {
     console.error("[Admin Wallet] System admin account not found for refund reversal.");
@@ -511,9 +432,10 @@ export const processAdminBookingRefund = async (
   let fullPlatformFee = Number(booking.totalPlatformFee) || 0;
   let fullCoupon = Number(booking.couponDiscount) || 0;
 
-  const existingCommissionTx = options?.session
-    ? await AdminWalletTransaction.findOne({ "metadata.bookingId": booking._id, transactionType: "commission" }).session(options.session)
-    : await AdminWalletTransaction.findOne({ "metadata.bookingId": booking._id, transactionType: "commission" });
+  const existingCommissionTx = await findAdminWalletTransactionRepo(
+    { "metadata.bookingId": booking._id, transactionType: "commission" },
+    options?.session
+  );
 
   if (existingCommissionTx && existingCommissionTx.metadata) {
     if (existingCommissionTx.metadata.totalPlatformFee !== undefined) {
@@ -537,9 +459,10 @@ export const processAdminBookingRefund = async (
 
   if (!isPartial) {
     // FULL BOOKING CANCELLATION: Reverse 100% of recorded platform fee and coupon subsidy (minus any prior partial refund reversals)
-    const priorAdminRefunds = options?.session
-      ? await AdminWalletTransaction.find({ "metadata.bookingId": booking._id, transactionType: "refund" }).session(options.session)
-      : await AdminWalletTransaction.find({ "metadata.bookingId": booking._id, transactionType: "refund" });
+    const priorAdminRefunds = await findAdminWalletTransactionsByQueryRepo(
+      { "metadata.bookingId": booking._id, transactionType: "refund" },
+      options?.session
+    );
 
     const totalPriorFeeRefunded = priorAdminRefunds.reduce((sum, tx) => sum + Number(tx.metadata?.refundedPlatformFee ?? 0), 0);
     const totalPriorCouponRecovered = priorAdminRefunds.reduce((sum, tx) => sum + Number(tx.metadata?.recoveredCoupon ?? 0), 0);

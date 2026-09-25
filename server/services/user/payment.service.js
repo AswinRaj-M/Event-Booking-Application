@@ -5,13 +5,15 @@ import {
   findPaymentByRazorpayOrderIdRepo, 
   findPaymentByIdRepo, 
   findPaymentsByUserIdRepo, 
-  updatePaymentStatusRepo 
+  updatePaymentStatusRepo,
+  findEventForPaymentRepo,
+  findEventByIdForPaymentRepo,
+  findBookingByIdForPaymentRepo,
+  saveBookingForPaymentRepo,
+  updateBookingStatusOnPaymentFailureRepo,
+  deductUserWalletBalanceForPaymentRepo,
 } from "../../repository/user/payment.repo.js";
 import { createPendingBookingService, confirmBookingAfterPaymentService } from "./booking.service.js";
-import Booking from "../../models/booking.model.js";
-import Event from "../../models/event.model.js";
-import User from "../../models/user.model.js";
-import UserWalletTransaction from "../../models/userWalletTransaction.model.js";
 import { createUserWalletTransactionRepo } from "../../repository/user/userWallet.repo.js";
 import { AppError } from "../../utils/AppError.js";
 import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
@@ -45,7 +47,7 @@ export const createRazorpayOrderService = async (userId, { eventId, tierId, quan
     throw new AppError("Valid Event ID and Quantity are required", HTTP_STATUS.BAD_REQUEST);
   }
 
-  const event = await Event.findOne({ _id: eventId, isDeleted: false });
+  const event = await findEventForPaymentRepo(eventId);
   if (!event) {
     throw new AppError("Event not found or is currently unavailable", HTTP_STATUS.NOT_FOUND);
   }
@@ -138,13 +140,13 @@ export const verifyPaymentSignatureService = async (userId, { razorpay_order_id,
 
   // Retrieve Associated Booking
   const bookingId = payment.orderId?._id || payment.orderId;
-  const booking = bookingId ? await Booking.findById(bookingId) : null;
+  const booking = bookingId ? await findBookingByIdForPaymentRepo(bookingId) : null;
 
   if (!booking) {
     throw new AppError("Associated booking record not found for this payment", HTTP_STATUS.NOT_FOUND);
   }
 
-  const event = await Event.findById(booking.eventId);
+  const event = await findEventByIdForPaymentRepo(booking.eventId);
   if (!event || event.isDeleted) {
     throw new AppError("Event not found or is currently unavailable", HTTP_STATUS.NOT_FOUND);
   }
@@ -173,7 +175,7 @@ export const verifyPaymentSignatureService = async (userId, { razorpay_order_id,
     booking.bookingStatus = "expired";
     booking.paymentStatus = "expired";
     booking.isInventoryReleased = true;
-    await booking.save();
+    await saveBookingForPaymentRepo(booking);
 
     // 2. Mark Payment as EXPIRED
     await updatePaymentStatusRepo(razorpay_order_id, {
@@ -209,7 +211,7 @@ export const verifyPaymentSignatureService = async (userId, { razorpay_order_id,
     booking.paymentStatus = "failed";
     booking.bookingStatus = "failed";
     booking.isInventoryReleased = true;
-    await booking.save();
+    await saveBookingForPaymentRepo(booking);
 
     throw new AppError("Payment signature verification failed. Invalid signature.", HTTP_STATUS.BAD_REQUEST);
   }
@@ -252,11 +254,7 @@ export const recordPaymentFailureService = async (userId, { razorpay_order_id, s
   });
 
   if (payment.orderId) {
-    await Booking.findByIdAndUpdate(payment.orderId._id || payment.orderId, {
-      paymentStatus: "failed",
-      bookingStatus: "failed",
-      isInventoryReleased: true
-    });
+    await updateBookingStatusOnPaymentFailureRepo(payment.orderId._id || payment.orderId);
   }
 
   return {
@@ -304,7 +302,7 @@ export const payWithWalletService = async (userId, { eventId, tierId, quantity, 
     throw new AppError("Valid Event ID and Quantity are required", HTTP_STATUS.BAD_REQUEST);
   }
 
-  const event = await Event.findOne({ _id: eventId, isDeleted: false });
+  const event = await findEventForPaymentRepo(eventId);
   if (!event) {
     throw new AppError("Event not found or is currently unavailable", HTTP_STATUS.NOT_FOUND);
   }
@@ -332,17 +330,13 @@ export const payWithWalletService = async (userId, { eventId, tierId, quantity, 
   const payableAmount = booking.totalAmount;
 
   // Step B: Atomic wallet balance check & deduction to prevent negative balance or double spending
-  const user = await User.findOneAndUpdate(
-    { _id: userId, walletBalance: { $gte: payableAmount } },
-    { $inc: { walletBalance: -payableAmount } },
-    { new: true }
-  );
+  const user = await deductUserWalletBalanceForPaymentRepo(userId, payableAmount);
 
   if (!user) {
     booking.bookingStatus = "failed";
     booking.paymentStatus = "failed";
     booking.isInventoryReleased = true;
-    await booking.save();
+    await saveBookingForPaymentRepo(booking);
 
     throw new AppError("Insufficient wallet balance to complete this transaction", HTTP_STATUS.BAD_REQUEST);
   }

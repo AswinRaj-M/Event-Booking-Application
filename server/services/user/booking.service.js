@@ -1,15 +1,9 @@
+import mongoose from "mongoose";
 import { AppError } from "../../utils/AppError.js";
 import { generateQrToken } from "../../utils/generateQrToken.js";
 import { generateTicketNumber } from "../../utils/generateTicketNumber.js";
 import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
-import Event from "../../models/event.model.js";
-import Booking from "../../models/booking.model.js";
-import Coupon from "../../models/coupon.model.js";
-import User from "../../models/user.model.js";
-import mongoose from "mongoose";
-import Payment from "../../models/payment.model.js";
 import { validateAndApplyCoupon } from "./coupon.service.js";
-import CouponRedemption from "../../models/couponRedemption.model.js";
 import { generateQRCode } from "../../utils/generateQrCode.js";
 import { processVendorBookingEarnings, processVendorBookingRefund, calculateVendorReceivable } from "../vendor/vendorWallet.service.js";
 import { processAdminBookingCommission, processAdminBookingRefund } from "../admin/adminWallet.service.js";
@@ -17,15 +11,26 @@ import {
   updateUserWalletBalanceRepo,
   createUserWalletTransactionRepo
 } from "../../repository/user/userWallet.repo.js";
-import UserWalletTransaction from "../../models/userWalletTransaction.model.js";
-
 import {
+  runInTransactionRepo,
+  cleanupExpiredBookingsRepo,
   createBookingRepo,
-  decrementEventSoldCountRepo,
   findBookingByIdRepo,
-  findBookingByTicketRepo,
+  findBookingRawByIdRepo,
   findUserBookingsRepo,
+  findBookingByTicketRepo,
   saveBookingRepo,
+  decrementEventSoldCountRepo,
+  findEventForBookingRepo,
+  countActivePendingTierTicketsRepo,
+  incrementEventTicketSalesRepo,
+  consumeCouponOnBookingRepo,
+  findEventWithVendorForNotificationRepo,
+  findCustomerNameByIdRepo,
+  updateBookingQrTokenRepo,
+  findPriorUserRefundTransactionsRepo,
+  findUserRefundTransactionRepo,
+  updateBookingPaymentsToRefundedRepo,
 } from "../../repository/user/booking.repo.js";
 import { sendNotification, sendAdminNotification } from "../../config/socket.js";
 
@@ -36,53 +41,21 @@ export const CHECKOUT_EXPIRATION_MS = CHECKOUT_EXPIRATION_MINUTES * 60 * 1000;
  * Execute operations inside a MongoDB transaction session with automatic standalone fallback
  */
 export const runInTransaction = async (fn) => {
-  let session = null;
-  try {
-    session = await mongoose.startSession();
-    session.startTransaction();
-    const result = await fn(session);
-    await session.commitTransaction();
-    return result;
-  } catch (err) {
-    if (session && session.inTransaction()) {
-      await session.abortTransaction();
-    }
-    if (err.message && (err.message.includes("replica set") || err.message.includes("Transaction numbers"))) {
-      return await fn(null);
-    }
-    throw err;
-  } finally {
-    if (session) {
-      session.endSession();
-    }
-  }
+  return await runInTransactionRepo(fn);
 };
 
 /**
  * Cleanup expired pending bookings and release reserved inventory
  */
 export const cleanupExpiredBookingsService = async () => {
-  const now = new Date();
-  return await Booking.updateMany(
-    {
-      bookingStatus: "pending",
-      checkoutExpiresAt: { $lt: now },
-    },
-    {
-      $set: {
-        bookingStatus: "expired",
-        paymentStatus: "expired",
-        isInventoryReleased: true,
-      },
-    }
-  );
+  return await cleanupExpiredBookingsRepo();
 };
 
 export const createPendingBookingService = async (userId, eventId, tierId, quantity, couponCode, items) => {
    // 1. Clean up any expired pending bookings first
    await cleanupExpiredBookingsService().catch(() => {});
 
-   const event = await Event.findOne({ _id: eventId, isDeleted: false });
+   const event = await findEventForBookingRepo(eventId);
 
    if (!event) {
      throw new AppError("Event not found or is currently unavailable", HTTP_STATUS.NOT_FOUND);
@@ -153,31 +126,7 @@ export const createPendingBookingService = async (userId, eventId, tierId, quant
      const tierSold = Number(selectedTier.sold) || Number(event.soldTickets) || 0;
 
      // Count active non-expired pending reservations for this specific tier
-     const activePending = await Booking.aggregate([
-       {
-         $match: {
-           eventId: new mongoose.Types.ObjectId(eventId),
-           bookingStatus: "pending",
-           checkoutExpiresAt: { $gt: new Date() },
-           $or: [
-             { tierId: validTierId },
-             { "tickets.tierId": validTierId }
-           ]
-         },
-       },
-       { $unwind: { path: "$tickets", preserveNullAndEmptyArrays: true } },
-       {
-         $match: {
-           $or: [
-             { "tickets.tierId": validTierId },
-             { tierId: validTierId }
-           ]
-         }
-       },
-       { $group: { _id: null, totalPending: { $sum: { $ifNull: ["$tickets.quantity", "$quantity"] } } } },
-     ]);
-
-     const pendingHeldTickets = activePending[0]?.totalPending || 0;
+     const pendingHeldTickets = await countActivePendingTierTicketsRepo(eventId, validTierId);
      const availableSeats = Math.max(0, tierCapacity - (tierSold + pendingHeldTickets));
 
      if (availableSeats <= 0 && tierCapacity > 0) {
@@ -296,7 +245,7 @@ export const getBookingDetailsService = async(userId, userRole, bookingId) => {
     booking.bookingStatus = "expired";
     booking.paymentStatus = "expired";
     booking.isInventoryReleased = true;
-    await booking.save();
+    await saveBookingRepo(booking);
   }
 
   const isBooker = booking.userId._id.toString() === userId.toString();
@@ -310,7 +259,7 @@ export const getBookingDetailsService = async(userId, userRole, bookingId) => {
   // Safe migration for legacy bookings missing booking-level QR token
   if (!booking.qrCodeToken && (booking.paymentStatus === "paid" || booking.bookingStatus === "confirmed")) {
     booking.qrCodeToken = booking.tickets?.[0]?.qrCodeToken || generateQrToken();
-    await booking.save();
+    await saveBookingRepo(booking);
   }
 
   const bookingObj = booking.toObject();
@@ -342,7 +291,7 @@ export const getBookingHistoryService = async(userId) => {
 };
 
 export const confirmBookingAfterPaymentService = async (bookingId) => {
-  const booking = await Booking.findById(bookingId);
+  const booking = await findBookingRawByIdRepo(bookingId);
   if (!booking) return null;
 
   booking.paymentStatus = "paid";
@@ -373,34 +322,15 @@ export const confirmBookingAfterPaymentService = async (bookingId) => {
     }];
   }
 
-  await booking.save();
+  await saveBookingRepo(booking);
 
   try {
-    if (booking.tickets && booking.tickets.length > 0) {
-      for (const tItem of booking.tickets) {
-        if (tItem.tierId) {
-          await Event.updateOne(
-            { _id: booking.eventId, "ticketTiers._id": tItem.tierId },
-            { $inc: { soldTickets: tItem.quantity, "ticketTiers.$.sold": tItem.quantity } }
-          );
-        } else {
-          await Event.updateOne(
-            { _id: booking.eventId },
-            { $inc: { soldTickets: tItem.quantity } }
-          );
-        }
-      }
-    } else if (booking.tierId) {
-      await Event.updateOne(
-        { _id: booking.eventId, "ticketTiers._id": booking.tierId },
-        { $inc: { soldTickets: booking.quantity, "ticketTiers.$.sold": booking.quantity } }
-      );
-    } else {
-      await Event.updateOne(
-        { _id: booking.eventId },
-        { $inc: { soldTickets: booking.quantity } }
-      );
-    }
+    await incrementEventTicketSalesRepo(
+      booking.eventId,
+      booking.tickets,
+      booking.tierId,
+      booking.quantity
+    );
   } catch (err) {
     console.error("Error updating event sold count on booking confirmation:", err);
   }
@@ -423,21 +353,12 @@ export const confirmBookingAfterPaymentService = async (bookingId) => {
   // Consume applied coupon only after successful payment confirmation
   if (booking.couponCode && booking.couponDiscount > 0) {
     try {
-      const coupon = await Coupon.findOne({ code: booking.couponCode });
-      if (coupon) {
-        const existingRedemption = await CouponRedemption.findOne({ bookingId: booking._id });
-        if (!existingRedemption) {
-          coupon.usedCount += 1;
-          await coupon.save();
-
-          await CouponRedemption.create({
-            couponId: coupon._id,
-            userId: booking.userId,
-            bookingId: booking._id,
-            discountApplied: booking.couponDiscount
-          });
-        }
-      }
+      await consumeCouponOnBookingRepo(
+        booking.couponCode,
+        booking.userId,
+        booking._id,
+        booking.couponDiscount
+      );
     } catch (couponErr) {
       console.error("Error consuming coupon on payment confirmation:", couponErr);
     }
@@ -446,12 +367,12 @@ export const confirmBookingAfterPaymentService = async (bookingId) => {
   // Real-time user & vendor notifications
   try {
     const bookingUserId = booking.userId?._id ? booking.userId._id : booking.userId;
-    const populatedEvent = await Event.findById(booking.eventId).populate("vendorId", "_id organizerName businessName");
+    const populatedEvent = await findEventWithVendorForNotificationRepo(booking.eventId);
     const eventTitle = populatedEvent?.title || "Event";
     const vendorId = populatedEvent?.vendorId?._id || populatedEvent?.vendorId;
 
     // Fetch customer name for vendor notification
-    const customer = await User.findById(bookingUserId).select("fullName");
+    const customer = await findCustomerNameByIdRepo(bookingUserId);
     const customerName = customer?.fullName || "A customer";
 
     // 1. PAYMENT_SUCCESS to User
@@ -529,7 +450,7 @@ export const getUserTicketsService = async(userId) => {
       let qrToken = bookingObj.qrCodeToken;
       if (!qrToken && (bookingObj.paymentStatus === "paid" || bookingObj.bookingStatus === "confirmed")) {
         qrToken = bookingObj.tickets?.[0]?.qrCodeToken || generateQrToken();
-        await Booking.updateOne({ _id: bookingObj._id }, { $set: { qrCodeToken: qrToken } });
+        await updateBookingQrTokenRepo(bookingObj._id, qrToken);
       }
 
       if (!bookingObj.tickets || bookingObj.tickets.length === 0) {
@@ -644,11 +565,7 @@ export const cancelTicketService = async(userId, ticketId, allowedLimitHours = 0
   const ticketShare = combinedSubtotal > 0 ? (ticketValue / combinedSubtotal) : (1 / (booking.tickets?.length || 1));
 
   // Check how much of user's payment was already refunded
-  const priorUserRefunds = await UserWalletTransaction.find({
-    "metadata.bookingId": booking._id,
-    transactionType: "refund",
-    status: "completed",
-  });
+  const priorUserRefunds = await findPriorUserRefundTransactionsRepo(booking._id);
   const totalUserAlreadyRefunded = priorUserRefunds.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
 
   // If this is the last uncancelled ticket, refund whatever remains of actualPaidAmount to avoid any rounding loss
@@ -675,25 +592,18 @@ export const cancelTicketService = async(userId, ticketId, allowedLimitHours = 0
       }
     }
 
-    if (session) {
-      await booking.save({ session });
-    } else {
-      await saveBookingRepo(booking);
-    }
+    await saveBookingRepo(booking, session ? { session } : {});
 
     // 3. Atomically credit User Wallet and create Wallet Transaction (with Idempotency check)
     if (ticketRefundAmount > 0) {
-      const existingRefundTx = session
-        ? await UserWalletTransaction.findOne({
-            "metadata.ticketId": ticket.ticketId,
-            transactionType: "refund",
-            status: "completed",
-          }).session(session)
-        : await UserWalletTransaction.findOne({
-            "metadata.ticketId": ticket.ticketId,
-            transactionType: "refund",
-            status: "completed",
-          });
+      const existingRefundTx = await findUserRefundTransactionRepo(
+        {
+          "metadata.ticketId": ticket.ticketId,
+          transactionType: "refund",
+          status: "completed",
+        },
+        session
+      );
 
       if (!existingRefundTx) {
         const updatedUser = await updateUserWalletBalanceRepo(userId, ticketRefundAmount, { session });
@@ -887,11 +797,7 @@ export const cancelBookingService = async (userId, bookingId, allowedLimitHours 
   const actualPaidAmount = Number(booking.totalAmount) || 0;
 
   // Query any prior user refunds on this booking (e.g. from partial single-ticket cancellations)
-  const priorUserRefunds = await UserWalletTransaction.find({
-    "metadata.bookingId": booking._id,
-    transactionType: "refund",
-    status: "completed",
-  });
+  const priorUserRefunds = await findPriorUserRefundTransactionsRepo(booking._id);
   const totalUserAlreadyRefunded = priorUserRefunds.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
 
   // User receives 100% of the actual paid amount (minus whatever was already refunded to user)
@@ -910,25 +816,11 @@ export const cancelBookingService = async (userId, bookingId, allowedLimitHours 
       booking.paymentStatus = "refunded";
     }
 
-    if (session) {
-      await booking.save({ session });
-    } else {
-      await saveBookingRepo(booking);
-    }
+    await saveBookingRepo(booking, session ? { session } : {});
 
     // Mark corresponding Payment records as REFUNDED
     try {
-      if (session) {
-        await Payment.updateMany(
-          { orderId: booking._id, status: { $in: ["SUCCESS", "PAID", "CREATED"] } },
-          { $set: { status: "REFUNDED" } }
-        ).session(session);
-      } else {
-        await Payment.updateMany(
-          { orderId: booking._id, status: { $in: ["SUCCESS", "PAID", "CREATED"] } },
-          { $set: { status: "REFUNDED" } }
-        );
-      }
+      await updateBookingPaymentsToRefundedRepo(booking._id, session);
     } catch (payErr) {
       console.error("Error updating payment status on booking refund:", payErr);
     }
@@ -942,9 +834,7 @@ export const cancelBookingService = async (userId, bookingId, allowedLimitHours 
         "metadata.isPartial": false,
       };
 
-      const existingRefundTx = session
-        ? await UserWalletTransaction.findOne(query).session(session)
-        : await UserWalletTransaction.findOne(query);
+      const existingRefundTx = await findUserRefundTransactionRepo(query, session);
 
       if (!existingRefundTx) {
         const updatedUser = await updateUserWalletBalanceRepo(userId, totalRefundAmount, { session });

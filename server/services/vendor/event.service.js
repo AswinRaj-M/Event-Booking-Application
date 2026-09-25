@@ -1,22 +1,25 @@
 import mongoose from "mongoose";
 import { AppError } from "../../utils/AppError.js";
 import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
-import Event from "../../models/event.model.js";
-import Booking from "../../models/booking.model.js";
 import { processVendorBookingRefund } from "./vendorWallet.service.js";
 import { processAdminBookingRefund } from "../admin/adminWallet.service.js";
 import {
   updateUserWalletBalanceRepo,
-  createUserWalletTransactionRepo
+  createUserWalletTransactionRepo,
 } from "../../repository/user/userWallet.repo.js";
-import UserWalletTransaction from "../../models/userWalletTransaction.model.js";
-
 import {
   createEventRepo,
   getVendorEventsRepo,
   cancelEventRepo,
   updateEventRepo,
   deleteEventRepo,
+  findVendorEventByIdRepo,
+  findPaidBookingsForEventCancellationRepo,
+  saveBookingDocRepo,
+  findEventCancellationUserRefundTxRepo,
+  getTierBookingCountsRepo,
+  completeEventBookingsRepo,
+  getEventsBookingCountsRepo,
 } from "../../repository/vendor/event.repo.js";
 import { sendNotification, sendAdminNotification } from "../../config/socket.js";
 
@@ -218,21 +221,7 @@ export const getVendorEventsService = async (vendorId) => {
   const events = await getVendorEventsRepo(vendorId);
   const eventIds = events.map(e => e._id);
 
-  const bookingCounts = await Booking.aggregate([
-    {
-      $match: {
-        eventId: { $in: eventIds },
-        bookingStatus: { $in: ["confirmed", "completed"] },
-        paymentStatus: { $in: ["paid", "free", "completed", "success", "SUCCESS"] }
-      }
-    },
-    {
-      $group: {
-        _id: "$eventId",
-        totalSold: { $sum: "$quantity" }
-      }
-    }
-  ]);
+  const bookingCounts = await getEventsBookingCountsRepo(eventIds);
 
   const bookingCountMap = {};
   bookingCounts.forEach(b => {
@@ -259,7 +248,7 @@ export const getVendorEventsService = async (vendorId) => {
 };
 
 export const cancelEventService = async (eventId, vendorId) => {
-  const event = await Event.findOne({ _id: eventId, vendorId });
+  const event = await findVendorEventByIdRepo(eventId, vendorId);
   if (!event) {
     throw new AppError("Event not found or unauthorized", HTTP_STATUS.NOT_FOUND);
   }
@@ -268,11 +257,7 @@ export const cancelEventService = async (eventId, vendorId) => {
   }
 
   // Handle all existing paid/confirmed bookings safely
-  const paidBookings = await Booking.find({
-    eventId: eventId,
-    bookingStatus: { $in: ["confirmed", "completed"] },
-    paymentStatus: "paid"
-  });
+  const paidBookings = await findPaidBookingsForEventCancellationRepo(eventId);
 
   let refundedCount = 0;
   for (const booking of paidBookings) {
@@ -294,17 +279,12 @@ export const cancelEventService = async (eventId, vendorId) => {
       });
       booking.bookingStatus = "cancelled";
       booking.paymentStatus = "refunded";
-      await booking.save();
+      await saveBookingDocRepo(booking);
 
       // 4. Atomically credit User Wallet and create Wallet Transaction (with Idempotency check)
       if (refundAmount > 0 && booking.userId) {
         const bookingUserId = booking.userId?._id ? booking.userId._id : booking.userId;
-        const existingUserRefund = await UserWalletTransaction.findOne({
-          "metadata.bookingId": booking._id,
-          "metadata.eventCancellation": true,
-          transactionType: "refund",
-          status: "completed"
-        });
+        const existingUserRefund = await findEventCancellationUserRefundTxRepo(booking._id);
 
         if (!existingUserRefund) {
           const updatedUser = await updateUserWalletBalanceRepo(bookingUserId, refundAmount);
@@ -372,7 +352,7 @@ export const cancelEventService = async (eventId, vendorId) => {
 };
 
 export const updateEventService = async (eventId, vendorId, data) => {
-  const existingEvent = await Event.findOne({ _id: eventId, vendorId });
+  const existingEvent = await findVendorEventByIdRepo(eventId, vendorId);
   if (!existingEvent) {
     throw new AppError("Event not found or unauthorized", HTTP_STATUS.NOT_FOUND);
   }
@@ -444,21 +424,7 @@ export const updateEventService = async (eventId, vendorId, data) => {
   }
 
   // Aggregate confirmed / completed bookings count for this specific event by tierId
-  const tierBookingCounts = await Booking.aggregate([
-    {
-      $match: {
-        eventId: existingEvent._id,
-        bookingStatus: { $in: ["confirmed", "completed"] },
-        paymentStatus: { $in: ["paid", "free", "completed", "success", "SUCCESS"] }
-      }
-    },
-    {
-      $group: {
-        _id: "$tierId",
-        totalSold: { $sum: "$quantity" }
-      }
-    }
-  ]);
+  const tierBookingCounts = await getTierBookingCountsRepo(existingEvent._id);
   const tierSoldMap = {};
   let totalConfirmedSold = 0;
   tierBookingCounts.forEach(b => {
@@ -568,10 +534,7 @@ export const updateEventService = async (eventId, vendorId, data) => {
   if (!updatedDoc) return null;
 
   if (updatedDoc.eventStatus === "completed") {
-    await Booking.updateMany(
-      { eventId: eventId, bookingStatus: { $in: ["confirmed", "checked-in"] } },
-      { $set: { bookingStatus: "completed" } }
-    );
+    await completeEventBookingsRepo(eventId);
   }
 
   const totalCapacity = (updatedDoc.ticketTiers || []).reduce((sum, t) => sum + (Number(t.capacity) || 0), 0);

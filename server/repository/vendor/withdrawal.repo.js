@@ -1,4 +1,12 @@
 import WithdrawalRequest from "../../models/withdrawalRequest.model.js";
+import Vendor from "../../models/vendor.model.js";
+
+/**
+ * Find vendor by ID for withdrawal
+ */
+export const findVendorByIdForWithdrawalRepo = async (vendorId) => {
+  return await Vendor.findById(vendorId);
+};
 
 /**
  * Create a new withdrawal request

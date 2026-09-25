@@ -1,11 +1,16 @@
 import bcrypt from "bcryptjs";
 import { AppError } from "../../utils/AppError.js";
 import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
-import Otp from "../../models/user.otp.model.js";
-import Vendor from "../../models/vendor.model.js";
 
 import { createVendorOtpService } from "./auth.service.js";
-import { findVendorByIdAndUpdate } from "../../repository/vendor/profile.repo.js";
+import {
+  findVendorByIdAndUpdate,
+  findVendorById,
+  findVendorByBusinessEmail,
+  saveVendor,
+  findVendorOtpByUserId,
+  deleteVendorOtpByUserId,
+} from "../../repository/vendor/profile.repo.js";
 
 export const updateVendorImagesService = async(vendorId,updateData) =>{
     const vendor = await findVendorByIdAndUpdate(
@@ -20,7 +25,7 @@ export const updateVendorProfileService = async (vendorId, profileData) => {
 };
 
 export const sendVendorEmailUpdateOtpService = async (vendorId, newEmail, password, otp) => {
-  const vendor = await Vendor.findById(vendorId);
+  const vendor = await findVendorById(vendorId);
   if (!vendor) throw new AppError("Vendor not found", HTTP_STATUS.NOT_FOUND);
 
   if (!password) {
@@ -32,7 +37,7 @@ export const sendVendorEmailUpdateOtpService = async (vendorId, newEmail, passwo
     throw new AppError("Incorrect password. Please enter your valid password.", HTTP_STATUS.BAD_REQUEST);
   }
 
-  const existingVendor = await Vendor.findOne({ businessEmail: newEmail });
+  const existingVendor = await findVendorByBusinessEmail(newEmail);
   if (existingVendor && existingVendor._id.toString() !== vendorId.toString()) {
     throw new AppError("Email already registered by another account", HTTP_STATUS.BAD_REQUEST);
   }
@@ -47,12 +52,12 @@ export const verifyVendorEmailUpdateOtpService = async (vendorId, otp, profileDa
     throw new AppError("OTP Required", HTTP_STATUS.BAD_REQUEST);
   }
 
-  const vendor = await Vendor.findById(vendorId);
+  const vendor = await findVendorById(vendorId);
   if (!vendor) {
     throw new AppError("Vendor not found", HTTP_STATUS.NOT_FOUND);
   }
 
-  const otpDoc = await Otp.findOne({ userId: vendorId });
+  const otpDoc = await findVendorOtpByUserId(vendorId);
   if (!otpDoc) {
     throw new AppError("Invalid or Expired OTP", HTTP_STATUS.BAD_REQUEST);
   }
@@ -65,7 +70,7 @@ export const verifyVendorEmailUpdateOtpService = async (vendorId, otp, profileDa
     throw new AppError("No pending email update found", HTTP_STATUS.BAD_REQUEST);
   }
 
-  const existingVendor = await Vendor.findOne({ businessEmail: otpDoc.tempEmail });
+  const existingVendor = await findVendorByBusinessEmail(otpDoc.tempEmail);
   if (existingVendor && existingVendor._id.toString() !== vendorId.toString()) {
     throw new AppError("Email already registered by another account", HTTP_STATUS.BAD_REQUEST);
   }
@@ -78,14 +83,14 @@ export const verifyVendorEmailUpdateOtpService = async (vendorId, otp, profileDa
   if (profileData.websiteOrInstagram) vendor.websiteOrInstagram = profileData.websiteOrInstagram;
   if (profileData.contactPhone) vendor.contactPhone = profileData.contactPhone;
 
-  await vendor.save();
-  await Otp.deleteOne({ userId: vendorId });
+  await saveVendor(vendor);
+  await deleteVendorOtpByUserId(vendorId);
 
   return vendor;
 };
 
 export const resendVendorEmailUpdateOtpService = async (vendorId, otp) => {
-  const otpDoc = await Otp.findOne({ userId: vendorId });
+  const otpDoc = await findVendorOtpByUserId(vendorId);
   if (!otpDoc || !otpDoc.tempEmail) {
     throw new AppError("No pending email update found", HTTP_STATUS.BAD_REQUEST);
   }
@@ -96,7 +101,7 @@ export const resendVendorEmailUpdateOtpService = async (vendorId, otp) => {
 };
 
 export const changeVendorPasswordService = async (vendorId, currentPassword, newPassword) => {
-  const vendor = await Vendor.findById(vendorId);
+  const vendor = await findVendorById(vendorId);
   if (!vendor) throw new AppError("Vendor account not found", HTTP_STATUS.NOT_FOUND);
 
   if (!currentPassword || !newPassword) {
@@ -110,6 +115,6 @@ export const changeVendorPasswordService = async (vendorId, currentPassword, new
 
   const hashedPassword = await bcrypt.hash(newPassword, 10);
   vendor.password = hashedPassword;
-  await vendor.save();
+  await saveVendor(vendor);
   return true;
 };

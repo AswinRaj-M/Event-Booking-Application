@@ -1,6 +1,10 @@
-import Booking from "../../models/booking.model.js";
-import Event from "../../models/event.model.js";
-import User from "../../models/user.model.js";
+import {
+  findUserIdsBySearchRepo,
+  findEventIdsBySearchRepo,
+  findAdminBookingsRepo,
+  countAdminBookingsRepo,
+  getAdminBookingKpiMetricsRepo,
+} from "../../repository/admin/booking.repo.js";
 
 // Get all bookings with filtering, search, pagination, and KPI metrics for Admin
 export const getAllBookingsAdminService = async ({
@@ -41,15 +45,10 @@ export const getAllBookingsAdminService = async ({
     const searchRegex = new RegExp(search.trim(), "i");
     
     // Find matching users and events first
-    const [matchingUsers, matchingEvents] = await Promise.all([
-      User.find({
-        $or: [{ fullName: searchRegex }, { email: searchRegex }],
-      }).select("_id"),
-      Event.find({ title: searchRegex }).select("_id"),
+    const [userIds, eventIds] = await Promise.all([
+      findUserIdsBySearchRepo(searchRegex),
+      findEventIdsBySearchRepo(searchRegex),
     ]);
-
-    const userIds = matchingUsers.map((u) => u._id);
-    const eventIds = matchingEvents.map((e) => e._id);
 
     query.$or = [
       { bookingId: searchRegex },
@@ -64,51 +63,18 @@ export const getAllBookingsAdminService = async ({
   const skip = (pageNum - 1) * limitNum;
 
   // Execute paginated query and total count in parallel
-  const [rawBookings, totalCount] = await Promise.all([
-    Booking.find(query)
-      .populate("userId", "fullName email phoneNumber profilePicture")
-      .populate({
-        path: "eventId",
-        select: "title thumbnail images ticketPrice schedule vendorId category",
-        populate: {
-          path: "vendorId",
-          select: "organizerName businessName fullName name email",
-        },
-      })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limitNum)
-      .lean(),
-    Booking.countDocuments(query),
+  const [rawBookings, totalCount, kpiMetrics] = await Promise.all([
+    findAdminBookingsRepo(query, skip, limitNum),
+    countAdminBookingsRepo(query),
+    getAdminBookingKpiMetricsRepo(),
   ]);
 
-  // Compute platform-wide KPI summary metrics
-  const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const startOfLastWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-
-  const [totalBookingsCount, activeEventsCount, cancelledBookingsCount, revenueStats] =
-    await Promise.all([
-      Booking.countDocuments({ bookingStatus: { $ne: "expired" } }),
-      Event.countDocuments({ isDeleted: false, isBlocked: false }),
-      Booking.countDocuments({ bookingStatus: "cancelled" }),
-      Booking.aggregate([
-        {
-          $match: {
-            paymentStatus: { $in: ["paid", "completed"] },
-            bookingStatus: { $ne: "cancelled" },
-          },
-        },
-        {
-          $group: {
-            _id: null,
-            totalRevenue: { $sum: "$totalAmount" },
-          },
-        },
-      ]),
-    ]);
-
-  const totalRevenue = revenueStats[0]?.totalRevenue || 0;
+  const {
+    totalBookingsCount,
+    activeEventsCount,
+    cancelledBookingsCount,
+    totalRevenue,
+  } = kpiMetrics;
 
   // Format bookings for admin response
   const bookings = rawBookings.map((b) => {

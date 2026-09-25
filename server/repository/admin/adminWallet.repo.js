@@ -1,6 +1,9 @@
 import AdminWallet from "../../models/adminWallet.model.js";
 import AdminWalletTransaction from "../../models/adminWalletTransaction.model.js";
 import Payment from "../../models/payment.model.js";
+import WithdrawalRequest from "../../models/withdrawalRequest.model.js";
+import Booking from "../../models/booking.model.js";
+import User from "../../models/user.model.js";
 
 /**
  * Find or create AdminWallet for a given adminId
@@ -158,5 +161,128 @@ export const updateDepositPaymentRepo = async (
     { $set: updateData },
     { new: true }
   );
+};
+
+/**
+ * Fetch platform financial aggregations (Withdrawals, Ledger commission, Booking fee, Coupon subsidy)
+ */
+export const getPlatformFinancialKpisRepo = async () => {
+  return await Promise.all([
+    // Approved & Pending Withdrawals
+    WithdrawalRequest.aggregate([
+      {
+        $group: {
+          _id: "$status",
+          totalAmount: { $sum: "$amount" },
+          count: { $sum: 1 },
+        },
+      },
+    ]),
+    // Commission earned from AdminWalletTransaction ledger
+    AdminWalletTransaction.aggregate([
+      { $match: { transactionType: "commission", status: "completed" } },
+      {
+        $group: {
+          _id: null,
+          totalLedgerCommission: { $sum: "$amount" },
+        },
+      },
+    ]),
+    // Platform fee earned across paid bookings
+    Booking.aggregate([
+      {
+        $match: {
+          $or: [
+            { paymentStatus: "paid" },
+            { bookingStatus: { $in: ["confirmed", "completed"] } }
+          ]
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalBookingCommission: {
+            $sum: {
+              $cond: [
+                { $gt: ["$totalPlatformFee", 0] },
+                "$totalPlatformFee",
+                {
+                  $cond: [
+                    { $gt: ["$platformFee", 0] },
+                    { $multiply: ["$platformFee", { $ifNull: ["$quantity", 1] }] },
+                    {
+                      $cond: [
+                        { $gt: ["$ticketPrice", 0] },
+                        { $multiply: [50, { $ifNull: ["$quantity", 1] }] },
+                        0
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+        },
+      },
+    ]),
+    // Coupon discounts absorbed/funded by platform across confirmed bookings
+    Booking.aggregate([
+      {
+        $match: {
+          $or: [
+            { paymentStatus: "paid" },
+            { bookingStatus: { $in: ["confirmed", "completed"] } }
+          ],
+          couponDiscount: { $gt: 0 }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalCouponSponsored: { $sum: "$couponDiscount" },
+        },
+      },
+    ]),
+  ]);
+};
+
+/**
+ * Save an AdminWallet document
+ */
+export const saveAdminWalletRepo = async (wallet) => {
+  return await wallet.save();
+};
+
+/**
+ * Find single AdminWalletTransaction by query
+ */
+export const findAdminWalletTransactionRepo = async (query, session = null) => {
+  if (session) {
+    return await AdminWalletTransaction.findOne(query).session(session);
+  }
+  return await AdminWalletTransaction.findOne(query);
+};
+
+/**
+ * Find multiple AdminWalletTransactions by query
+ */
+export const findAdminWalletTransactionsByQueryRepo = async (query, session = null) => {
+  if (session) {
+    return await AdminWalletTransaction.find(query).session(session);
+  }
+  return await AdminWalletTransaction.find(query);
+};
+
+/**
+ * Find system administrator user
+ */
+export const findSystemAdminUserRepo = async (session = null) => {
+  const query = {
+    $or: [{ role: { $regex: /^admin$/i } }, { email: { $regex: /admin/i } }],
+  };
+  if (session) {
+    return await User.findOne(query).session(session);
+  }
+  return await User.findOne(query);
 };
 

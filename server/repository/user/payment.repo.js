@@ -1,4 +1,7 @@
 import Payment from "../../models/payment.model.js";
+import Booking from "../../models/booking.model.js";
+import Event from "../../models/event.model.js";
+import User from "../../models/user.model.js";
 
 export const createPaymentRepo = async (paymentData) => {
   return await Payment.create(paymentData);
@@ -35,6 +38,38 @@ export const updatePaymentStatusRepo = async (razorpayOrderId, updateData) => {
   return await Payment.findOneAndUpdate(
     { razorpayOrderId },
     { $set: updateData },
+    { new: true }
+  );
+};
+
+export const findEventForPaymentRepo = async (eventId) => {
+  return await Event.findOne({ _id: eventId, isDeleted: false });
+};
+
+export const findEventByIdForPaymentRepo = async (eventId) => {
+  return await Event.findById(eventId);
+};
+
+export const findBookingByIdForPaymentRepo = async (bookingId) => {
+  return await Booking.findById(bookingId);
+};
+
+export const saveBookingForPaymentRepo = async (booking) => {
+  return await booking.save();
+};
+
+export const updateBookingStatusOnPaymentFailureRepo = async (bookingId) => {
+  return await Booking.findByIdAndUpdate(bookingId, {
+    paymentStatus: "failed",
+    bookingStatus: "failed",
+    isInventoryReleased: true,
+  });
+};
+
+export const deductUserWalletBalanceForPaymentRepo = async (userId, payableAmount) => {
+  return await User.findOneAndUpdate(
+    { _id: userId, walletBalance: { $gte: payableAmount } },
+    { $inc: { walletBalance: -payableAmount } },
     { new: true }
   );
 };

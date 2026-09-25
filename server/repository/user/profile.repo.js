@@ -21,3 +21,7 @@ export const updatePassword = async(userId,password) =>{
     {new : true}
   )
 }
+
+export const saveUser = async (user) => {
+  return await user.save();
+};

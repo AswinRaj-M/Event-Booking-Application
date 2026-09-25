@@ -1,7 +1,3 @@
-import mongoose from "mongoose";
-import Event from "../../models/event.model.js";
-import WalletTransaction from "../../models/walletTransaction.model.js";
-import WithdrawalRequest from "../../models/withdrawalRequest.model.js";
 import {
   findOrCreateWalletRepo,
   updateWalletBalanceRepo,
@@ -9,6 +5,11 @@ import {
   findTransactionByBookingIdRepo,
   findWalletByVendorIdRepo,
   getWalletTransactionsRepo,
+  findEventForVendorWalletRepo,
+  findSingleWalletTransactionRepo,
+  findWalletTransactionsByQueryRepo,
+  getVendorWalletLedgerStatsRepo,
+  saveVendorWalletDocRepo,
 } from "../../repository/vendor/vendorWallet.repo.js";
 import { AppError } from "../../utils/AppError.js";
 import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
@@ -80,7 +81,7 @@ export const processVendorBookingEarnings = async (booking) => {
   let event = booking.eventId;
   if (!event || typeof event !== "object" || !event.vendorId) {
     const eventId = booking.eventId?._id || booking.eventId;
-    event = await Event.findById(eventId);
+    event = await findEventForVendorWalletRepo(eventId);
   }
 
   if (!event) {
@@ -151,9 +152,7 @@ export const processVendorBookingRefund = async (
     ? { bookingId: booking._id, transactionType: "refund", "metadata.ticketId": ticketId }
     : { bookingId: booking._id, transactionType: "refund", "metadata.isPartial": false };
 
-  const existingRefundTx = options?.session
-    ? await WalletTransaction.findOne(query).session(options.session)
-    : await WalletTransaction.findOne(query);
+  const existingRefundTx = await findSingleWalletTransactionRepo(query, options?.session);
 
   if (existingRefundTx) {
     console.log(`[Vendor Wallet] Refund transaction already processed for booking/ticket: ${booking._id}`);
@@ -164,7 +163,7 @@ export const processVendorBookingRefund = async (
   let event = booking.eventId;
   if (!event || typeof event !== "object" || !event.vendorId) {
     const eventId = booking.eventId?._id || booking.eventId;
-    event = options?.session ? await Event.findById(eventId).session(options.session) : await Event.findById(eventId);
+    event = await findEventForVendorWalletRepo(eventId, options?.session);
   }
 
   if (!event || !event.vendorId) {
@@ -176,9 +175,10 @@ export const processVendorBookingRefund = async (
 
   // 2. Look up actual earnings transaction created during purchase if available
   let fullVendorAmount = 0;
-  const existingEarningsTx = options?.session
-    ? await WalletTransaction.findOne({ bookingId: booking._id, transactionType: "earnings" }).session(options.session)
-    : await WalletTransaction.findOne({ bookingId: booking._id, transactionType: "earnings" });
+  const existingEarningsTx = await findSingleWalletTransactionRepo(
+    { bookingId: booking._id, transactionType: "earnings" },
+    options?.session
+  );
 
   if (existingEarningsTx) {
     fullVendorAmount = Math.abs(Number(existingEarningsTx.netAmount ?? existingEarningsTx.amount ?? 0));
@@ -191,9 +191,10 @@ export const processVendorBookingRefund = async (
   let vendorReversalAmount = 0;
   if (!isPartial) {
     // FULL BOOKING CANCELLATION: Reverse 100% of original earnings credited (minus any prior partial refund reversals)
-    const priorRefunds = options?.session
-      ? await WalletTransaction.find({ bookingId: booking._id, transactionType: "refund" }).session(options.session)
-      : await WalletTransaction.find({ bookingId: booking._id, transactionType: "refund" });
+    const priorRefunds = await findWalletTransactionsByQueryRepo(
+      { bookingId: booking._id, transactionType: "refund" },
+      options?.session
+    );
     const totalPriorRefunded = priorRefunds.reduce((sum, tx) => sum + Math.abs(Number(tx.netAmount ?? tx.amount ?? 0)), 0);
     vendorReversalAmount = Math.max(0, Number((fullVendorAmount - totalPriorRefunded).toFixed(2)));
   } else {
@@ -264,45 +265,7 @@ export const getVendorWalletService = async (vendorId) => {
   const wallet = await findOrCreateWalletRepo(vendorId);
 
   try {
-    const vendorObjId = mongoose.isValidObjectId(vendorId)
-      ? new mongoose.Types.ObjectId(vendorId.toString())
-      : vendorId;
-
-    const [txStats, withdrawalStats] = await Promise.all([
-      WalletTransaction.aggregate([
-        {
-          $match: {
-            $or: [
-              { walletId: wallet._id },
-              { vendorId: { $in: [vendorObjId, vendorId.toString()] } },
-            ],
-            status: { $ne: "failed" },
-          },
-        },
-        {
-          $group: {
-            _id: "$transactionType",
-            totalAmount: { $sum: { $ifNull: ["$netAmount", "$amount"] } },
-          },
-        },
-      ]),
-      WithdrawalRequest.aggregate([
-        {
-          $match: {
-            $or: [
-              { walletId: wallet._id },
-              { vendorId: { $in: [vendorObjId, vendorId.toString()] } },
-            ],
-          },
-        },
-        {
-          $group: {
-            _id: "$status",
-            totalAmount: { $sum: "$amount" },
-          },
-        },
-      ]),
-    ]);
+    const { txStats, withdrawalStats } = await getVendorWalletLedgerStatsRepo(wallet._id, vendorId);
 
     let ledgerEarnings = 0;
     let ledgerRefunds = 0;
@@ -351,7 +314,7 @@ export const getVendorWalletService = async (vendorId) => {
         wallet.totalEarnings = totalEarnings;
         wallet.pendingBalance = pendingBalance;
         wallet.totalWithdrawn = totalWithdrawn;
-        await wallet.save();
+        await saveVendorWalletDocRepo(wallet);
       }
     }
   } catch (err) {

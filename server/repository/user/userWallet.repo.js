@@ -91,3 +91,14 @@ export const updateUserDepositPaymentRepo = async (
     { new: true }
   );
 };
+
+/**
+ * Update pending withdrawal UserWalletTransaction by withdrawalRequestId
+ */
+export const updateWithdrawalUserWalletTransactionRepo = async (withdrawalRequestId, updateData) => {
+  return await UserWalletTransaction.findOneAndUpdate(
+    { "metadata.withdrawalRequestId": withdrawalRequestId, status: "pending" },
+    { $set: updateData },
+    { new: true }
+  );
+};

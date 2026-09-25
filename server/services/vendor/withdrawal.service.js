@@ -10,8 +10,8 @@ import {
   getVendorWithdrawalRequestsRepo,
   getAdminWithdrawalRequestsRepo,
   updateWithdrawalRequestStatusRepo,
+  findVendorByIdForWithdrawalRepo,
 } from "../../repository/vendor/withdrawal.repo.js";
-import Vendor from "../../models/vendor.model.js";
 import { AppError } from "../../utils/AppError.js";
 import { HTTP_STATUS } from "../../utils/enums/http.status.enum.js";
 import { sendNotification, sendAdminNotification } from "../../config/socket.js";
@@ -26,7 +26,7 @@ export const requestVendorWithdrawalService = async (vendorId, { amount, destina
   }
 
   // 1. Validate Vendor Exists
-  const vendor = await Vendor.findById(vendorId);
+  const vendor = await findVendorByIdForWithdrawalRepo(vendorId);
   if (!vendor) {
     throw new AppError("Vendor account not found.", HTTP_STATUS.NOT_FOUND);
   }
@@ -98,7 +98,7 @@ export const approveWithdrawalService = async (adminId, requestId) => {
 
   if (isUserRequest) {
     const userId = request.userId?._id || request.userId;
-    const { findUserWalletRepo, updateUserWalletBalanceRepo, createUserWalletTransactionRepo } = await import("../../repository/user/userWallet.repo.js");
+    const { findUserWalletRepo, updateUserWalletBalanceRepo, createUserWalletTransactionRepo, updateWithdrawalUserWalletTransactionRepo } = await import("../../repository/user/userWallet.repo.js");
     
     const user = await findUserWalletRepo(userId);
     if (!user || (user.walletBalance || 0) < request.amount) {
@@ -116,12 +116,10 @@ export const approveWithdrawalService = async (adminId, requestId) => {
     });
 
     // Update existing pending UserWalletTransaction to completed (or create if missing)
-    const UserWalletTransaction = (await import("../../models/userWalletTransaction.model.js")).default;
-    let transaction = await UserWalletTransaction.findOneAndUpdate(
-      { "metadata.withdrawalRequestId": request._id, status: "pending" },
-      { $set: { status: "completed", balanceAfter: updatedUser?.walletBalance || 0 } },
-      { new: true }
-    );
+    let transaction = await updateWithdrawalUserWalletTransactionRepo(request._id, {
+      status: "completed",
+      balanceAfter: updatedUser?.walletBalance || 0,
+    });
 
     if (!transaction) {
       transaction = await createUserWalletTransactionRepo({
@@ -159,10 +157,8 @@ export const approveWithdrawalService = async (adminId, requestId) => {
       availableBalanceInc: -request.amount,
       totalEarningsInc: 0,
       pendingBalanceInc: 0,
+      totalWithdrawnInc: request.amount,
     });
-
-    updatedWallet.totalWithdrawn = (updatedWallet.totalWithdrawn || 0) + request.amount;
-    await updatedWallet.save();
 
     const approvedRequest = await updateWithdrawalRequestStatusRepo(requestId, {
       status: "approved",
@@ -228,11 +224,8 @@ export const rejectWithdrawalService = async (adminId, requestId, rejectionReaso
 
   // 3. Update pending UserWalletTransaction status to 'failed' if present
   if (request.userType === "user" || request.userId) {
-    const UserWalletTransaction = (await import("../../models/userWalletTransaction.model.js")).default;
-    await UserWalletTransaction.findOneAndUpdate(
-      { "metadata.withdrawalRequestId": request._id, status: "pending" },
-      { $set: { status: "failed" } }
-    );
+    const { updateWithdrawalUserWalletTransactionRepo } = await import("../../repository/user/userWallet.repo.js");
+    await updateWithdrawalUserWalletTransactionRepo(request._id, { status: "failed" });
   }
 
   // Send notification to User/Vendor on rejection
