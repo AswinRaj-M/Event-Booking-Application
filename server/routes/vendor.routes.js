@@ -133,8 +133,8 @@ router.get("/wallet/withdrawals", protect, requireRole("vendor"), asyncHandler(g
 router.post("/check-in", protect, requireRole("vendor"), asyncHandler(checkInTicket))
 router.get("/check-ins/recent", protect, requireRole("vendor"), asyncHandler(getRecentCheckIns))
 
-router.post("/logout", protect, requireRole("vendor"), asyncHandler(vendorLogout))
-router.get("/logout", protect, requireRole("vendor"), asyncHandler(vendorLogout))
+router.post("/logout", asyncHandler(vendorLogout))
+router.get("/logout", asyncHandler(vendorLogout))
 router.get("/status", protect, requireRole("vendor"), (req, res) => {
   res.status(HTTP_STATUS.OK).json({
     success: true,

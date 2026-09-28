@@ -2,13 +2,15 @@
   import { Link, useNavigate } from "react-router-dom";
   import logo from "../../assets/logo.jpeg";
   import { useDispatch, useSelector } from "react-redux";
-  import { clearMessages, loginUserThunk } from "../../features/user.slice";
+  import { clearMessages, loginUserThunk, logoutUserState } from "../../features/user.slice";
   import { useEffect } from "react";
   import { toast } from "sonner";
   import {
     vendorClearMessages,
     vendorLoginThunk,
+    vendorLogoutState,
   } from "../../features/vendorSlice";
+  import { logoutAdminState } from "../../features/admin.slice";
 import Loader from "../../components/common/Loader";
 import { COMMON_ROUTES, USER_ROUTES, VENDOR_ROUTES } from "../../constants/Routes";
 
@@ -31,6 +33,8 @@ import { COMMON_ROUTES, USER_ROUTES, VENDOR_ROUTES } from "../../constants/Route
       e.preventDefault();
 
       if (isLogin) {
+        dispatch(vendorLogoutState());
+        dispatch(logoutAdminState());
         dispatch(
           loginUserThunk({
             email,
@@ -39,6 +43,8 @@ import { COMMON_ROUTES, USER_ROUTES, VENDOR_ROUTES } from "../../constants/Route
         );
       } else {
         try {
+          dispatch(logoutUserState());
+          dispatch(logoutAdminState());
           const data = await dispatch(
             vendorLoginThunk({
               businessEmail: email,

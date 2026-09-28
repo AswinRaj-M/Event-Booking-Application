@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
+import { useLocation } from "react-router-dom";
 import {
   Bell,
   X,
@@ -26,19 +27,54 @@ import {
   deleteAdminNotificationApi,
   clearAllAdminNotificationsApi
 } from "../../services/admin.api";
+import {
+  getVendorNotificationsApi,
+  markVendorNotificationsReadApi,
+  deleteVendorNotificationApi,
+  clearAllVendorNotificationsApi
+} from "../../services/vendor.api";
 
 // Shared cache across all mounted NotificationBell instances to deduplicate & throttle network requests
 const notificationFetchPromises = new Map();
 const lastFetchTimestamps = new Map();
 const FETCH_COOLDOWN_MS = 60000; // 1 minute cache TTL for automatic fetch
 
-const NotificationBell = ({ placement = "right", className = "" }) => {
+const NotificationBell = ({ placement = "right", className = "", role: propRole }) => {
+  const location = useLocation();
   const { user } = useSelector((state) => state.user || {});
   const { vendor } = useSelector((state) => state.vendor || {});
   const { admin } = useSelector((state) => state.admin || {});
-  const rawUserId = user?.id || user?._id || vendor?.id || vendor?._id || admin?.id || admin?._id || null;
-  const activeUserId = rawUserId ? rawUserId.toString() : null;
-  const isAdmin = Boolean(admin?.id || admin?._id);
+
+  const effectiveRole = propRole || (
+    location.pathname.startsWith("/admin") ? "admin" :
+    location.pathname.startsWith("/vendor") ? "vendor" : "user"
+  );
+
+  let activeUserId = null;
+  let fetchApi = getUserNotificationsApi;
+  let markReadApi = markUserNotificationsReadApi;
+  let deleteApi = deleteUserNotificationApi;
+  let clearAllApi = clearAllUserNotificationsApi;
+
+  if (effectiveRole === "admin") {
+    activeUserId = (admin?.id || admin?._id)?.toString() || null;
+    fetchApi = getAdminNotificationsApi;
+    markReadApi = markAdminNotificationsReadApi;
+    deleteApi = deleteAdminNotificationApi;
+    clearAllApi = clearAllAdminNotificationsApi;
+  } else if (effectiveRole === "vendor") {
+    activeUserId = (vendor?.id || vendor?._id)?.toString() || null;
+    fetchApi = getVendorNotificationsApi;
+    markReadApi = markVendorNotificationsReadApi;
+    deleteApi = deleteVendorNotificationApi;
+    clearAllApi = clearAllVendorNotificationsApi;
+  } else {
+    activeUserId = (user?.id || user?._id)?.toString() || null;
+    fetchApi = getUserNotificationsApi;
+    markReadApi = markUserNotificationsReadApi;
+    deleteApi = deleteUserNotificationApi;
+    clearAllApi = clearAllUserNotificationsApi;
+  }
 
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const notificationRef = useRef(null);
@@ -68,14 +104,13 @@ const NotificationBell = ({ placement = "right", className = "" }) => {
 
     // 2. Fetch fresh user-owned notifications from backend DB (deduplicated & throttled)
     let isMounted = true;
-    const cacheKey = `${isAdmin ? "admin" : "user"}_${activeUserId}`;
+    const cacheKey = `${effectiveRole}_${activeUserId}`;
     const now = Date.now();
     const lastFetch = lastFetchTimestamps.get(cacheKey) || 0;
 
     let fetchPromise = notificationFetchPromises.get(cacheKey);
 
     if (!fetchPromise && now - lastFetch > FETCH_COOLDOWN_MS) {
-      const fetchApi = isAdmin ? getAdminNotificationsApi : getUserNotificationsApi;
       fetchPromise = fetchApi()
         .then((res) => {
           lastFetchTimestamps.set(cacheKey, Date.now());
@@ -106,7 +141,7 @@ const NotificationBell = ({ placement = "right", className = "" }) => {
     return () => {
       isMounted = false;
     };
-  }, [activeUserId, isAdmin]);
+  }, [activeUserId, effectiveRole, fetchApi]);
 
   // Listen to custom window event dispatched globally on new real-time notifications
   useEffect(() => {
@@ -177,7 +212,6 @@ const NotificationBell = ({ placement = "right", className = "" }) => {
             localStorage.setItem(`festivo_unread_notifications_${activeUserId}`, "0");
           } catch (e) {}
         }
-        const markReadApi = isAdmin ? markAdminNotificationsReadApi : markUserNotificationsReadApi;
         markReadApi().catch(() => {});
       }
       return willOpen;
@@ -193,8 +227,7 @@ const NotificationBell = ({ placement = "right", className = "" }) => {
         localStorage.setItem(`festivo_unread_notifications_${activeUserId}`, "0");
       } catch (e) {}
     }
-    const clearApi = isAdmin ? clearAllAdminNotificationsApi : clearAllUserNotificationsApi;
-    clearApi().catch(() => {});
+    clearAllApi().catch(() => {});
   };
 
   const handleRemoveNotification = (id) => {
@@ -207,7 +240,6 @@ const NotificationBell = ({ placement = "right", className = "" }) => {
       }
       return updated;
     });
-    const deleteApi = isAdmin ? deleteAdminNotificationApi : deleteUserNotificationApi;
     deleteApi(id).catch(() => {});
   };
 

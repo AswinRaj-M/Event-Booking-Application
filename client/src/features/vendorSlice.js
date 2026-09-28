@@ -136,6 +136,18 @@ const vendorSlice = createSlice({
       .addCase(refreshVendorToken.rejected, (state) => {
         state.vendor = null
       })
+      .addCase(vendorLogoutThunk.fulfilled, (state) => {
+        state.vendor = null
+        state.success = false
+        state.error = null
+        state.unverified = false
+      })
+      .addCase(vendorLogoutThunk.rejected, (state) => {
+        state.vendor = null
+        state.success = false
+        state.error = null
+        state.unverified = false
+      })
   }
 })
 

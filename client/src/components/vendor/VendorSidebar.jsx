@@ -55,7 +55,7 @@ const VendorSidebar = () => {
                     <span className="text-white font-extrabold text-base tracking-wider leading-none">Festivo</span>
                     <span className="text-[10px] text-purple-400 font-semibold tracking-wider mt-1 uppercase">Vendor Portal</span>
                 </div>
-                <NotificationBell placement="sidebar" />
+                <NotificationBell placement="sidebar" role="vendor" />
             </div>
 
             {/* Scrollable Content */}

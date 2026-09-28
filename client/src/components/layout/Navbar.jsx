@@ -94,7 +94,7 @@ const Navbar = () => {
             {/* Right Auth / Notification & Mobile Toggle */}
             <div className="flex items-center gap-3 sm:gap-4">
                 {/* Notification Bell & Dropdown */}
-                <NotificationBell />
+                <NotificationBell role="user" />
 
                 {/* 3-Lines Hamburger Menu Button - ONLY visible on mobile (md:hidden) */}
                 <button

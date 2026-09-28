@@ -48,7 +48,7 @@ const UserSideBar = () => {
           <span className="text-white font-extrabold text-lg tracking-wider leading-none">Festivo</span>
           <span className="text-[10px] text-zinc-500 font-semibold tracking-wider mt-1.5 uppercase">Premium Booking</span>
         </div>
-        <NotificationBell placement="sidebar" />
+        <NotificationBell placement="sidebar" role="user" />
       </div>
 
       {/* Main Navigation Area */}

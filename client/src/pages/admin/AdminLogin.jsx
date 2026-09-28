@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
 import { adminClearMessages, adminLoginThunk } from "../../features/admin.slice";
+import { logoutUserState } from "../../features/user.slice";
+import { vendorLogoutState } from "../../features/vendorSlice";
 import {toast} from 'sonner'
 import { ADMIN_ROUTES, COMMON_ROUTES } from "../../constants/Routes";
 import { forgotPassword } from "../../services/user.api";
@@ -19,6 +21,8 @@ const AdminLogin = () => {
    
     const handleSubmit = (e) =>{
         e.preventDefault()
+        dispatch(logoutUserState())
+        dispatch(vendorLogoutState())
         dispatch(adminLoginThunk({
             email,
             password

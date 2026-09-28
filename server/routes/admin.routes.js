@@ -43,7 +43,7 @@ import upload from '../middleware/upload.js'
 const router = express.Router()
 
 router.post('/login', asyncHandler(AdminLogin))
-router.post('/logout', protect, requireRole("admin"), asyncHandler(logoutAdmin))
+router.post('/logout', asyncHandler(logoutAdmin))
 router.get("/vendorManagement", protect, requireRole("admin"), asyncHandler(getAllVendors))
 router.get('/vendor-application/:id', protect, requireRole("admin"), asyncHandler(getVendorById))
 router.patch('/vendors/approve-application', protect, requireRole("admin"), asyncHandler(vendorApprove))

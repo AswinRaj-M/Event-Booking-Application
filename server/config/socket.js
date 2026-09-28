@@ -120,7 +120,7 @@ export const sendNotification = async (userTarget, data = {}) => {
 export const sendAdminNotification = async (data = {}) => {
   try {
     const adminUsers = await User.find({
-      $or: [{ role: { $regex: /^admin$/i } }, { email: { $regex: /admin/i } }],
+      role: { $regex: /^admin$/i },
     }).select("_id");
 
     if (adminUsers && adminUsers.length > 0) {

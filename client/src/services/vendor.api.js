@@ -120,3 +120,20 @@ export const getVendorWithdrawalsApi = () => {
 export const changeVendorPasswordApi = (data) => {
   return axiosInstance.put("/vendor/change-password", data);
 };
+
+// Vendor Notifications APIs
+export const getVendorNotificationsApi = () => {
+  return axiosInstance.get("/vendor/notifications");
+};
+
+export const markVendorNotificationsReadApi = () => {
+  return axiosInstance.patch("/vendor/notifications/mark-read");
+};
+
+export const deleteVendorNotificationApi = (id) => {
+  return axiosInstance.delete(`/vendor/notifications/${id}`);
+};
+
+export const clearAllVendorNotificationsApi = () => {
+  return axiosInstance.delete("/vendor/notifications/clear-all");
+};

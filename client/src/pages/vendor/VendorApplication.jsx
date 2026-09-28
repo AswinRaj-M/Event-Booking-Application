@@ -5,6 +5,7 @@ import { Building2, Info, MapPin, Upload, AlertCircle, Eye, EyeOff, CheckCircle2
 import { useDispatch, useSelector } from 'react-redux';
 import { vendorApplicationThunk, vendorClearMessages, vendorLogoutState } from '../../features/vendorSlice';
 import { logoutUserState } from '../../features/user.slice';
+import { logoutAdminState } from '../../features/admin.slice';
 import Loader from '../../components/common/Loader';
 import { toast } from 'sonner';
 import { getAllCategories } from '../../services/common.api';
@@ -264,6 +265,7 @@ const VendorApplication = () => {
             const data = await dispatch(vendorApplicationThunk(formData)).unwrap();
             dispatch(vendorLogoutState());
             dispatch(logoutUserState());
+            dispatch(logoutAdminState());
             navigate(COMMON_ROUTES.VERIFY_OTP, {
                 state: {
                     userId: data.vendorId,

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { vendorLogoutState, setVendorData } from '../../features/vendorSlice';
+import { vendorLogoutState, vendorLogoutThunk, setVendorData } from '../../features/vendorSlice';
 import { checkVendorStatus } from '../../services/vendor.api';
 import logo from '../../assets/logo.jpeg';
 import { CheckCircle2, Clock, XCircle, RefreshCw, LogOut } from 'lucide-react';
@@ -15,6 +15,7 @@ const VendorStatus = () => {
     const vendor = useSelector((state) => state.vendor?.vendor);
 
     const [isChecking, setIsChecking] = useState(false);
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
     const status = vendor?.applicationStatus || 'pending';
     const businessName = vendor?.businessName || location.state?.businessName || "Your Business";
     const appId = (vendor?.id || vendor?._id)
@@ -27,6 +28,7 @@ const VendorStatus = () => {
 
     // Immediate check function to fetch fresh vendor status from server
     const fetchStatus = useCallback(async (manual = false) => {
+        if (isLoggingOut || !vendor) return;
         if (manual) setIsChecking(true);
         try {
             const response = await checkVendorStatus();
@@ -54,10 +56,11 @@ const VendorStatus = () => {
         } finally {
             if (manual) setIsChecking(false);
         }
-    }, [dispatch, navigate, vendor]);
+    }, [dispatch, navigate, vendor, isLoggingOut]);
 
     // Check status immediately on mount (such as page reload)
     useEffect(() => {
+        if (isLoggingOut || !vendor) return;
         if (status === 'approved') {
             navigate(VENDOR_ROUTES.DASHBOARD, { replace: true });
             return;
@@ -71,21 +74,31 @@ const VendorStatus = () => {
         }, 10000);
 
         return () => clearInterval(interval);
-    }, [status, fetchStatus, navigate]);
+    }, [status, fetchStatus, navigate, isLoggingOut, vendor]);
 
     // Listen for real-time notification socket events dispatched on window
     useEffect(() => {
         const handleNotification = () => {
-            fetchStatus();
+            if (!isLoggingOut && vendor) {
+                fetchStatus();
+            }
         };
 
         window.addEventListener("festivo:notification", handleNotification);
         return () => window.removeEventListener("festivo:notification", handleNotification);
-    }, [fetchStatus]);
+    }, [fetchStatus, isLoggingOut, vendor]);
 
-    const handleLogout = () => {
-        dispatch(vendorLogoutState());
-        navigate(COMMON_ROUTES.LOGIN, { replace: true });
+    const handleLogout = async () => {
+        setIsLoggingOut(true);
+        try {
+            await dispatch(vendorLogoutThunk()).unwrap();
+        } catch (error) {
+            console.error("Vendor logout error:", error);
+        } finally {
+            dispatch(vendorLogoutState());
+            toast.success("Logged out successfully");
+            navigate(COMMON_ROUTES.LOGIN, { replace: true });
+        }
     };
 
     const renderStatusContent = () => {
@@ -216,10 +229,11 @@ const VendorStatus = () => {
 
                     <button
                         onClick={handleLogout}
-                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all cursor-pointer"
+                        disabled={isLoggingOut}
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all cursor-pointer disabled:opacity-50"
                     >
                         <LogOut size={16} />
-                        Logout
+                        {isLoggingOut ? "Logging out..." : "Logout"}
                     </button>
                 </div>
             </nav>

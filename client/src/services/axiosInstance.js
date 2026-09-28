@@ -108,6 +108,7 @@ axiosInstance.interceptors.response.use(
 
     const isAuthRoute = originalRequest.url?.includes('/login') || 
                         originalRequest.url?.includes('/register') ||
+                        originalRequest.url?.includes('/logout') ||
                         originalRequest.url?.includes('/verify-otp') ||
                         originalRequest.url?.includes('/refresh-token') ||
                         originalRequest.url?.includes('/forgot-password') ||

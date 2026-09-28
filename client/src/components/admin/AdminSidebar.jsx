@@ -41,7 +41,7 @@ function AdminSidebar() {
                     </div>
                     <span className="text-lg font-bold tracking-wide text-gray-100 truncate">FestivoAdmin</span>
                 </div>
-                <NotificationBell placement="sidebar" />
+                <NotificationBell placement="sidebar" role="admin" />
             </div>
 
             {/* Navigation */}

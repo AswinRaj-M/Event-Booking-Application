@@ -3,13 +3,14 @@ import AppRoutes from './routes/AppRoutes.jsx';
 import AdminRoutes from './routes/AdminRoutes.jsx';
 import VendorRoutes from './routes/VendorRoutes.jsx';
 import { Toaster, toast } from "sonner";
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import GlobalSmoothScroll from './components/common/GlobalSmoothScroll.jsx';
 
 import { useSelector } from 'react-redux';
 import { getSocket, disconnectSocket } from './services/socket';
 
 function App() {
+  const location = useLocation();
   const { user } = useSelector((state) => state.user || {});
   const { vendor } = useSelector((state) => state.vendor || {});
   const { admin } = useSelector((state) => state.admin || {});
@@ -23,7 +24,14 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const rawActiveId = user?.id || user?._id || vendor?.id || vendor?._id || admin?.id || admin?._id;
+    let rawActiveId = null;
+    if (location.pathname.startsWith("/admin")) {
+      rawActiveId = admin?.id || admin?._id;
+    } else if (location.pathname.startsWith("/vendor")) {
+      rawActiveId = vendor?.id || vendor?._id;
+    } else {
+      rawActiveId = user?.id || user?._id;
+    }
     const activeId = rawActiveId ? rawActiveId.toString() : null;
     if (!activeId) {
       disconnectSocket();
@@ -81,7 +89,7 @@ function App() {
     return () => {
       socket.off("notification", handleNotification);
     };
-  }, [user?.id, user?._id, vendor?.id, vendor?._id, admin?.id, admin?._id]);
+  }, [location.pathname, user?.id, user?._id, vendor?.id, vendor?._id, admin?.id, admin?._id]);
 
   return (
     <>
